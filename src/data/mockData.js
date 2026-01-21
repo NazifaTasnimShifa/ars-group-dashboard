@@ -2,8 +2,8 @@
 
 export const user = {
   id: 'user01',
-  name: 'Client Uncle',
-  email: 'uncle@example.com',
+  name: 'ARS group Admin',
+  email: 'admin@arsgroup.com',
 };
 
 export const companies = [

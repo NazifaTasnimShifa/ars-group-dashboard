@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('uncle@example.com'); // Pre-filled for demo
+  const [email, setEmail] = useState('admin@arsgroup.com'); // Pre-filled for demo
   const [password, setPassword] = useState('password'); // Pre-filled for demo
   const [error, setError] = useState('');
   const { login } = useAppContext();
