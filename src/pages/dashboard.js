@@ -22,10 +22,11 @@ export default function DashboardPage() {
 
   // This formats numbers to the Taka currency format
   const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'BDT',
-      minimumFractionDigits: 0,
+    return new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "BDT",
+        currencyDisplay: "narrowSymbol", // <- shows "৳"
+        minimumFractionDigits: 0,
     }).format(value);
   };
 
