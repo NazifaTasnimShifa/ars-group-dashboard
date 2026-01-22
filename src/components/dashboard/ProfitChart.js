@@ -1,6 +1,6 @@
 // src/components/dashboard/ProfitChart.js
 
-import Chart from '../ui/Chart'; // Corrected import path
+import Chart from '@/components/ui/Chart'; // CORRECTED PATH using '@'
 
 const options = {
   responsive: true,

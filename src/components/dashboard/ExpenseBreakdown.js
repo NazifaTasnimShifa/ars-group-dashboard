@@ -1,6 +1,6 @@
 // src/components/dashboard/ExpenseBreakdown.js
 
-import { Pie } from 'react-chartjs-2';
+import Chart from '@/components/ui/Chart'; // CORRECTED PATH using '@'
 
 const options = {
     responsive: true,
@@ -32,8 +32,8 @@ const options = {
 
 export default function ExpenseBreakdown() {
     return (
-        <div className="h-64 rounded-lg bg-white p-4 shadow">
-            <Pie data={data} options={options} />
+        <div className="h-64 rounded-lg bg-white p-4 shadow relative">
+            <Chart type="pie" data={data} options={options} />
         </div>
     )
 }

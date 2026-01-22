@@ -1,7 +1,7 @@
 // src/components/dashboard/RevenueChart.js
 
-import FilterButtons from '../ui/FilterButtons';
-import Chart from '../ui/Chart'; // Corrected import path
+import FilterButtons from '@/components/ui/FilterButtons'; // CORRECTED PATH using '@'
+import Chart from '@/components/ui/Chart'; // CORRECTED PATH using '@'
 
 const options = {
   responsive: true,
