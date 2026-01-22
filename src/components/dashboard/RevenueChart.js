@@ -1,4 +1,5 @@
 // src/components/dashboard/RevenueChart.js
+
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -10,6 +11,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import FilterButtons from '../ui/FilterButtons'; // THIS LINE WAS MISSING
 
 ChartJS.register(
   CategoryScale,
@@ -29,15 +31,13 @@ const options = {
       position: 'top',
     },
     title: {
-      display: true,
-      text: 'Revenue vs Expenses Trend (Mock)',
+      display: false, // Title is now in the header
     },
   },
 };
 
 const labels = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
 
-// Mock monthly data derived from annual totals
 const data = {
   labels,
   datasets: [
@@ -58,8 +58,14 @@ const data = {
 
 export default function RevenueChart() {
   return (
-    <div className="h-96 rounded-lg bg-white p-4 shadow">
-      <Line options={options} data={data} />
+    <div className="h-96 rounded-lg bg-white p-4 shadow flex flex-col">
+       <div className="flex justify-between items-center mb-2">
+            <h3 className="font-semibold text-gray-900">Revenue vs Expenses</h3>
+            <FilterButtons periods={['1M', '6M', '1Y']} />
+        </div>
+      <div className="flex-grow">
+        <Line options={options} data={data} />
+      </div>
     </div>
   );
 }
