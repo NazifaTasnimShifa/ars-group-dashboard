@@ -2,7 +2,7 @@
 
 import { sundryDebtors } from '@/data/mockData';
 import { useAppContext } from '@/contexts/AppContext';
-import FilterButtons from '../ui/FilterButtons'; // THIS LINE WAS MISSING
+import FilterButtons from '@/components/ui/FilterButtons'; // CORRECTED PATH using '@'
 
 export default function DebtorsTable() {
     const { selectedCompany } = useAppContext();

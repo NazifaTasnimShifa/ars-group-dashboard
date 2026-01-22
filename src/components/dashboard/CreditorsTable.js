@@ -2,7 +2,7 @@
 
 import { sundryCreditors } from '@/data/mockData';
 import { useAppContext } from '@/contexts/AppContext';
-import FilterButtons from '../ui/FilterButtons'; // Import the component
+import FilterButtons from '@/components/ui/FilterButtons'; // CORRECTED PATH using '@'
 
 export default function CreditorsTable() {
     const { selectedCompany } = useAppContext();
