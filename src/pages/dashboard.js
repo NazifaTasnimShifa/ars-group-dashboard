@@ -8,11 +8,14 @@ import ProfitChart from '@/components/dashboard/ProfitChart';
 import DebtorsTable from '@/components/dashboard/DebtorsTable';
 import CreditorsTable from '@/components/dashboard/CreditorsTable';
 import Modal from '@/components/ui/Modal';
+import CashFlowSummary from '@/components/dashboard/CashFlowSummary'; // NEW
+import SalesPerformance from '@/components/dashboard/SalesPerformance'; // NEW
+import ExpenseBreakdown from '@/components/dashboard/ExpenseBreakdown'; // NEW
 import { 
     ArrowDownIcon, 
     ArrowUpIcon, 
     BanknotesIcon,
-    PlusCircleIcon, // New Icon
+    PlusCircleIcon,
 } from '@heroicons/react/24/outline';
 
 export default function DashboardPage() {
@@ -40,7 +43,7 @@ export default function DashboardPage() {
         <p>This is a placeholder form to add a new {modalTitle.toLowerCase()}. The real form will go here.</p>
       </Modal>
 
-      <div>
+      <div className="space-y-8">
         {/* Header with Add Buttons */}
         <div className="sm:flex sm:items-center sm:justify-between">
             <h3 className="text-base font-semibold leading-6 text-gray-900">Last 30 days</h3>
@@ -57,7 +60,7 @@ export default function DashboardPage() {
         </div>
 
         {/* KPI Cards Row */}
-        <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((item) => (
             <StatCard 
               key={item.name} 
@@ -68,14 +71,24 @@ export default function DashboardPage() {
           ))}
         </div>
 
+        {/* NEW: Quick Insights Row */}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <SalesPerformance />
+            <ExpenseBreakdown />
+        </div>
+
+        {/* Cash Flow Summary */}
+        <div>
+            <CashFlowSummary />
+        </div>
+
         {/* Charts Row */}
-        <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5">
             <RevenueChart />
-            <ProfitChart />
         </div>
 
         {/* Tables Row */}
-        <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <DebtorsTable />
             <CreditorsTable />
         </div>
