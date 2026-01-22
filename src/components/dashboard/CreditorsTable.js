@@ -1,6 +1,8 @@
 // src/components/dashboard/CreditorsTable.js
+
 import { sundryCreditors } from '@/data/mockData';
 import { useAppContext } from '@/contexts/AppContext';
+import FilterButtons from '../ui/FilterButtons'; // Import the component
 
 export default function CreditorsTable() {
     const { selectedCompany } = useAppContext();
@@ -8,7 +10,10 @@ export default function CreditorsTable() {
 
     return (
         <div className="rounded-lg bg-white p-4 shadow">
-            <h3 className="font-semibold">Sundry Creditors (Next 30 Days)</h3>
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold text-gray-900">Sundry Creditors</h3>
+                <FilterButtons periods={['7D', '1M', '3M']} />
+            </div>
             <div className="mt-4 flow-root">
                 <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
                     <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
