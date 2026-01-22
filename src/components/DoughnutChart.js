@@ -1,5 +1,5 @@
 // src/components/DoughnutChart.js
-import Chart from './Chart';
+import Chart from './ui/Chart';
 
 const DoughnutChart = () => {
   const data = {

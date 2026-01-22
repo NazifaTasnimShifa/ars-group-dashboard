@@ -1,6 +1,6 @@
 // src/components/dashboard/ProfitChart.js
 
-import Chart from '@/components/ui/Chart'; // CORRECTED PATH using '@'
+import { Bar } from 'react-chartjs-2';
 
 const options = {
   responsive: true,
@@ -55,7 +55,7 @@ export default function ProfitChart() {
   return (
     <div className="h-96 rounded-lg bg-white p-4 shadow flex flex-col">
       <div className="flex-grow relative">
-        <Chart type="bar" options={options} data={data} />
+        <Bar options={options} data={data} />
       </div>
     </div>
   );

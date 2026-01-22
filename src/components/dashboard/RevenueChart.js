@@ -1,18 +1,13 @@
 // src/components/dashboard/RevenueChart.js
-
-import FilterButtons from '@/components/ui/FilterButtons'; // CORRECTED PATH using '@'
-import Chart from '@/components/ui/Chart'; // CORRECTED PATH using '@'
+import { Line } from 'react-chartjs-2';
+import FilterButtons from '@/components/ui/FilterButtons';
 
 const options = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
-    legend: {
-      position: 'top',
-    },
-    title: {
-      display: false, 
-    },
+    legend: { position: 'top' },
+    title: { display: false },
   },
 };
 
@@ -44,7 +39,7 @@ export default function RevenueChart() {
             <FilterButtons periods={['1M', '6M', '1Y']} />
         </div>
       <div className="flex-grow relative">
-        <Chart type="line" options={options} data={data} />
+        <Line options={options} data={data} />
       </div>
     </div>
   );

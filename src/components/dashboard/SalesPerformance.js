@@ -1,6 +1,5 @@
 // src/components/dashboard/SalesPerformance.js
-
-import Chart from '@/components/ui/Chart'; // CORRECTED PATH using '@'
+import { Doughnut } from 'react-chartjs-2';
 
 const options = {
   responsive: true,
@@ -30,6 +29,11 @@ const data = {
 };
 
 export default function SalesPerformance() {
+  // ... (percentage calculation is the same)
+  const sales = 7500000;
+  const target = 10000000;
+  const percentage = (sales / target) * 100;
+
   return (
     <div className="rounded-lg bg-white p-6 shadow relative h-64">
       <h3 className="text-base font-semibold text-gray-900">Sales vs Target (YTD)</h3>
@@ -40,7 +44,7 @@ export default function SalesPerformance() {
         </div>
       </div>
       <div className="h-full w-full">
-        <Chart type="doughnut" data={data} options={options} />
+        <Doughnut data={data} options={options} />
       </div>
     </div>
   );
