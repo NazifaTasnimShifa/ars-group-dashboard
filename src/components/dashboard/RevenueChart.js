@@ -1,27 +1,7 @@
 // src/components/dashboard/RevenueChart.js
 
-import { Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import FilterButtons from '../ui/FilterButtons'; // THIS LINE WAS MISSING
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+import FilterButtons from '../ui/FilterButtons';
+import Chart from '../ui/Chart'; // Corrected import path
 
 const options = {
   responsive: true,
@@ -31,7 +11,7 @@ const options = {
       position: 'top',
     },
     title: {
-      display: false, // Title is now in the header
+      display: false, 
     },
   },
 };
@@ -63,8 +43,8 @@ export default function RevenueChart() {
             <h3 className="font-semibold text-gray-900">Revenue vs Expenses</h3>
             <FilterButtons periods={['1M', '6M', '1Y']} />
         </div>
-      <div className="flex-grow">
-        <Line options={options} data={data} />
+      <div className="flex-grow relative">
+        <Chart type="line" options={options} data={data} />
       </div>
     </div>
   );
