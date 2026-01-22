@@ -14,7 +14,7 @@ import {
   Legend,
 } from 'chart.js';
 
-// Register all the components you need for your charts, but only once.
+// This registers all necessary Chart.js components ONCE.
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -29,20 +29,30 @@ ChartJS.register(
 
 const Chart = ({ options, data, type }) => {
   const canvasRef = useRef(null);
+  const chartRef = useRef(null); // Use a ref to hold the chart instance
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const chart = new ChartJS(canvas, {
+    // If a chart instance already exists, destroy it before creating a new one
+    if (chartRef.current) {
+      chartRef.current.destroy();
+    }
+
+    // Create the new chart instance and store it in the ref
+    chartRef.current = new ChartJS(canvas, {
       type,
       data,
       options,
     });
 
-    // When the component unmounts, destroy the chart to prevent canvas errors
+    // The cleanup function will run when the component unmounts
     return () => {
-      chart.destroy();
+      if (chartRef.current) {
+        chartRef.current.destroy();
+        chartRef.current = null;
+      }
     };
   }, [data, options, type]);
 
