@@ -3,9 +3,9 @@
 // Data from your FY2024 tax files:
 // Current Assets: 3,798,535
 // Current Liabilities: 5,425,360
-const currentAssets = 3798535;
-const currentLiabilities = 5425360;
-const ratio = currentAssets / currentLiabilities;
+// const currentAssets = 3798535;
+// const currentLiabilities = 5425360;
+// const ratio = currentAssets / currentLiabilities;
 
 const getStatus = (r) => {
     if (r < 1.0) return { text: 'Critical', color: 'red' };
@@ -13,14 +13,16 @@ const getStatus = (r) => {
     return { text: 'Healthy', color: 'green' };
 }
 
-const status = getStatus(ratio);
+// const status = getStatus(ratio);
 const colorClasses = {
     red: 'bg-red-100 text-red-800',
     yellow: 'bg-yellow-100 text-yellow-800',
     green: 'bg-green-100 text-green-800',
 }
 
-export default function CurrentRatio() {
+export default function CurrentRatio({ data }) { // Accept data as a prop
+  const ratio = data.ratio;
+  const status = getStatus(ratio);
   return (
     <div className="rounded-lg bg-white p-6 shadow text-center">
         <h3 className="text-base font-semibold text-gray-900">Current Ratio (Liquidity)</h3>

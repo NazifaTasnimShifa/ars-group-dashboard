@@ -37,11 +37,20 @@ const data = {
   ],
 };
 
-export default function RevenueSources() {
+export default function RevenueSources({ data: revenueData }) { // Accept data
+      const chartData = {
+      labels: revenueData.labels,
+      datasets: [
+        {
+          label: 'Revenue Share',
+          data: revenueData.data,
+        },
+      ],
+    }
   return (
     <div className="rounded-lg bg-white p-4 shadow h-full flex flex-col">
       <div className="flex-grow relative">
-        <Pie data={data} options={options} />
+        <Pie data={chartData} options={options} />
       </div>
     </div>
   );

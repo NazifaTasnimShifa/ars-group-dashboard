@@ -9,10 +9,12 @@ const expenses = [
     { name: 'Office Rent', amount: 144000 },
 ];
 
-const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
+// const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
 const formatCurrency = (value) => `৳${value.toLocaleString('en-IN')}`;
 
-export default function TopExpenses() {
+// export default function TopExpenses() {
+export default function TopExpenses({ data: expenses }) { // Accept data and rename it to 'expenses'
+    const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
   return (
     <div className="rounded-lg bg-white p-6 shadow">
         <h3 className="text-base font-semibold leading-6 text-gray-900">Top 5 Expense Accounts (FY2024)</h3>
