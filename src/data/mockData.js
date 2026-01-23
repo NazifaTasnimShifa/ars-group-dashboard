@@ -11,25 +11,70 @@ export const companies = [
     id: 'ars_lube',
     name: 'ARS Lube LTD BD',
     shortName: 'ARS Lube',
-    stats: {
-      todaySales: 75200,
-      yesterdayClosing: 14267, // From tax file 'Cash & cash equivalents'
-      totalReceivables: 1250000,
-      totalPayables: 2663885, // From tax file 'Account payable'
-    },
   },
   {
     id: 'ars_corp',
     name: 'ARS Corporation',
     shortName: 'ARS Corp',
-    stats: {
-      todaySales: 120500,
-      yesterdayClosing: 450000,
-      totalReceivables: 2100500,
-      totalPayables: 1850230,
-    },
   },
 ];
+
+// --- NEW: Company-Specific Dashboard Data ---
+
+export const dashboardData = {
+  ars_lube: {
+    stats: [
+      { name: 'Opening Balance (2023)', value: 20701199, icon: 'BanknotesIcon' },
+      { name: 'Current Balance (2024)', value: 14591956, icon: 'BanknotesIcon' },
+      { name: 'Today\'s Fuel Sale', value: 65200, icon: 'ArrowUpIcon' },
+      { name: 'Today\'s Lube Sale', value: 10000, icon: 'ArrowUpIcon' },
+    ],
+    profitability: {
+      grossMargin: 20.00, // (985369 / 4926846) * 100
+      netMargin: -93.13, // (-4588623 / 4926846) * 100
+    },
+    currentRatio: {
+      ratio: 0.70, // 3798535 / 5425360
+    },
+    topExpenses: [
+      { name: 'Interest Provision', amount: 2658180 },
+      { name: 'Depreciation', amount: 1291645 },
+      { name: 'Interest Charged by Bank', amount: 909319 },
+      { name: 'Staff Salary & Allowances', amount: 325000 },
+      { name: 'Office Rent', amount: 144000 },
+    ],
+    revenueSources: {
+      labels: ['Petrol', 'Diesel', 'Lubricants', 'Other'],
+      data: [2150000, 1550000, 1000000, 226846],
+    },
+  },
+  ars_corp: {
+    stats: [
+      { name: 'Yesterday Closing', value: 450000, icon: 'BanknotesIcon' },
+      { name: 'Today\'s Sales', value: 120500, icon: 'ArrowUpIcon' },
+      { name: 'Total Receivables', value: 2100500, icon: 'ArrowDownIcon' },
+      { name: 'Total Payables', value: 1850230, icon: 'ArrowUpIcon' },
+    ],
+    profitability: {
+      grossMargin: 35.5,
+      netMargin: 12.8,
+    },
+    currentRatio: {
+      ratio: 2.1,
+    },
+    topExpenses: [
+      { name: 'Dealer Commission', amount: 1200000 },
+      { name: 'Vehicle Running Costs', amount: 850000 },
+      { name: 'Salaries & Wages', amount: 450000 },
+      { name: 'Cylinder Re-testing', amount: 250000 },
+      { name: 'Marketing', amount: 150000 },
+    ],
+    revenueSources: {
+      labels: ['Beximco 12KG', 'SENA 12KG', 'Beximco 22KG', 'SENA 35KG'],
+      data: [4500000, 3500000, 2000000, 1500000],
+    },
+  }
+};
 
 export const sundryDebtors = {
   ars_lube: [
