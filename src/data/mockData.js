@@ -198,3 +198,43 @@ export const incomeStatementData = {
     otherIncome: { name: "Other Income", amount: 75000 },
   }
 };
+
+export const cashFlowStatementData = {
+  ars_lube: {
+    date: "For the year ended 30 June 2024",
+    operating: [
+      { name: "Net Profit/(Loss)", amount: -4588623 },
+      { name: "Adjustments for Depreciation", amount: 1291645 },
+      { name: "Changes in Advances, Deposits & Pre-payments", amount: 412040 },
+      { name: "Changes in Accounts Receivable", amount: 1264479 },
+      { name: "Changes in Inventories", amount: 2581752 },
+      { name: "Changes in Accounts Payable", amount: -1380000 },
+    ],
+    investing: [
+      { name: "Acquisition of Fixed Assets", amount: 0 },
+      { name: "Increase/Decrease in FDR", amount: -7966 },
+    ],
+    financing: [
+      { name: "Increase/Decrease in Bank Loan", amount: -230681 },
+    ],
+    openingCash: 585039,
+  },
+  ars_corp: {
+    date: "For the year ended 30 June 2024",
+    operating: [
+      { name: "Net Profit", amount: 1200000 },
+      { name: "Adjustments for Depreciation", amount: 450000 },
+      { name: "Changes in Accounts Receivable", amount: -250000 },
+      { name: "Changes in Inventories", amount: -150000 },
+      { name: "Changes in Accounts Payable", amount: 300000 },
+    ],
+    investing: [
+      { name: "Purchase of Delivery Vehicle", amount: -800000 },
+    ],
+    financing: [
+      { name: "Owner's Capital Introduced", amount: 500000 },
+      { name: "Owner's Drawings", amount: -200000 },
+    ],
+    openingCash: 350000,
+  }
+};
