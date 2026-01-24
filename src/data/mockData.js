@@ -259,3 +259,63 @@ export const processLossData = {
   ],
   ars_corp: [], // No process loss for the LPG business in this prototype
 };
+
+
+export const salesData = {
+  ars_lube: [
+    { id: 'INV-24-001', customer: 'Rahim Filling Station', date: '2024-06-12', amount: 450000, status: 'Paid' },
+    { id: 'INV-24-002', customer: 'Karim Traders', date: '2024-06-18', amount: 300000, status: 'Paid' },
+    { id: 'INV-24-003', customer: 'Local Retail Sale', date: '2024-07-05', amount: 75200, status: 'Paid' },
+    { id: 'INV-24-004', customer: 'Salam Enterprise', date: '2024-07-11', amount: 500000, status: 'Unpaid' },
+  ],
+  ars_corp: [
+    { id: 'INV-24-201', customer: 'Beximco LPG Dealer', date: '2024-06-20', amount: 800000, status: 'Paid' },
+    { id: 'INV-24-202', customer: 'SENA Gas Supplies', date: '2024-07-01', amount: 1300500, status: 'Unpaid' },
+    { id: 'INV-24-203', customer: 'Local Distributor', date: '2024-07-14', amount: 120500, status: 'Paid' },
+  ],
+};
+
+export const fixedAssetsData = {
+  ars_lube: [
+    { id: 'FA-001', name: 'Land', acquisitionDate: '2012-01-01', cost: 2666990, depreciation: 0, bookValue: 2666990 },
+    { id: 'FA-002', name: 'Building', acquisitionDate: '2013-01-01', cost: 2395217, depreciation: 119761, bookValue: 2275456 },
+    { id: 'FA-003', name: 'Motor Vehicles', acquisitionDate: '2020-05-10', cost: 4144629, depreciation: 828926, bookValue: 3315703 },
+  ],
+  ars_corp: [
+    { id: 'FA-101', name: 'Delivery Truck', acquisitionDate: '2021-02-15', cost: 3500000, depreciation: 700000, bookValue: 2800000 },
+    { id: 'FA-102', name: 'Office Equipment', acquisitionDate: '2022-08-01', cost: 800000, depreciation: 80000, bookValue: 720000 },
+  ],
+};
+
+export const trialBalanceData = {
+  ars_lube: {
+    date: "As at 30 June 2024",
+    accounts: [
+      // Debits
+      { name: 'Property, Plant & Equipment', debit: 10793421, credit: 0 },
+      { name: 'Current Assets', debit: 3798535, credit: 0 },
+      { name: 'Expenses (Total)', debit: 5555026, credit: 0 },
+      // Credits
+      { name: 'Paid up Capital', debit: 0, credit: 1800000 },
+      { name: 'Retained Earnings (Opening Loss)', debit: 0, credit: 23136268 },
+      { name: 'Bank Loan', debit: 0, credit: 35091487 },
+      { name: 'Current Liabilities', debit: 0, credit: 5425360 },
+      { name: 'Revenue', debit: 0, credit: 4926846 },
+    ]
+  },
+  ars_corp: {
+    date: "As at 30 June 2024",
+    accounts: [
+      // Debits
+      { name: 'Fixed Assets', debit: 6300000, credit: 0 },
+      { name: 'Current Assets', debit: 3750500, credit: 0 },
+      { name: 'Expenses (Total)', debit: 3000000, credit: 0 },
+      // Credits
+      { name: 'Owner\'s Capital', debit: 0, credit: 3000000 },
+      { name: 'Retained Earnings', debit: 0, credit: 950270 },
+      { name: 'Long-term Loan', debit: 0, credit: 4000000 },
+      { name: 'Current Liabilities', debit: 0, credit: 2100230 },
+      { name: 'Revenue', debit: 0, credit: 11500000 },
+    ]
+  }
+};
