@@ -28,6 +28,7 @@ const navigation = [
       { name: 'Inventory Status', href: '/inventory/status' },
       { name: 'Purchases', href: '/inventory/purchases' },
       { name: 'Sales', href: '/inventory/sales' },
+      { name: 'Process Loss', href: '/inventory/process-loss' }, // ADD THIS LINE
     ],
   },
   {

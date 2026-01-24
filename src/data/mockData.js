@@ -238,3 +238,24 @@ export const cashFlowStatementData = {
     openingCash: 350000,
   }
 };
+
+export const purchasesData = {
+  ars_lube: [
+    { id: 'PO-24-001', supplier: 'Govt. Fuel Depot', date: '2024-06-15', amount: 1356205, status: 'Paid' },
+    { id: 'PO-24-002', supplier: 'Lubricant Imports Inc.', date: '2024-06-20', amount: 850000, status: 'Paid' },
+    { id: 'PO-24-003', supplier: 'Padma Oil Company', date: '2024-07-10', amount: 1500000, status: 'Unpaid' },
+  ],
+  ars_corp: [
+    { id: 'PO-24-101', supplier: 'Beximco LPG Unit', date: '2024-06-18', amount: 950000, status: 'Paid' },
+    { id: 'PO-24-102', supplier: 'SENA Kalyan Sangstha', date: '2024-06-25', amount: 900230, status: 'Paid' },
+    { id: 'PO-24-103', supplier: 'Beximco LPG Unit', date: '2024-07-12', amount: 1100000, status: 'Partial' },
+  ],
+};
+
+export const processLossData = {
+  ars_lube: [
+    { id: 'PL-001', date: '2024-06-30', product: 'Petrol (Octane 95)', type: 'Vaporization', quantity: 75.5, unit: 'Litre', notes: 'Monthly estimated vaporization loss.' },
+    { id: 'PL-002', date: '2024-07-15', product: 'Diesel', type: 'Spillage', quantity: 25, unit: 'Litre', notes: 'Spillage during tanker unloading.' },
+  ],
+  ars_corp: [], // No process loss for the LPG business in this prototype
+};
