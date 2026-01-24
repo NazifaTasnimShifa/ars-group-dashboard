@@ -1,6 +1,7 @@
 // src/pages/dashboard.js
 
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
+import { Menu, Transition } from '@headlessui/react';
 import { useAppContext } from '@/contexts/AppContext';
 import { dashboardData } from '@/data/mockData';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -12,92 +13,238 @@ import RevenueSources from '@/components/dashboard/RevenueSources';
 import RevenueChart from '@/components/dashboard/RevenueChart';
 import DebtorsTable from '@/components/dashboard/DebtorsTable';
 import CreditorsTable from '@/components/dashboard/CreditorsTable';
-import Modal from '@/components/ui/Modal'; // THIS IS THE MISSING LINE
-import { 
-    BanknotesIcon, 
-    ArrowUpIcon, 
-    ArrowDownIcon, 
-    PlusCircleIcon 
+import Modal from '@/components/ui/Modal';
+
+// Form components (must exist in your project)
+import DebtorForm from '@/components/forms/DebtorForm';
+import CreditorForm from '@/components/forms/CreditorForm';
+import InventoryItemForm from '@/components/forms/InventoryItemForm';
+import SaleForm from '@/components/forms/SaleForm';
+import FixedAssetForm from '@/components/forms/FixedAssetForm';
+
+import {
+  BanknotesIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
+  ChevronDownIcon,
+  PlusCircleIcon,
 } from '@heroicons/react/24/outline';
 
-// Map icon names from data to actual icon components
+// Map icon names from data to actual icon components (keys should match item.icon values in your mockData)
 const iconMap = {
-    BanknotesIcon,
-    ArrowUpIcon,
-    ArrowDownIcon,
+  BanknotesIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
 };
 
 export default function DashboardPage() {
-  const [open, setOpen] = useState(false);
-  const [modalTitle, setModalTitle] = useState('');
+  const [modalState, setModalState] = useState({ open: false, title: '', content: null });
   const { selectedCompany } = useAppContext();
 
-  const handleOpenModal = (title) => {
-    setModalTitle(title);
-    setOpen(true);
-  };
-
-  const formatCurrency = (value) => `৳${value.toLocaleString('en-IN')}`;
+  const formatCurrency = (value) => `৳${(value ?? 0).toLocaleString('en-IN')}`;
 
   const data = selectedCompany ? dashboardData[selectedCompany.id] : null;
 
+  // Open modal with a specific form component
+  const handleOpenModal = (title, formComponent) => {
+    setModalState({ open: true, title: `Add New ${title}`, content: formComponent });
+  };
+
+  // Close modal and reset content
+  const handleCloseModal = () =>
+    setModalState((prev) => ({ ...prev, open: false, title: '', content: null }));
+
   if (!data) {
-    // This shows while the selectedCompany is being set
-    return <DashboardLayout><div>Loading company data...</div></DashboardLayout>;
+    return (
+      <DashboardLayout>
+        <div>Loading data...</div>
+      </DashboardLayout>
+    );
   }
 
   return (
     <DashboardLayout>
-      <Modal open={open} setOpen={setOpen} title={`Add New ${modalTitle}`}>
-        <p>This is a placeholder form to add a new {modalTitle.toLowerCase()}. The real form will go here.</p>
+      {/* Generic modal renders whatever content we pass */}
+      <Modal
+        open={modalState.open}
+        setOpen={(val) => setModalState((prev) => ({ ...prev, open: val }))}
+        title={modalState.title}
+      >
+        {modalState.content}
       </Modal>
 
       <div className="space-y-8">
         <div className="sm:flex sm:items-center sm:justify-between">
-            <h3 className="text-base font-semibold leading-6 text-gray-900">Dashboard Overview</h3>
-            <div className="mt-3 flex sm:ml-4 sm:mt-0">
-                <button onClick={() => handleOpenModal('Product')} type="button" className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 mr-2">
-                    <PlusCircleIcon className="-ml-0.5 mr-1.5 h-5 w-5 text-gray-400" aria-hidden="true" />
-                    Add Product
-                </button>
-                <button onClick={() => handleOpenModal('Sale')} type="button" className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
-                    <PlusCircleIcon className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
-                    Add Sale
-                </button>
+          <h3 className="text-base font-semibold leading-6 text-gray-900">Dashboard Overview</h3>
+
+          {/* Add New dropdown using Headless UI */}
+          <Menu as="div" className="relative inline-block text-left">
+            <div>
+              <Menu.Button className="inline-flex w-full items-center justify-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                <PlusCircleIcon className="h-5 w-5" aria-hidden="true" />
+                Add New
+                <ChevronDownIcon className="ml-2 h-5 w-5 text-indigo-200" aria-hidden="true" />
+              </Menu.Button>
             </div>
+
+            <Transition
+              as={Fragment}
+              enter="transition ease-out duration-100"
+              enterFrom="transform opacity-0 scale-95"
+              enterTo="transform opacity-100 scale-100"
+              leave="transition ease-in duration-75"
+              leaveFrom="transform opacity-100 scale-100"
+              leaveTo="transform opacity-0 scale-95"
+            >
+              <Menu.Items className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                <div className="py-1">
+                  <Menu.Item>
+                    {({ active }) => (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleOpenModal(
+                            'Sale',
+                            <SaleForm onSave={handleCloseModal} onCancel={handleCloseModal} />
+                          )
+                        }
+                        className={`${
+                          active ? 'bg-gray-100' : ''
+                        } block w-full text-left px-4 py-2 text-sm text-gray-700`}
+                      >
+                        Add Sale
+                      </button>
+                    )}
+                  </Menu.Item>
+
+                  <Menu.Item>
+                    {({ active }) => (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleOpenModal(
+                            'Product',
+                            <InventoryItemForm onSave={handleCloseModal} onCancel={handleCloseModal} />
+                          )
+                        }
+                        className={`${
+                          active ? 'bg-gray-100' : ''
+                        } block w-full text-left px-4 py-2 text-sm text-gray-700`}
+                      >
+                        Add Product
+                      </button>
+                    )}
+                  </Menu.Item>
+
+                  <Menu.Item>
+                    {({ active }) => (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleOpenModal(
+                            'Debtor',
+                            <DebtorForm onSave={handleCloseModal} onCancel={handleCloseModal} />
+                          )
+                        }
+                        className={`${
+                          active ? 'bg-gray-100' : ''
+                        } block w-full text-left px-4 py-2 text-sm text-gray-700`}
+                      >
+                        Add Debtor
+                      </button>
+                    )}
+                  </Menu.Item>
+
+                  <Menu.Item>
+                    {({ active }) => (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleOpenModal(
+                            'Creditor',
+                            <CreditorForm onSave={handleCloseModal} onCancel={handleCloseModal} />
+                          )
+                        }
+                        className={`${
+                          active ? 'bg-gray-100' : ''
+                        } block w-full text-left px-4 py-2 text-sm text-gray-700`}
+                      >
+                        Add Creditor
+                      </button>
+                    )}
+                  </Menu.Item>
+
+                  <Menu.Item>
+                    {({ active }) => (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleOpenModal(
+                            'Asset',
+                            <FixedAssetForm onSave={handleCloseModal} onCancel={handleCloseModal} />
+                          )
+                        }
+                        className={`${
+                          active ? 'bg-gray-100' : ''
+                        } block w-full text-left px-4 py-2 text-sm text-gray-700`}
+                      >
+                        Add Fixed Asset
+                      </button>
+                    )}
+                  </Menu.Item>
+                </div>
+              </Menu.Items>
+            </Transition>
+          </Menu>
         </div>
 
+        {/* Stats cards */}
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {data.stats.map((item) => ( 
-            <StatCard 
-              key={item.name} 
-              title={item.name}
-              value={formatCurrency(item.value)}
-              icon={iconMap[item.icon]} 
-            /> 
-          ))}
+          {data.stats.map((item) => {
+            const Icon = iconMap[item.icon] || BanknotesIcon;
+            return (
+              <StatCard
+                key={item.name}
+                title={item.name}
+                value={formatCurrency(item.value)}
+                icon={Icon}
+              />
+            );
+          })}
         </div>
 
+        {/* Financial health overview */}
         <div>
-          <h3 className="text-base font-semibold leading-6 text-gray-900 mb-4">Financial Health Overview</h3>
+          <h3 className="text-base font-semibold leading-6 text-gray-900 mb-4">
+            Financial Health Overview
+          </h3>
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-              <div className="lg:col-span-2"><ProfitabilityRatios data={data.profitability} /></div>
-              <CurrentRatio data={data.currentRatio} />
+            <div className="lg:col-span-2">
+              <ProfitabilityRatios data={data.profitability} />
+            </div>
+            <CurrentRatio data={data.currentRatio} />
           </div>
         </div>
 
+        {/* Top expenses and revenue sources */}
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
-          <div className="lg:col-span-3"><TopExpenses data={data.topExpenses} /></div>
-          <div className="lg:col-span-2"><RevenueSources data={data.revenueSources} /></div>
+          <div className="lg:col-span-3">
+            <TopExpenses data={data.topExpenses} />
+          </div>
+          <div className="lg:col-span-2">
+            <RevenueSources data={data.revenueSources} />
+          </div>
         </div>
 
+        {/* Revenue chart */}
         <div className="grid grid-cols-1 gap-5">
-            <RevenueChart />
+          <RevenueChart data={data.revenueChart} />
         </div>
 
+        {/* Debtors & creditors */}
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-            <DebtorsTable />
-            <CreditorsTable />
+          <DebtorsTable data={data.debtors} />
+          <CreditorsTable data={data.creditors} />
         </div>
       </div>
     </DashboardLayout>
