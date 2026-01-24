@@ -19,6 +19,7 @@ const navigation = [
       { name: 'Balance Sheet', href: '/reports/balance-sheet' },
       { name: 'Income Statement', href: '/reports/income-statement' },
       { name: 'Cash Flow', href: '/reports/cash-flow' },
+      { name: 'Trial Balance', href: '/reports/trial-balance' }, // ADD THIS LINE
     ],
   },
   {
