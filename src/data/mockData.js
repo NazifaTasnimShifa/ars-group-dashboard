@@ -173,3 +173,28 @@ export const balanceSheetData = {
     ]
   }
 };
+
+export const incomeStatementData = {
+  ars_lube: {
+    date: "For the year ended 30 June 2024",
+    revenue: { name: "Revenue", amount: 4926846 },
+    costOfGoodsSold: { name: "Cost of Goods Sold", amount: 3941477 },
+    expenses: {
+      administrative: { name: "Administrative & General Expenses", amount: 1893527 },
+      selling: { name: "Selling & Marketing Expenses", amount: 95000 },
+      financial: { name: "Financial Expenses", amount: 3567499 },
+    },
+    otherIncome: { name: "Other Income - Bank Interest", amount: 11595 },
+  },
+  ars_corp: {
+    date: "For the year ended 30 June 2024",
+    revenue: { name: "Commission Revenue", amount: 11500000 },
+    costOfGoodsSold: { name: "Cost of Sales (Commission)", amount: 1200000 }, // e.g., Dealer commission
+    expenses: {
+      administrative: { name: "Administrative Expenses", amount: 1800000 },
+      selling: { name: "Vehicle & Marketing Costs", amount: 950000 },
+      financial: { name: "Bank Charges", amount: 50000 },
+    },
+    otherIncome: { name: "Other Income", amount: 75000 },
+  }
+};
