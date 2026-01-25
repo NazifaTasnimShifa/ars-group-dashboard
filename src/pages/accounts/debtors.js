@@ -12,7 +12,7 @@ import FilterButtons from '@/components/ui/FilterButtons';
 import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid';
 
 // IMPORTANT: Set this to the URL of your PHP API
-const API_URL = 'http://localhost/php_api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function DebtorsPage() {
   const [modalState, setModalState] = useState({ open: false, mode: 'add', debtor: null });

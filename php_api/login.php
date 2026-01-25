@@ -1,8 +1,9 @@
 <?php
 // /php_api/login.php
 
-include 'db.php'; // Includes your PDO connection and headers
+include 'db.php'; // This file now contains your headers and $pdo connection
 
+// Get the posted JSON data
 $data = json_decode(file_get_contents("php://input"));
 
 $email = $data->email ?? '';
