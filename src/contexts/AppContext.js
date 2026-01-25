@@ -2,57 +2,88 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { user as mockUser, companies as mockCompanies } from '../data/mockData';
+// We still need mockCompanies to get the full object data (like shortName)
+import { companies as mockCompanies } from '../data/mockData';
 
 const AppContext = createContext();
+
+// IMPORTANT: Set this to the URL of your PHP API
+const API_URL = 'http://localhost/php_api'; // Or your live URL
 
 export function AppProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState(null);
-  const [loading, setLoading] = useState(true); // NEW: Loading state
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // NEW: This effect runs once on app load to rehydrate state from sessionStorage
   useEffect(() => {
     try {
-      const storedAuth = sessionStorage.getItem('isAuthenticated');
+      const storedUser = sessionStorage.getItem('user');
       const storedCompany = sessionStorage.getItem('selectedCompany');
 
-      if (storedAuth === 'true') {
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
         setIsAuthenticated(true);
-        setUser(mockUser);
         setCompanies(mockCompanies);
         if (storedCompany) {
           setSelectedCompany(JSON.parse(storedCompany));
         }
       }
     } catch (error) {
-      console.error("Could not rehydrate session state.", error);
+      console.error("Could not rehydrate session.", error);
     } finally {
-      setLoading(false); // Stop loading once done
+      setLoading(false);
     }
   }, []);
 
-  const login = (email, password) => {
-    if (email === mockUser.email) {
-      setUser(mockUser);
-      setIsAuthenticated(true);
-      setCompanies(mockCompanies);
-      sessionStorage.setItem('isAuthenticated', 'true'); // NEW: Save auth state
-      router.push('/select-company');
-      return true;
+  const login = async (email, password) => {
+    try {
+      const response = await fetch(`${API_URL}/login.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const loggedInUser = data.user;
+        setUser(loggedInUser);
+        setIsAuthenticated(true);
+        setCompanies(mockCompanies);
+        sessionStorage.setItem('user', JSON.stringify(loggedInUser));
+
+        // *** HERE IS THE NEW LOGIC ***
+        if (loggedInUser.role === 'admin') {
+          // Admin goes to company selection
+          router.push('/select-company');
+        } else if (loggedInUser.role === 'user' && loggedInUser.company_id) {
+          // User is auto-assigned to their company
+          // We call selectCompany to set it and redirect
+          selectCompany(loggedInUser.company_id);
+        } else {
+          // Fallback for user with no company
+          router.push('/login?error=no_company');
+        }
+        return true;
+      } else {
+        return data.message || 'Invalid credentials.';
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      return 'Could not connect to the server.';
     }
-    return false;
   };
 
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
     setSelectedCompany(null);
-    sessionStorage.removeItem('isAuthenticated'); // NEW: Clear session
-    sessionStorage.removeItem('selectedCompany'); // NEW: Clear session
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('selectedCompany');
     router.push('/login');
   };
 
@@ -60,14 +91,14 @@ export function AppProvider({ children }) {
     const company = mockCompanies.find((c) => c.id === companyId);
     if (company) {
       setSelectedCompany(company);
-      sessionStorage.setItem('selectedCompany', JSON.stringify(company)); // NEW: Save company
+      sessionStorage.setItem('selectedCompany', JSON.stringify(company));
       router.push('/dashboard');
     }
   };
 
   const switchCompany = () => {
       setSelectedCompany(null);
-      sessionStorage.removeItem('selectedCompany'); // NEW: Clear company
+      sessionStorage.removeItem('selectedCompany');
       router.push('/select-company');
   }
 
@@ -76,7 +107,7 @@ export function AppProvider({ children }) {
     isAuthenticated,
     companies,
     selectedCompany,
-    loading, // NEW: Expose loading state
+    loading,
     login,
     logout,
     selectCompany,
