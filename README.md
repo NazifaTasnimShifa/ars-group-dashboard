@@ -1,40 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# ARS Group - ERP Business Dashboard (Prototype)
 
-## Getting Started
+This project is a high-fidelity, interactive prototype for a web-based ERP and business intelligence dashboard for the ARS Group. It provides a centralized overview of two distinct businesses, ARS Lube LTD BD and ARS Corporation, allowing for comprehensive monitoring of financial health, inventory, and operational metrics.
 
-First, run the development server:
+## ✨ Key Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Multi-Company Architecture**: Seamlessly switch between different company dashboards.
+- **Authentication**: Secure login page to protect business data.
+- **Dynamic Dashboard**: At-a-glance overview of crucial KPIs, including profitability ratios, liquidity, sales performance, and top expenses.
+- **Interactive Charts & Tables**: Visual representations of financial trends and data, built with Chart.js.
+- **Full-Featured Modules**: Complete pages for managing:
+  - **Accounts**: Sundry Debtors and Creditors with filtering and add/edit/delete functionality.
+  - **Inventory**: Detailed status, purchases, sales, and process loss tracking.
+  - **Financial Reports**: Dynamic, accountant-approved layouts for the Balance Sheet, Income Statement, Cash Flow Statement, and Trial Balance.
+  - **Fixed Assets**: A complete register of all company assets.
+- **Responsive Design**: A modern, collapsible sidebar and mobile-friendly layout built with Tailwind CSS and Headless UI.
+- **Placeholder Modals**: Functional modals for all data entry points (Add Sale, Add Product, etc.) ready for backend integration.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🚀 Technology Stack
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+- **Framework**: [Next.js](https://nextjs.org/) (with Pages Router)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **UI Components**: [Headless UI](https://headlessui.com/) for accessible components (Modals, Dropdowns).
+- **Icons**: [Heroicons](https://heroicons.com/)
+- **Charts**: [Chart.js](https://www.chartjs.org/) with `react-chartjs-2`.
+- **Linting & Formatting**: ESLint.
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
+## 🛠️ Getting Started
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+### Prerequisites
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Node.js (v18.x or higher)
+- npm or yarn
 
-## Learn More
+### Installation & Setup
 
-To learn more about Next.js, take a look at the following resources:
+1.  **Clone the repository:**
+    ```bash
+    git clone <your-repository-url>
+    cd ars-erp-dashboard
+    ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3.  **Run the development server:**
+    ```bash
+    npm run dev
+    ```
 
-## Deploy on Vercel
+4.  **Open the application:**
+    Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Login Credentials (for Prototype)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+- **Email**: `admin@arsgroup.com`
+- **Password**: Any password will work.
+
+---
+
+This project was bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
