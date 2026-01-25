@@ -50,6 +50,7 @@ const navigation = [
     children: [
       { name: 'Sundry Debtors', href: '/accounts/debtors' },
       { name: 'Sundry Creditors', href: '/accounts/creditors' },
+      { name: 'Chart of Accounts', href: '/accounts/chart-of-accounts' },
     ],
   },
   { name: 'Fixed Assets', href: '/fixed-assets', icon: TruckIcon },

@@ -319,3 +319,62 @@ export const trialBalanceData = {
     ]
   }
 };
+
+export const chartOfAccountsData = {
+  ars_lube: [
+    { id: '1000', name: 'Assets', children: [
+      { id: '1100', name: 'Current Assets', children: [
+        { id: '1110', name: 'Cash & Bank' },
+        { id: '1120', name: 'Accounts Receivable' },
+        { id: '1130', name: 'Inventory' },
+      ]},
+      { id: '1200', name: 'Fixed Assets', children: [
+        { id: '1210', name: 'Land & Buildings' },
+        { id: '1220', name: 'Vehicles' },
+      ]},
+    ]},
+    { id: '2000', name: 'Liabilities', children: [
+      { id: '2100', name: 'Current Liabilities', children: [{ id: '2110', name: 'Accounts Payable' }]},
+      { id: '2200', name: 'Long-Term Liabilities', children: [{ id: '2210', name: 'Bank Loans' }]},
+    ]},
+    { id: '3000', name: 'Equity', children: [
+        { id: '3100', name: 'Owner\'s Capital' },
+        { id: '3200', name: 'Retained Earnings' },
+    ]},
+    { id: '4000', name: 'Revenue', children: [
+      { id: '4100', name: 'Fuel Sales' },
+      { id: '4200', name: 'Lubricant Sales' },
+    ]},
+    { id: '5000', name: 'Expenses', children: [
+      { id: '5100', name: 'Cost of Goods Sold' },
+      { id: '5200', name: 'Transportation Expenses', children: [
+        { id: '5210', name: 'Driver Salary' },
+        { id: '5220', name: 'Fuel Costs' },
+        { id: '5230', name: 'Scheduled Maintenance' },
+        { id: '5240', name: 'Unscheduled Maintenance' },
+        { id: '5250', name: 'Accidental Damages' },
+      ]},
+      { id: '5300', name: 'Administrative Expenses', children: [
+        { id: '5310', name: 'Office Rent' },
+        { id: '5320', name: 'Salaries' },
+      ]},
+    ]},
+  ],
+  ars_corp: [
+    // Simplified CoA for the second company
+    { id: '1000', name: 'Assets', children: [
+        { id: '1100', name: 'Bank Balance' },
+        { id: '1110', name: 'Receivables' },
+    ]},
+    { id: '2000', name: 'Liabilities', children: [
+        { id: '2100', name: 'Payables' },
+    ]},
+    { id: '4000', name: 'Revenue', children: [
+        { id: '4100', name: 'Commission Income' },
+    ]},
+    { id: '5000', name: 'Expenses', children: [
+        { id: '5100', name: 'Dealer Commission Expense' },
+        { id: '5200', name: 'Operating Costs' },
+    ]},
+  ]
+};
