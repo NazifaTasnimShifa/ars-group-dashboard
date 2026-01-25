@@ -8,7 +8,8 @@ import PageHeader from '@/components/ui/PageHeader';
 import Modal from '@/components/ui/Modal';
 import PurchaseOrderForm from '@/components/forms/PurchaseOrderForm';
 import PageStat from '@/components/ui/PageStat';
-import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid';
+import FilterButtons from '@/components/ui/FilterButtons'; // NEW
+import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/20/solid';
 
 const StatusBadge = ({ status }) => {
     const statusColors = {
@@ -58,12 +59,24 @@ export default function PurchasesPage() {
 
   return (
     <DashboardLayout>
-      <Modal open={modalState.open} setOpen={(val) => setModalState({...modalState, open: val})} title={`${modalState.mode === 'add' ? 'Add' : 'Edit'} Purchase Order`}>
-        <PurchaseOrderForm purchase={modalState.purchase} onSave={handleSave} onCancel={handleCancel} />
+      <Modal 
+        open={modalState.open} 
+        setOpen={(val) => setModalState({...modalState, open: val})} 
+        title={`${modalState.mode === 'add' ? 'Add' : 'Edit'} Purchase Order`}
+      >
+        <PurchaseOrderForm 
+          purchase={modalState.purchase} 
+          onSave={handleSave} 
+          onCancel={handleCancel} 
+        />
       </Modal>
 
       <PageHeader title="Purchase Orders" description="A list of all purchases made by the company.">
-        <button onClick={handleAdd} type="button" className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+        <button 
+          onClick={handleAdd} 
+          type="button" 
+          className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+        >
           <PlusIcon className="-ml-0.5 mr-1.5 h-5 w-5 inline" /> New Purchase Order
         </button>
       </PageHeader>
@@ -73,10 +86,22 @@ export default function PurchasesPage() {
       </dl>
 
       <div className="rounded-lg bg-white p-6 shadow">
-        <div className="mb-4">
+        {/* --- UPDATED: Filter Controls Section --- */}
+        <div className="sm:flex sm:items-center sm:justify-between mb-4">
             <div className="w-full max-w-xs">
               <label htmlFor="search" className="sr-only">Search</label>
-              <input id="search" name="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full rounded-md border-0 bg-white py-1.5 pl-3 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="Filter by PO# or Supplier..." type="search" />
+              <input 
+                id="search" 
+                name="search" 
+                value={searchQuery} 
+                onChange={(e) => setSearchQuery(e.target.value)} 
+                className="block w-full rounded-md border-0 bg-white py-1.5 pl-3 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" 
+                placeholder="Filter by PO# or Supplier..." 
+                type="search" 
+              />
+            </div>
+            <div className="mt-4 sm:mt-0">
+                <FilterButtons periods={['1M', '3M', '6M', '1Y']} />
             </div>
         </div>
 

@@ -7,6 +7,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import Modal from '@/components/ui/Modal';
 import PageStat from '@/components/ui/PageStat';
+import FilterButtons from '@/components/ui/FilterButtons'; // NEW
 import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid';
 
 // A simple form for the modal
@@ -46,15 +47,24 @@ const ProcessLossForm = ({ onSave, onCancel }) => (
 
 export default function ProcessLossPage() {
   const [modalOpen, setModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(''); // NEW
   const { selectedCompany } = useAppContext();
 
-  const losses = selectedCompany ? processLossData[selectedCompany.id] : [];
+  const losses = useMemo(() => { // NEW
+    const companyLosses = selectedCompany ? processLossData[selectedCompany.id] : [];
+    if (!searchQuery) return companyLosses;
+    return companyLosses.filter(loss => 
+      loss.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      loss.type.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [selectedCompany, searchQuery]);
+
   const totalLossQty = losses.reduce((sum, item) => sum + item.quantity, 0);
 
   const stats = [
     { name: 'Total Loss Events', stat: losses.length },
     { name: 'Total Quantity Lost', stat: `${totalLossQty.toFixed(2)} Litres` },
-    { name: 'Most Common Type', stat: 'Vaporization' }, // Mock stat
+    { name: 'Most Common Type', stat: 'Vaporization' },
   ];
 
   return (
@@ -74,7 +84,22 @@ export default function ProcessLossPage() {
       </dl>
 
       <div className="rounded-lg bg-white p-6 shadow">
-        <h3 className="font-semibold text-gray-900 mb-4">Loss History</h3>
+        {/* --- UPDATED: Filter Controls Section --- */}
+        <div className="sm:flex sm:items-center sm:justify-between mb-4">
+            <div className="w-full max-w-xs">
+              <label htmlFor="search" className="sr-only">Search</label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input id="search" name="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full rounded-md border-0 bg-white py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="Filter by product or type..." type="search" />
+              </div>
+            </div>
+            <div className="mt-4 sm:mt-0">
+                <FilterButtons periods={['1M', '3M', '6M', '1Y']} />
+            </div>
+        </div>
+
         <div className="flow-root">
           <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
             <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
