@@ -1,19 +1,33 @@
 // src/pages/select-company.js
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { useAppContext } from '@/contexts/AppContext';
 import { BuildingOffice2Icon } from '@heroicons/react/24/outline';
 
 export default function SelectCompanyPage() {
-  const { user, companies, selectCompany, logout } = useAppContext();
+  const { user, companies, selectCompany, logout, loading } = useAppContext();
+  const router = useRouter();
 
-  if (!user) {
+  // --- SECURITY CHECK ---
+  useEffect(() => {
+    if (!loading && user) {
+      // If a normal user tries to access this page, kick them to dashboard
+      if (user.role !== 'admin') {
+        router.replace('/dashboard');
+      }
+    }
+  }, [user, loading, router]);
+
+  if (loading || !user) {
     return (
-        <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-            <p>Loading...</p>
-        </div>
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <p>Loading...</p>
+      </div>
     );
   }
 
+  // If user is admin, show the selection
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto lg:py-0 h-screen">
@@ -23,7 +37,8 @@ export default function SelectCompanyPage() {
               Welcome, {user.name}
             </h2>
             <p className="mt-2 text-sm text-gray-600">
-              Please select a company to view the dashboard.
+              You are logged in as an <strong>Admin</strong>. <br/>
+              Please select a company to manage.
             </p>
           </div>
 

@@ -10,21 +10,20 @@ datasource db {
 }
 
 model companies {
-  id        String  @id @db.VarChar(50)
-  name      String  @db.VarChar(255)
-  shortName String  @db.VarChar(100)
+  id        String    @id @db.VarChar(50) // e.g., 'ars_lube'
+  name      String    @db.VarChar(255)
+  shortName String    @db.VarChar(100)
   users     users[]
   debtors   debtors[]
-  // ... add other tables here as we create them
 }
 
 model users {
-  id         Int       @id @default(autoincrement())
-  email      String    @unique @db.VarChar(255)
-  password   String    @db.VarChar(255)
+  id         Int        @id @default(autoincrement())
+  email      String     @unique @db.VarChar(255)
+  password   String     @db.VarChar(255)
   role       users_role @default(user)
-  name       String    @db.VarChar(255)
-  company_id String?   @db.VarChar(50)
+  name       String     @db.VarChar(255)
+  company_id String?    @db.VarChar(50)
   company    companies? @relation(fields: [company_id], references: [id], onDelete: SetNull)
 }
 

@@ -17,13 +17,16 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Find user by email
     const user = await prisma.users.findUnique({
       where: { email: email },
     });
 
+    // Validate password
+    // Note: In a real production app with new users, use bcrypt.hashSync to create passwords first.
     if (user && bcrypt.compareSync(password, user.password)) {
-      // Correct password!
-      // We must remove the password hash before sending the user object
+      
+      // Remove sensitive data before sending to frontend
       const { password, ...userWithoutPassword } = user;
 
       res.status(200).json({
@@ -31,11 +34,12 @@ export default async function handler(req, res) {
         user: userWithoutPassword
       });
     } else {
-      // Invalid credentials
       res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
   } catch (error) {
     console.error("Login API Error:", error);
     res.status(500).json({ success: false, message: 'An internal server error occurred.' });
+  } finally {
+    await prisma.$disconnect();
   }
 }

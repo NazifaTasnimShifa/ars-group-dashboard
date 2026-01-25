@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState(''); // Changed
-  const [password, setPassword] = useState(''); // Changed
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAppContext();
@@ -15,6 +15,7 @@ export default function LoginPage() {
     setError('');
     setIsLoading(true);
 
+    // Call the context login which calls the API
     const result = await login(email, password); 
 
     setIsLoading(false);
@@ -28,10 +29,10 @@ export default function LoginPage() {
       <div className="w-full max-w-md p-8 space-y-8 bg-white shadow-lg rounded-lg">
         <div>
           <h2 className="text-center text-3xl font-extrabold text-gray-900">
-            ARS Dashboard Login
+            ARS Dashboard
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Access to your business overview
+            Secure Enterprise Login
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

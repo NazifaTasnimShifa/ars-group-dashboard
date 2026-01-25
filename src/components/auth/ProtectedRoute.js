@@ -5,37 +5,38 @@ import { useRouter } from 'next/router';
 import { useAppContext } from '@/contexts/AppContext';
 
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, selectedCompany, loading } = useAppContext(); // Get loading state
+  const { isAuthenticated, selectedCompany, loading } = useAppContext();
   const router = useRouter();
 
   useEffect(() => {
-    // Wait until loading is false before checking authentication
-    if (loading) {
-      return;
-    }
+    if (loading) return;
 
     if (!isAuthenticated) {
       router.replace('/login');
       return;
     }
 
+    // If logged in but no company selected (and not on the selection page)
+    // redirect to selection (Admins) or back to login if something is broken
     if (isAuthenticated && !selectedCompany && router.pathname !== '/select-company') {
       router.replace('/select-company');
-      return;
     }
   }, [isAuthenticated, selectedCompany, router, loading]);
 
-  // Show loading screen while session is being checked
   if (loading) {
-      return <div className="min-h-screen bg-gray-100 flex items-center justify-center">Authenticating...</div>;
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
   }
 
-  if ( (isAuthenticated && selectedCompany) || (isAuthenticated && router.pathname === '/select-company')) {
+  // Render children if conditions are met
+  if ((isAuthenticated && selectedCompany) || (isAuthenticated && router.pathname === '/select-company')) {
     return children;
   }
 
-  // Fallback loading state
-  return <div className="min-h-screen bg-gray-100 flex items-center justify-center">Loading...</div>;
+  return null; // Return null while redirecting
 };
 
 export default ProtectedRoute;
