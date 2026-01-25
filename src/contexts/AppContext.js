@@ -6,9 +6,6 @@ import { companies as mockCompanies } from '../data/mockData';
 
 const AppContext = createContext();
 
-// NEW: Get the API URL from the environment variable
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
 export function AppProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -40,15 +37,12 @@ export function AppProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      const response = await fetch(`${API_URL}/login.php`, {
+      // NEW: We now call our internal Next.js API route!
+      const response = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
 
       const data = await response.json();
 
@@ -72,14 +66,33 @@ export function AppProvider({ children }) {
       }
     } catch (error) {
       console.error('Login error:', error);
-      // This is the error you are seeing
-      return 'Could not connect to the server. Please check your connection or contact support.'; 
+      return 'Could not connect to the server.';
     }
   };
 
-  const logout = () => { /* ... no change ... */ };
-  const selectCompany = (companyId) => { /* ... no change ... */ };
-  const switchCompany = () => { /* ... no change ... */ }
+  const logout = () => {
+    setUser(null);
+    setIsAuthenticated(false);
+    setSelectedCompany(null);
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('selectedCompany');
+    router.push('/login');
+  };
+
+  const selectCompany = (companyId) => {
+    const company = mockCompanies.find((c) => c.id === companyId);
+    if (company) {
+      setSelectedCompany(company);
+      sessionStorage.setItem('selectedCompany', JSON.stringify(company));
+      router.push('/dashboard');
+    }
+  };
+
+  const switchCompany = () => {
+      setSelectedCompany(null);
+      sessionStorage.removeItem('selectedCompany');
+      router.push('/select-company');
+  }
 
   const value = {
     user,

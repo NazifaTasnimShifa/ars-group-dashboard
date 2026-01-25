@@ -1,0 +1,44 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model companies {
+  id        String  @id @db.VarChar(50)
+  name      String  @db.VarChar(255)
+  shortName String  @db.VarChar(100)
+  users     users[]
+  debtors   debtors[]
+  // ... add other tables here as we create them
+}
+
+model users {
+  id         Int       @id @default(autoincrement())
+  email      String    @unique @db.VarChar(255)
+  password   String    @db.VarChar(255)
+  role       users_role @default(user)
+  name       String    @db.VarChar(255)
+  company_id String?   @db.VarChar(50)
+  company    companies? @relation(fields: [company_id], references: [id], onDelete: SetNull)
+}
+
+model debtors {
+  id         Int       @id @default(autoincrement())
+  company_id String    @db.VarChar(50)
+  name       String    @db.VarChar(255)
+  amount     Decimal   @db.Decimal(12, 2)
+  due        DateTime  @db.Date
+  aging      Int
+  company    companies @relation(fields: [company_id], references: [id], onDelete: Cascade)
+}
+
+enum users_role {
+  admin
+  user
+}
