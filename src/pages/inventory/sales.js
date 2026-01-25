@@ -74,12 +74,7 @@ export default function SalesPage() {
         <div className="sm:flex sm:items-center sm:justify-between mb-4">
             <div className="w-full max-w-xs">
               <label htmlFor="search" className="sr-only">Search</label>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                  <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-                </div>
-                <input id="search" name="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full rounded-md border-0 bg-white py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="Filter by Invoice# or Customer..." type="search" />
-              </div>
+              <input id="search" name="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full rounded-md border-0 bg-white py-1.5 pl-3 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="Filter by Invoice# or Customer..." type="search" />
             </div>
             <div className="mt-4 sm:mt-0">
                 <FilterButtons periods={['1M', '3M', '6M', '1Y']} />

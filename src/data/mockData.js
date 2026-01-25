@@ -322,59 +322,25 @@ export const trialBalanceData = {
 
 export const chartOfAccountsData = {
   ars_lube: [
-    { id: '1000', name: 'Assets', children: [
-      { id: '1100', name: 'Current Assets', children: [
-        { id: '1110', name: 'Cash & Bank' },
-        { id: '1120', name: 'Accounts Receivable' },
-        { id: '1130', name: 'Inventory' },
-      ]},
-      { id: '1200', name: 'Fixed Assets', children: [
-        { id: '1210', name: 'Land & Buildings' },
-        { id: '1220', name: 'Vehicles' },
-      ]},
-    ]},
-    { id: '2000', name: 'Liabilities', children: [
-      { id: '2100', name: 'Current Liabilities', children: [{ id: '2110', name: 'Accounts Payable' }]},
-      { id: '2200', name: 'Long-Term Liabilities', children: [{ id: '2210', name: 'Bank Loans' }]},
-    ]},
-    { id: '3000', name: 'Equity', children: [
-        { id: '3100', name: 'Owner\'s Capital' },
-        { id: '3200', name: 'Retained Earnings' },
-    ]},
-    { id: '4000', name: 'Revenue', children: [
-      { id: '4100', name: 'Fuel Sales' },
-      { id: '4200', name: 'Lubricant Sales' },
-    ]},
-    { id: '5000', name: 'Expenses', children: [
-      { id: '5100', name: 'Cost of Goods Sold' },
-      { id: '5200', name: 'Transportation Expenses', children: [
-        { id: '5210', name: 'Driver Salary' },
-        { id: '5220', name: 'Fuel Costs' },
-        { id: '5230', name: 'Scheduled Maintenance' },
-        { id: '5240', name: 'Unscheduled Maintenance' },
-        { id: '5250', name: 'Accidental Damages' },
-      ]},
-      { id: '5300', name: 'Administrative Expenses', children: [
-        { id: '5310', name: 'Office Rent' },
-        { id: '5320', name: 'Salaries' },
-      ]},
-    ]},
+    { code: 1110, name: 'Cash & Bank', type: 'Asset', balance: 14267 },
+    { code: 1120, name: 'Accounts Receivable', type: 'Asset', balance: 0 },
+    { code: 1130, name: 'Inventory', type: 'Asset', balance: 743458 },
+    { code: 1220, name: 'Vehicles', type: 'Asset', balance: 3315703 },
+    { code: 2110, name: 'Accounts Payable', type: 'Liability', balance: 2663885 },
+    { code: 2210, name: 'Bank Loans', type: 'Liability', balance: 35091487 },
+    { code: 3100, name: 'Paid up Capital', type: 'Equity', balance: 1800000 },
+    { code: 4100, name: 'Sales Revenue', type: 'Income', balance: 4926846 },
+    { code: 5210, name: 'Driver Salary', type: 'Expense', balance: 95000 },
+    { code: 5220, name: 'Fuel Costs', type: 'Expense', balance: 150000 }, // Mock data
+    { code: 5310, name: 'Office Rent', type: 'Expense', balance: 144000 },
   ],
   ars_corp: [
-    // Simplified CoA for the second company
-    { id: '1000', name: 'Assets', children: [
-        { id: '1100', name: 'Bank Balance' },
-        { id: '1110', name: 'Receivables' },
-    ]},
-    { id: '2000', name: 'Liabilities', children: [
-        { id: '2100', name: 'Payables' },
-    ]},
-    { id: '4000', name: 'Revenue', children: [
-        { id: '4100', name: 'Commission Income' },
-    ]},
-    { id: '5000', name: 'Expenses', children: [
-        { id: '5100', name: 'Dealer Commission Expense' },
-        { id: '5200', name: 'Operating Costs' },
-    ]},
+    { code: 1100, name: 'Bank Balance', type: 'Asset', balance: 450000 },
+    { code: 1110, name: 'Receivables', type: 'Asset', balance: 2100500 },
+    { code: 2100, name: 'Payables', type: 'Liability', balance: 1850230 },
+    { code: 3000, name: 'Owner\'s Equity', type: 'Equity', balance: 950270 },
+    { code: 4100, name: 'Commission Income', type: 'Income', balance: 11500000 },
+    { code: 5100, name: 'Dealer Commission', type: 'Expense', balance: 1200000 },
+    { code: 5200, name: 'Operating Costs', type: 'Expense', balance: 950000 },
   ]
 };
