@@ -4,16 +4,12 @@ export default function DebtorForm({ debtor, onSave, onCancel }) {
   
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    // Extract data directly from the form DOM
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData.entries());
 
-    // Add specific logic for types if needed (e.g. convert amounts to numbers)
     data.amount = parseFloat(data.amount);
-    data.aging = 0; // New debtors start with 0 aging
+    data.aging = 0; 
     
-    // Include ID if we are editing
     if (debtor?.id) {
       data.id = debtor.id;
     }
@@ -24,7 +20,6 @@ export default function DebtorForm({ debtor, onSave, onCancel }) {
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-4">
-        {/* Debtor Name */}
         <div>
           <label htmlFor="name" className="block text-sm font-medium leading-6 text-gray-900">Debtor Name</label>
           <div className="mt-2">
@@ -32,7 +27,6 @@ export default function DebtorForm({ debtor, onSave, onCancel }) {
           </div>
         </div>
 
-        {/* Contact Person */}
         <div>
           <label htmlFor="contactPerson" className="block text-sm font-medium leading-6 text-gray-900">Contact Person</label>
           <div className="mt-2">
@@ -40,7 +34,6 @@ export default function DebtorForm({ debtor, onSave, onCancel }) {
           </div>
         </div>
 
-        {/* Email and Phone */}
         <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
             <div>
                 <label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-900">Email</label>
@@ -56,7 +49,6 @@ export default function DebtorForm({ debtor, onSave, onCancel }) {
             </div>
         </div>
 
-        {/* Amount and Due Date */}
         <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
           <div>
             <label htmlFor="amount" className="block text-sm font-medium leading-6 text-gray-900">Amount</label>

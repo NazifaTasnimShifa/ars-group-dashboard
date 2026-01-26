@@ -1,5 +1,3 @@
-// src/pages/accounts/debtors.js
-
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -21,7 +19,6 @@ export default function DebtorsPage() {
 
   const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
-  // --- FETCH DATA ---
   const fetchData = useCallback(async () => {
     if (!selectedCompany) return;
     setIsLoading(true);
@@ -38,7 +35,6 @@ export default function DebtorsPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // --- STATS & FILTERING ---
   const filteredDebtors = useMemo(() => {
     if (!searchQuery) return debtors;
     return debtors.filter(debtor => 
@@ -57,47 +53,33 @@ export default function DebtorsPage() {
     ]);
   }, [debtors]);
 
-  // --- ACTION HANDLERS ---
-  
   const handleRemove = async (debtor) => {
     if(!confirm(`Are you sure you want to delete ${debtor.name}?`)) return;
-
     try {
         const res = await fetch(`/api/data?type=debtors&companyId=${selectedCompany.id}`, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: debtor.id })
         });
-        if(res.ok) {
-            fetchData(); 
-        } else {
-            alert('Failed to delete debtor');
-        }
-    } catch (e) {
-        console.error(e);
-    }
+        if(res.ok) fetchData();
+    } catch (e) { console.error(e); }
   };
 
   const handleSave = async (formData) => {
     const method = modalState.mode === 'edit' ? 'PUT' : 'POST';
-    
     try {
         const res = await fetch(`/api/data?type=debtors&companyId=${selectedCompany.id}`, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
         });
-
         if(res.ok) {
             setModalState({ ...modalState, open: false });
             fetchData(); 
         } else {
             alert('Failed to save debtor');
         }
-    } catch (e) {
-        console.error(e);
-        alert('An error occurred');
-    }
+    } catch (e) { console.error(e); }
   };
 
   const handleAdd = () => setModalState({ open: true, mode: 'add', debtor: null });
@@ -124,12 +106,7 @@ export default function DebtorsPage() {
         <div className="mb-4 xl:flex xl:items-center xl:justify-between">
             <div className="w-full max-w-xs">
               <label htmlFor="search" className="sr-only">Search</label>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                  <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-                </div>
-                <input id="search" name="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full rounded-md border-0 bg-white py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="Filter by name..." type="search" />
-              </div>
+              <input id="search" name="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full rounded-md border-0 bg-white py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="Filter by name..." type="search" />
             </div>
             <div className="mt-4 sm:mt-0">
                 <FilterButtons periods={['1M', '3M', '6M', '1Y']} />
@@ -139,9 +116,7 @@ export default function DebtorsPage() {
         <div className="flow-root">
           <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
             <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-              {isLoading ? (
-                <p className="text-center py-4 text-gray-500">Loading data...</p>
-              ) : (
+              {isLoading ? <p className="text-center py-4 text-gray-500">Loading data...</p> : (
                 <table className="min-w-full divide-y divide-gray-300">
                   <thead className="bg-gray-50">
                     <tr>
@@ -149,7 +124,7 @@ export default function DebtorsPage() {
                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Amount</th>
                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Due Date</th>
                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Aging</th>
-                        <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Actions</span></th>
+                        <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Edit</span></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">

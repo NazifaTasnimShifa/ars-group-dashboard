@@ -1,5 +1,3 @@
-// src/pages/fixed-assets.js
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
