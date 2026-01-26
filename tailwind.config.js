@@ -1,6 +1,8 @@
 // tailwind.config.js
+import flowbitePlugin from 'flowbite/plugin';
+
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -10,6 +12,6 @@ module.exports = {
     extend: {},
   },
   plugins: [
-    require('flowbite/plugin'),
+    flowbitePlugin,
   ],
 };
