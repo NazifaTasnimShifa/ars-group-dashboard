@@ -1,8 +1,7 @@
 // src/pages/accounts/creditors.js
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { sundryCreditors } from '@/data/mockData';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import Modal from '@/components/ui/Modal';
@@ -16,28 +15,51 @@ export default function CreditorsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const { selectedCompany } = useAppContext();
 
-  const formatCurrency = (value) => `৳${value.toLocaleString('en-IN')}`;
+  // --- State for live data ---
+  const [creditors, setCreditors] = useState([]);
+  const [stats, setStats] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // --- Data Preparation and Filtering ---
-  const creditors = useMemo(() => {
-    const companyCreditors = selectedCompany ? sundryCreditors[selectedCompany.id] : [];
-    if (!searchQuery) return companyCreditors;
+  const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
-    return companyCreditors.filter(creditor => 
+  // --- Fetch Data ---
+  useEffect(() => {
+    if (selectedCompany) {
+      setIsLoading(true);
+      fetch(`/api/data?type=creditors&companyId=${selectedCompany.id}`)
+        .then(res => res.json())
+        .then(data => {
+          setCreditors(Array.isArray(data) ? data : []);
+          setIsLoading(false);
+        })
+        .catch(error => {
+          console.error("Failed to fetch creditors:", error);
+          setCreditors([]);
+          setIsLoading(false);
+        });
+    }
+  }, [selectedCompany]);
+
+  // --- Filter & Compute Stats ---
+  const filteredCreditors = useMemo(() => {
+    if (!searchQuery) return creditors;
+    return creditors.filter(creditor => 
       creditor.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [selectedCompany, searchQuery]);
+  }, [creditors, searchQuery]);
 
-  const totalPayables = creditors.reduce((sum, c) => sum + c.amount, 0);
-  const dueSoon = creditors.filter(c => c.aging < 30 && c.aging >= 0).length;
+  useEffect(() => {
+    const totalPayables = creditors.reduce((sum, c) => sum + Number(c.amount), 0);
+    const dueSoon = creditors.filter(c => c.aging < 30 && c.aging >= 0).length;
 
-  const stats = [
-    { name: 'Total Payables', stat: formatCurrency(totalPayables) },
-    { name: 'Due within 30 Days', stat: dueSoon },
-    { name: 'Avg. Payment Period', stat: '28 Days' }, // Mock stat
-  ];
+    setStats([
+      { name: 'Total Payables', stat: formatCurrency(totalPayables) },
+      { name: 'Due within 30 Days', stat: dueSoon },
+      { name: 'Avg. Payment Period', stat: '28 Days' }, // Mock stat calculation
+    ]);
+  }, [creditors]);
 
-  // --- Modal Handlers ---
+  // --- Handlers ---
   const handleAdd = () => setModalState({ open: true, mode: 'add', creditor: null });
   const handleEdit = (creditor) => setModalState({ open: true, mode: 'edit', creditor });
   const handleRemove = (creditor) => alert(`This would remove ${creditor.name}.`);
@@ -46,7 +68,6 @@ export default function CreditorsPage() {
 
   return (
     <DashboardLayout>
-      {/* --- Modal for Add/Edit --- */}
       <Modal open={modalState.open} setOpen={(val) => setModalState({...modalState, open: val})} title={`${modalState.mode === 'add' ? 'Add' : 'Edit'} Creditor`}>
         <CreditorForm creditor={modalState.creditor} onSave={handleSave} onCancel={handleCancel} />
       </Modal>
@@ -57,12 +78,10 @@ export default function CreditorsPage() {
         </button>
       </PageHeader>
 
-      {/* --- Stat Cards --- */}
       <dl className="mb-8 grid grid-cols-1 gap-5 sm:grid-cols-3">
         {stats.map((item) => ( <PageStat key={item.name} item={item} /> ))}
       </dl>
 
-      {/* --- Filters and Table --- */}
       <div className="rounded-lg bg-white p-6 shadow">
         <div className="mb-4 xl:flex xl:items-center xl:justify-between">
             <div className="w-full max-w-xs">
@@ -82,29 +101,31 @@ export default function CreditorsPage() {
         <div className="flow-root">
           <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
             <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Name</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Amount Due</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Due Date</th>
-                    <th className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Edit</span></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {creditors.map((creditor) => (
-                    <tr key={creditor.id}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">{creditor.name}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{formatCurrency(creditor.amount)}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{creditor.due}</td>
-                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                        <button onClick={() => handleEdit(creditor)} className="text-indigo-600 hover:text-indigo-900"><PencilIcon className="h-5 w-5" /></button>
-                        <button onClick={() => handleRemove(creditor)} className="ml-4 text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
-                      </td>
+              {isLoading ? <p className="text-center py-4 text-gray-500">Loading...</p> : (
+                <table className="min-w-full divide-y divide-gray-300">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Name</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Amount Due</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Due Date</th>
+                      <th className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Edit</span></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {filteredCreditors.map((creditor) => (
+                      <tr key={creditor.id}>
+                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">{creditor.name}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{formatCurrency(creditor.amount)}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{new Date(creditor.due).toLocaleDateString()}</td>
+                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+                          <button onClick={() => handleEdit(creditor)} className="text-indigo-600 hover:text-indigo-900"><PencilIcon className="h-5 w-5" /></button>
+                          <button onClick={() => handleRemove(creditor)} className="ml-4 text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>

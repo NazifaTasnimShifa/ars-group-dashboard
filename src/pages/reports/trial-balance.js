@@ -1,17 +1,36 @@
 // src/pages/reports/trial-balance.js
 
+import { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trialBalanceData } from '@/data/mockData';
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from '@/components/ui/PageHeader';
 
-const formatCurrency = (val) => val === 0 ? '-' : `৳${val.toLocaleString('en-IN')}`;
+const formatCurrency = (val) => val === 0 ? '-' : `৳${(val || 0).toLocaleString('en-IN')}`;
 
 export default function TrialBalancePage() {
   const { selectedCompany } = useAppContext();
-  const data = selectedCompany ? trialBalanceData[selectedCompany.id] : null;
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!data) { return <DashboardLayout><div>Loading...</div></DashboardLayout>; }
+  useEffect(() => {
+    if (selectedCompany) {
+      setLoading(true);
+      fetch(`/api/reports?type=trial-balance&companyId=${selectedCompany.id}`)
+        .then(res => res.json())
+        .then(fetchedData => {
+          setData(fetchedData);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error(err);
+          setLoading(false);
+        });
+    }
+  }, [selectedCompany]);
+
+  if (loading || !data || !data.accounts) { 
+    return <DashboardLayout><div>Loading...</div></DashboardLayout>; 
+  }
 
   const totalDebits = data.accounts.reduce((sum, acc) => sum + acc.debit, 0);
   const totalCredits = data.accounts.reduce((sum, acc) => sum + acc.credit, 0);
@@ -29,8 +48,8 @@ export default function TrialBalancePage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {data.accounts.map(acc => (
-              <tr key={acc.name}>
+            {data.accounts.map((acc, idx) => (
+              <tr key={`${acc.name}-${idx}`}>
                 <td className="whitespace-nowrap py-4 text-sm font-medium text-gray-800">{acc.name}</td>
                 <td className="whitespace-nowrap py-4 text-sm text-gray-500 text-right">{formatCurrency(acc.debit)}</td>
                 <td className="whitespace-nowrap py-4 text-sm text-gray-500 text-right">{formatCurrency(acc.credit)}</td>

@@ -12,7 +12,11 @@ import {
   fixedAssetsData, 
   processLossData, 
   chartOfAccountsData,
-  dashboardData
+  dashboardData,
+  balanceSheetData,
+  incomeStatementData,
+  cashFlowStatementData,
+  trialBalanceData
 } from '../src/data/mockData.js';
 
 const prisma = new PrismaClient();
@@ -20,7 +24,7 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Start seeding ...');
 
-  // 1. Clear existing data to avoid unique key conflicts during re-seeding
+  // 1. Clean up
   await prisma.process_loss.deleteMany();
   await prisma.chart_of_accounts.deleteMany();
   await prisma.fixed_assets.deleteMany();
@@ -32,16 +36,24 @@ async function main() {
   await prisma.users.deleteMany();
   await prisma.companies.deleteMany();
 
-  // 2. Seed Companies & Dashboard Stats
+  // 2. Seed Companies & Reports
   for (const company of companies) {
     const stats = dashboardData[company.id] || {};
+    const bs = balanceSheetData[company.id] || {};
+    const is = incomeStatementData[company.id] || {};
+    const cf = cashFlowStatementData[company.id] || {};
+    const tb = trialBalanceData[company.id] || {};
 
     await prisma.companies.create({
       data: {
         id: company.id,
         name: company.name,
         shortName: company.shortName,
-        dashboard_stats: stats, 
+        dashboard_stats: stats,
+        balance_sheet: bs,
+        income_statement: is,
+        cash_flow: cf,
+        trial_balance: tb
       },
     });
     console.log(`Created company: ${company.name}`);
@@ -78,13 +90,11 @@ async function main() {
       company_id: 'ars_corp',
     },
   });
-  console.log('Created users');
 
   // 4. Seed Related Data
   const companyIds = ['ars_lube', 'ars_corp'];
 
   for (const cid of companyIds) {
-    
     // Debtors
     const debtors = sundryDebtors[cid] || [];
     if (debtors.length > 0) {

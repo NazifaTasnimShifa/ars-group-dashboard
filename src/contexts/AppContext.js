@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { companies as mockCompanies } from '../data/mockData'; // Keeping mock structure for UI elements
 
 const AppContext = createContext();
 
@@ -14,27 +13,48 @@ export function AppProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  // Fetch companies helper
+  const fetchCompanies = async () => {
+    try {
+      const res = await fetch('/api/companies');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setCompanies(data);
+        return data;
+      }
+    } catch (err) {
+      console.error("Failed to load companies", err);
+    }
+    return [];
+  };
+
   useEffect(() => {
     // Rehydrate session on refresh
-    try {
-      const storedUser = sessionStorage.getItem('user');
-      const storedCompany = sessionStorage.getItem('selectedCompany');
+    const initAuth = async () => {
+      try {
+        const storedUser = sessionStorage.getItem('user');
+        const storedCompany = sessionStorage.getItem('selectedCompany');
 
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        setIsAuthenticated(true);
-        setCompanies(mockCompanies); // In real app, fetch these from DB too
+        // Always fetch fresh companies list
+        const fetchedCompanies = await fetchCompanies();
 
-        if (storedCompany) {
-          setSelectedCompany(JSON.parse(storedCompany));
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          setIsAuthenticated(true);
+
+          if (storedCompany) {
+            setSelectedCompany(JSON.parse(storedCompany));
+          }
         }
+      } catch (error) {
+        console.error("Could not rehydrate session.", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Could not rehydrate session.", error);
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    initAuth();
   }, []);
 
   const login = async (email, password) => {
@@ -50,28 +70,24 @@ export function AppProvider({ children }) {
       if (data.success) {
         const loggedInUser = data.user;
         
-        // Update State
         setUser(loggedInUser);
         setIsAuthenticated(true);
-        setCompanies(mockCompanies);
         
-        // Persist Session
+        // Ensure we have the latest company list
+        const currentCompanies = await fetchCompanies();
+        
         sessionStorage.setItem('user', JSON.stringify(loggedInUser));
 
-        // --- KEY REDIRECTION LOGIC ---
         if (loggedInUser.role === 'admin') {
-          // Admin gets to choose
           router.push('/select-company');
         } else if (loggedInUser.role === 'user' && loggedInUser.company_id) {
-          // Normal User is FORCED to their company
-          // Find the full company object from mock data based on the DB ID
-          const companyObj = mockCompanies.find(c => c.id === loggedInUser.company_id);
+          // Find company object
+          const companyObj = currentCompanies.find(c => c.id === loggedInUser.company_id);
           
           if (companyObj) {
             selectCompany(companyObj.id);
           } else {
-            // Fallback if company ID in DB doesn't match config
-            console.error("Assigned company ID not found in configuration");
+            console.error("Assigned company ID not found in database");
             router.push('/login?error=config_mismatch');
           }
         } else {
@@ -97,7 +113,7 @@ export function AppProvider({ children }) {
   };
 
   const selectCompany = (companyId) => {
-    const company = mockCompanies.find((c) => c.id === companyId);
+    const company = companies.find((c) => c.id === companyId);
     if (company) {
       setSelectedCompany(company);
       sessionStorage.setItem('selectedCompany', JSON.stringify(company));
@@ -106,7 +122,6 @@ export function AppProvider({ children }) {
   };
 
   const switchCompany = () => {
-    // Only Admins should really call this, but we handle security in the page too
     setSelectedCompany(null);
     sessionStorage.removeItem('selectedCompany');
     router.push('/select-company');

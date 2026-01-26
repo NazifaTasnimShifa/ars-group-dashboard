@@ -8,7 +8,7 @@ import Modal from '@/components/ui/Modal';
 import DebtorForm from '@/components/forms/DebtorForm';
 import PageStat from '@/components/ui/PageStat';
 import FilterButtons from '@/components/ui/FilterButtons';
-import { PencilIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid';
+import { PencilIcon, TrashIcon, MagnifyingGlassIcon, PlusIcon } from '@heroicons/react/20/solid';
 
 export default function DebtorsPage() {
   const [modalState, setModalState] = useState({ open: false, mode: 'add', debtor: null });
@@ -21,28 +21,24 @@ export default function DebtorsPage() {
 
   const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
-  // Fetch Data from Next.js API
-  useEffect(() => {
-    if (selectedCompany) {
-      setIsLoading(true);
-      // Using our new generic API endpoint
-      fetch(`/api/data?type=debtors&companyId=${selectedCompany.id}`)
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            setDebtors(data);
-          } else {
-            setDebtors([]); // Fallback if error
-          }
-          setIsLoading(false);
-        })
-        .catch(error => {
-          console.error("Failed to fetch debtors:", error);
-          setIsLoading(false);
-        });
+  // --- FETCH DATA ---
+  const fetchData = async () => {
+    if (!selectedCompany) return;
+    setIsLoading(true);
+    try {
+        const res = await fetch(`/api/data?type=debtors&companyId=${selectedCompany.id}`);
+        const data = await res.json();
+        setDebtors(Array.isArray(data) ? data : []);
+    } catch (error) {
+        console.error("Failed to fetch:", error);
+    } finally {
+        setIsLoading(false);
     }
-  }, [selectedCompany]);
+  };
 
+  useEffect(() => { fetchData(); }, [selectedCompany]);
+
+  // --- STATS & FILTERING ---
   const filteredDebtors = useMemo(() => {
     if (!searchQuery) return debtors;
     return debtors.filter(debtor => 
@@ -61,11 +57,54 @@ export default function DebtorsPage() {
     ]);
   }, [debtors]);
 
+  // --- ACTION HANDLERS ---
+  
+  // 1. DELETE
+  const handleRemove = async (debtor) => {
+    if(!confirm(`Are you sure you want to delete ${debtor.name}?`)) return;
+
+    try {
+        const res = await fetch(`/api/data?type=debtors&companyId=${selectedCompany.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: debtor.id })
+        });
+        if(res.ok) {
+            fetchData(); // Refresh table
+        } else {
+            alert('Failed to delete debtor');
+        }
+    } catch (e) {
+        console.error(e);
+    }
+  };
+
+  // 2. CREATE / UPDATE
+  const handleSave = async (formData) => {
+    const method = modalState.mode === 'edit' ? 'PUT' : 'POST';
+    
+    try {
+        const res = await fetch(`/api/data?type=debtors&companyId=${selectedCompany.id}`, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+
+        if(res.ok) {
+            setModalState({ ...modalState, open: false });
+            fetchData(); // Refresh table
+        } else {
+            alert('Failed to save debtor');
+        }
+    } catch (e) {
+        console.error(e);
+        alert('An error occurred');
+    }
+  };
+
   const handleAdd = () => setModalState({ open: true, mode: 'add', debtor: null });
   const handleEdit = (debtor) => setModalState({ open: true, mode: 'edit', debtor });
-  const handleRemove = (debtor) => alert(`This would remove ${debtor.name}.`);
-  const handleSave = () => setModalState({ open: false, mode: 'add', debtor: null });
-  const handleCancel = () => setModalState({ open: false, mode: 'add', debtor: null });
+  const handleCancel = () => setModalState({ ...modalState, open: false });
 
   return (
     <DashboardLayout>
@@ -75,7 +114,7 @@ export default function DebtorsPage() {
 
       <PageHeader title="Sundry Debtors" description="Manage all parties who owe money to the company.">
         <button onClick={handleAdd} type="button" className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
-           Add Debtor
+           <PlusIcon className="-ml-0.5 mr-1.5 h-5 w-5 inline" /> Add Debtor
         </button>
       </PageHeader>
 
@@ -112,7 +151,7 @@ export default function DebtorsPage() {
                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Amount</th>
                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Due Date</th>
                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Aging</th>
-                        <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Edit</span></th>
+                        <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Actions</span></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">

@@ -1,8 +1,7 @@
 // src/pages/inventory/sales.js
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { salesData } from '@/data/mockData';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import Modal from '@/components/ui/Modal';
@@ -28,25 +27,47 @@ export default function SalesPage() {
   const [modalState, setModalState] = useState({ open: false, mode: 'add', sale: null });
   const [searchQuery, setSearchQuery] = useState('');
   const { selectedCompany } = useAppContext();
-  const formatCurrency = (value) => `৳${value.toLocaleString('en-IN')}`;
+  const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
-  const sales = useMemo(() => {
-    const companySales = selectedCompany ? salesData[selectedCompany.id] : [];
-    if (!searchQuery) return companySales;
-    return companySales.filter(s => 
+  const [sales, setSales] = useState([]);
+  const [stats, setStats] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (selectedCompany) {
+      setIsLoading(true);
+      fetch(`/api/data?type=sales&companyId=${selectedCompany.id}`)
+        .then(res => res.json())
+        .then(data => {
+          setSales(Array.isArray(data) ? data : []);
+          setIsLoading(false);
+        })
+        .catch(error => {
+          console.error("Failed to fetch sales:", error);
+          setSales([]);
+          setIsLoading(false);
+        });
+    }
+  }, [selectedCompany]);
+
+  const filteredSales = useMemo(() => {
+    if (!searchQuery) return sales;
+    return sales.filter(s => 
       s.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.id.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [selectedCompany, searchQuery]);
+  }, [sales, searchQuery]);
 
-  const totalSales = sales.reduce((sum, s) => sum + s.amount, 0);
-  const unpaidInvoices = sales.filter(s => s.status === 'Unpaid').length;
+  useEffect(() => {
+    const totalSales = sales.reduce((sum, s) => sum + Number(s.amount), 0);
+    const unpaidInvoices = sales.filter(s => s.status === 'Unpaid').length;
 
-  const stats = [
-    { name: 'Total Sales (YTD)', stat: formatCurrency(totalSales) },
-    { name: 'Unpaid Invoices', stat: unpaidInvoices },
-    { name: 'Total Invoices', stat: sales.length },
-  ];
+    setStats([
+        { name: 'Total Sales (YTD)', stat: formatCurrency(totalSales) },
+        { name: 'Unpaid Invoices', stat: unpaidInvoices },
+        { name: 'Total Invoices', stat: sales.length },
+    ]);
+  }, [sales]);
 
   const handleAdd = () => setModalState({ open: true, mode: 'add', sale: null });
   const handleEdit = (sale) => setModalState({ open: true, mode: 'edit', sale });
@@ -84,33 +105,35 @@ export default function SalesPage() {
         <div className="flow-root">
           <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
             <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Invoice #</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Customer</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Amount</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
-                    <th className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Actions</span></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {sales.map((s) => (
-                    <tr key={s.id}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-indigo-600 sm:pl-0 hover:underline cursor-pointer">{s.id}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{s.customer}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{s.date}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{formatCurrency(s.amount)}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500"><StatusBadge status={s.status} /></td>
-                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                        <button onClick={() => handleEdit(s)} className="text-indigo-600 hover:text-indigo-900"><PencilIcon className="h-5 w-5" /></button>
-                        <button onClick={() => handleRemove(s)} className="ml-4 text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
-                      </td>
+              {isLoading ? <p className="text-center py-4 text-gray-500">Loading...</p> : (
+                <table className="min-w-full divide-y divide-gray-300">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Invoice #</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Customer</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Amount</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
+                      <th className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Actions</span></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {filteredSales.map((s) => (
+                      <tr key={s.id}>
+                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-indigo-600 sm:pl-0 hover:underline cursor-pointer">{s.id}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{s.customer}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{new Date(s.date).toLocaleDateString()}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{formatCurrency(s.amount)}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500"><StatusBadge status={s.status} /></td>
+                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+                          <button onClick={() => handleEdit(s)} className="text-indigo-600 hover:text-indigo-900"><PencilIcon className="h-5 w-5" /></button>
+                          <button onClick={() => handleRemove(s)} className="ml-4 text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>

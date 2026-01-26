@@ -1,16 +1,14 @@
 // src/pages/inventory/process-loss.js
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { processLossData } from '@/data/mockData';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import Modal from '@/components/ui/Modal';
 import PageStat from '@/components/ui/PageStat';
-import FilterButtons from '@/components/ui/FilterButtons'; // NEW
+import FilterButtons from '@/components/ui/FilterButtons';
 import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid';
 
-// A simple form for the modal
 const ProcessLossForm = ({ onSave, onCancel }) => (
     <form onSubmit={(e) => { e.preventDefault(); onSave(); }}>
         <div className="space-y-4">
@@ -47,25 +45,46 @@ const ProcessLossForm = ({ onSave, onCancel }) => (
 
 export default function ProcessLossPage() {
   const [modalOpen, setModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(''); // NEW
+  const [searchQuery, setSearchQuery] = useState('');
   const { selectedCompany } = useAppContext();
 
-  const losses = useMemo(() => { // NEW
-    const companyLosses = selectedCompany ? processLossData[selectedCompany.id] : [];
-    if (!searchQuery) return companyLosses;
-    return companyLosses.filter(loss => 
+  const [losses, setLosses] = useState([]);
+  const [stats, setStats] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (selectedCompany) {
+      setIsLoading(true);
+      fetch(`/api/data?type=process-loss&companyId=${selectedCompany.id}`)
+        .then(res => res.json())
+        .then(data => {
+          setLosses(Array.isArray(data) ? data : []);
+          setIsLoading(false);
+        })
+        .catch(error => {
+          console.error("Failed to fetch process loss:", error);
+          setLosses([]);
+          setIsLoading(false);
+        });
+    }
+  }, [selectedCompany]);
+
+  const filteredLosses = useMemo(() => {
+    if (!searchQuery) return losses;
+    return losses.filter(loss => 
       loss.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
       loss.type.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [selectedCompany, searchQuery]);
+  }, [losses, searchQuery]);
 
-  const totalLossQty = losses.reduce((sum, item) => sum + item.quantity, 0);
-
-  const stats = [
-    { name: 'Total Loss Events', stat: losses.length },
-    { name: 'Total Quantity Lost', stat: `${totalLossQty.toFixed(2)} Litres` },
-    { name: 'Most Common Type', stat: 'Vaporization' },
-  ];
+  useEffect(() => {
+    const totalLossQty = losses.reduce((sum, item) => sum + Number(item.quantity), 0);
+    setStats([
+        { name: 'Total Loss Events', stat: losses.length },
+        { name: 'Total Quantity Lost', stat: `${totalLossQty.toFixed(2)} Units` }, // Simplified unit
+        { name: 'Most Common Type', stat: 'Vaporization' }, // Mock calc
+    ]);
+  }, [losses]);
 
   return (
     <DashboardLayout>
@@ -84,7 +103,6 @@ export default function ProcessLossPage() {
       </dl>
 
       <div className="rounded-lg bg-white p-6 shadow">
-        {/* --- UPDATED: Filter Controls Section --- */}
         <div className="sm:flex sm:items-center sm:justify-between mb-4">
             <div className="w-full max-w-xs">
               <label htmlFor="search" className="sr-only">Search</label>
@@ -103,30 +121,32 @@ export default function ProcessLossPage() {
         <div className="flow-root">
           <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
             <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Event ID</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Product</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Type</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Quantity</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Notes</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {losses.map((loss) => (
-                    <tr key={loss.id}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">{loss.id}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{loss.date}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{loss.product}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{loss.type}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-red-600 font-semibold">{loss.quantity} {loss.unit}</td>
-                      <td className="px-3 py-4 text-sm text-gray-500 max-w-xs truncate">{loss.notes}</td>
+              {isLoading ? <p className="text-center py-4 text-gray-500">Loading...</p> : (
+                <table className="min-w-full divide-y divide-gray-300">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Event ID</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Product</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Type</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Quantity</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Notes</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {filteredLosses.map((loss) => (
+                      <tr key={loss.id}>
+                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">{loss.id}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{new Date(loss.date).toLocaleDateString()}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{loss.product}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{loss.type}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-red-600 font-semibold">{loss.quantity} {loss.unit}</td>
+                        <td className="px-3 py-4 text-sm text-gray-500 max-w-xs truncate">{loss.notes}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>

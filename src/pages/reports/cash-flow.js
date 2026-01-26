@@ -1,11 +1,11 @@
 // src/pages/reports/cash-flow.js
 
+import { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { cashFlowStatementData } from '@/data/mockData';
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from '@/components/ui/PageHeader';
 
-const formatCurrency = (val) => `৳${val.toLocaleString('en-IN')}`;
+const formatCurrency = (val) => `৳${(val || 0).toLocaleString('en-IN')}`;
 
 const CashFlowRow = ({ name, amount, isTotal = false, isSubtotal = false, indent = false }) => {
     const isNegative = amount < 0;
@@ -20,7 +20,7 @@ const CashFlowRow = ({ name, amount, isTotal = false, isSubtotal = false, indent
     );
 };
 
-const CashFlowSection = ({ title, items }) => {
+const CashFlowSection = ({ title, items = [] }) => {
     const total = items.reduce((sum, item) => sum + item.amount, 0);
     return (
         <div className="mt-4">
@@ -35,9 +35,26 @@ const CashFlowSection = ({ title, items }) => {
 
 export default function CashFlowPage() {
   const { selectedCompany } = useAppContext();
-  const data = selectedCompany ? cashFlowStatementData[selectedCompany.id] : null;
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!data) {
+  useEffect(() => {
+    if (selectedCompany) {
+      setLoading(true);
+      fetch(`/api/reports?type=cash-flow&companyId=${selectedCompany.id}`)
+        .then(res => res.json())
+        .then(fetchedData => {
+          setData(fetchedData);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error(err);
+          setLoading(false);
+        });
+    }
+  }, [selectedCompany]);
+
+  if (loading || !data || !data.operating) {
     return <DashboardLayout><div>Loading report data...</div></DashboardLayout>;
   }
 

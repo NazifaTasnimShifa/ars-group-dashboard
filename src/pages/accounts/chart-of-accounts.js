@@ -1,8 +1,8 @@
 // src/pages/accounts/chart-of-accounts.js
 
+import { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { chartOfAccountsData } from '@/data/mockData';
-import DashboardLayout from "@/components/layout/DashboardLayout";
+import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import { PlusIcon } from '@heroicons/react/20/solid';
 
@@ -16,8 +16,26 @@ const typeColors = {
 
 export default function ChartOfAccountsPage() {
   const { selectedCompany } = useAppContext();
-  const accounts = selectedCompany ? chartOfAccountsData[selectedCompany.id] : [];
-  const formatCurrency = (value) => `৳${value.toLocaleString('en-IN')}`;
+  const [accounts, setAccounts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
+
+  useEffect(() => {
+    if (selectedCompany) {
+      setIsLoading(true);
+      fetch(`/api/data?type=chart-of-accounts&companyId=${selectedCompany.id}`)
+        .then(res => res.json())
+        .then(data => {
+          setAccounts(Array.isArray(data) ? data : []);
+          setIsLoading(false);
+        })
+        .catch(error => {
+          console.error("Failed to fetch chart of accounts:", error);
+          setAccounts([]);
+          setIsLoading(false);
+        });
+    }
+  }, [selectedCompany]);
 
   return (
     <DashboardLayout>
@@ -33,6 +51,7 @@ export default function ChartOfAccountsPage() {
       <div className="rounded-lg bg-white shadow">
         <div className="flow-root">
             <div className="inline-block min-w-full align-middle">
+              {isLoading ? <p className="text-center py-4 text-gray-500">Loading...</p> : (
                 <table className="min-w-full divide-y divide-gray-300">
                     <thead className="bg-gray-50">
                         <tr>
@@ -57,6 +76,7 @@ export default function ChartOfAccountsPage() {
                         ))}
                     </tbody>
                 </table>
+              )}
             </div>
         </div>
       </div>

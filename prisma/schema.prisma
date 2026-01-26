@@ -6,7 +6,6 @@ generator client {
 
 datasource db {
   provider = "mysql"
-  // Replace env("DATABASE_URL") with the direct string
   url      = "mysql://u448110646_ars_admin:v5jL>3JG;Hl~J58c!OFS@srv992.hstgr.io:3306/u448110646_ars_group"
 }
 
@@ -14,7 +13,13 @@ model companies {
   id                String              @id @db.VarChar(50)
   name              String              @db.VarChar(255)
   shortName         String              @db.VarChar(100)
-  dashboard_stats   Json?               // Stores the dashboard stats JSON
+  dashboard_stats   Json?
+  // New Report Fields
+  balance_sheet     Json?
+  income_statement  Json?
+  cash_flow         Json?
+  trial_balance     Json?
+  
   users             users[]
   debtors           debtors[]
   creditors         creditors[]
@@ -61,7 +66,7 @@ model creditors {
 }
 
 model inventory_items {
-  id         String    @id @db.VarChar(50) // Stores 'L001', 'C001' etc.
+  id         String    @id @db.VarChar(50)
   company_id String    @db.VarChar(50)
   name       String    @db.VarChar(255)
   sku        String    @db.VarChar(100)
@@ -75,7 +80,7 @@ model inventory_items {
 }
 
 model sales {
-  id         String    @id @db.VarChar(50) // Stores 'INV-24-001'
+  id         String    @id @db.VarChar(50)
   company_id String    @db.VarChar(50)
   customer   String    @db.VarChar(255)
   date       DateTime  @db.Date
@@ -85,7 +90,7 @@ model sales {
 }
 
 model purchases {
-  id         String    @id @db.VarChar(50) // Stores 'PO-24-001'
+  id         String    @id @db.VarChar(50)
   company_id String    @db.VarChar(50)
   supplier   String    @db.VarChar(255)
   date       DateTime  @db.Date
@@ -95,7 +100,7 @@ model purchases {
 }
 
 model fixed_assets {
-  id              String    @id @db.VarChar(50) // Stores 'FA-001'
+  id              String    @id @db.VarChar(50)
   company_id      String    @db.VarChar(50)
   name            String    @db.VarChar(255)
   acquisitionDate DateTime  @db.Date
@@ -106,7 +111,7 @@ model fixed_assets {
 }
 
 model process_loss {
-  id         String    @id @db.VarChar(50) // Stores 'PL-001'
+  id         String    @id @db.VarChar(50)
   company_id String    @db.VarChar(50)
   date       DateTime  @db.Date
   product    String    @db.VarChar(255)

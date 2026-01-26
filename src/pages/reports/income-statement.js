@@ -1,12 +1,12 @@
 // src/pages/reports/income-statement.js
 
+import { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { incomeStatementData } from '@/data/mockData';
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from '@/components/ui/PageHeader';
 
 const StatementRow = ({ name, amount, isTotal = false, isSubtotal = false, indent = false, isLoss = false }) => {
-    const formatCurrency = (val) => `৳${val.toLocaleString('en-IN')}`;
+    const formatCurrency = (val) => `৳${(val || 0).toLocaleString('en-IN')}`;
     const amountColor = isLoss ? 'text-red-600' : 'text-gray-800';
     return (
         <div className={`flex justify-between py-2 ${!isTotal && 'border-b border-gray-200'} ${indent && 'pl-6'}`}>
@@ -22,9 +22,26 @@ const StatementRow = ({ name, amount, isTotal = false, isSubtotal = false, inden
 
 export default function IncomeStatementPage() {
   const { selectedCompany } = useAppContext();
-  const data = selectedCompany ? incomeStatementData[selectedCompany.id] : null;
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!data) {
+  useEffect(() => {
+    if (selectedCompany) {
+      setLoading(true);
+      fetch(`/api/reports?type=income-statement&companyId=${selectedCompany.id}`)
+        .then(res => res.json())
+        .then(fetchedData => {
+          setData(fetchedData);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error(err);
+          setLoading(false);
+        });
+    }
+  }, [selectedCompany]);
+
+  if (loading || !data || !data.revenue) {
     return <DashboardLayout><div>Loading report data...</div></DashboardLayout>;
   }
 
@@ -48,18 +65,13 @@ export default function IncomeStatementPage() {
             </div>
 
             <div className="space-y-4">
-                {/* Revenue */}
                 <StatementRow name={data.revenue.name} amount={data.revenue.amount} />
-
-                {/* Cost of Goods Sold */}
                 <StatementRow name={`Less: ${data.costOfGoodsSold.name}`} amount={data.costOfGoodsSold.amount} />
 
-                {/* Gross Profit */}
                 <div className="pt-2 border-t-2 border-gray-400">
                     <StatementRow name="Gross Profit" amount={grossProfit} isSubtotal isLoss={grossProfit < 0} />
                 </div>
 
-                {/* Expenses */}
                 <div className="pt-4">
                     <p className="text-sm font-semibold text-gray-600">Less: Operating Expenses</p>
                     <div className="mt-2 space-y-2 border-l-2 border-gray-200 pl-2">
@@ -70,10 +82,8 @@ export default function IncomeStatementPage() {
                     </div>
                 </div>
 
-                {/* Other Income */}
                 <StatementRow name={`Add: ${data.otherIncome.name}`} amount={data.otherIncome.amount} />
 
-                {/* Net Profit/Loss */}
                 <div className="mt-4 pt-4 border-t-2 border-gray-800">
                     <StatementRow name="Net Profit / (Loss) Before Tax" amount={profitBeforeTax} isTotal isLoss={profitBeforeTax < 0} />
                 </div>

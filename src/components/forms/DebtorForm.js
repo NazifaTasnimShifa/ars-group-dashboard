@@ -1,8 +1,28 @@
 // src/components/forms/DebtorForm.js
 
 export default function DebtorForm({ debtor, onSave, onCancel }) {
+  
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    // Extract data directly from the form DOM
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+
+    // Add specific logic for types if needed (e.g. convert amounts to numbers)
+    data.amount = parseFloat(data.amount);
+    data.aging = 0; // New debtors start with 0 aging
+    
+    // Include ID if we are editing
+    if (debtor?.id) {
+      data.id = debtor.id;
+    }
+
+    onSave(data);
+  };
+
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSave(); }}>
+    <form onSubmit={handleSubmit}>
       <div className="space-y-4">
         {/* Debtor Name */}
         <div>
@@ -47,7 +67,8 @@ export default function DebtorForm({ debtor, onSave, onCancel }) {
           <div>
             <label htmlFor="due" className="block text-sm font-medium leading-6 text-gray-900">Due Date</label>
             <div className="mt-2">
-              <input type="date" name="due" id="due" defaultValue={debtor?.due || ''} required className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600" />
+              // Default to a future date if new
+              <input type="date" name="due" id="due" defaultValue={debtor?.due ? new Date(debtor.due).toISOString().split('T')[0] : ''} required className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600" />
             </div>
           </div>
         </div>
@@ -55,7 +76,7 @@ export default function DebtorForm({ debtor, onSave, onCancel }) {
       </div>
       <div className="mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
         <button type="submit" className="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 sm:col-start-2">
-          Save Debtor
+          {debtor ? 'Update Debtor' : 'Save Debtor'}
         </button>
         <button type="button" className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0" onClick={onCancel}>
           Cancel
