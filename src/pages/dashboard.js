@@ -1,6 +1,6 @@
 // src/pages/dashboard.js
 
-import { useState, useEffect, Fragment } from 'react'; // Added useEffect
+import { useState, useEffect, useCallback, Fragment } from 'react';
 import { Menu, Transition } from '@headlessui/react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -13,7 +13,13 @@ import RevenueChart from '@/components/dashboard/RevenueChart';
 import DebtorsTable from '@/components/dashboard/DebtorsTable';
 import CreditorsTable from '@/components/dashboard/CreditorsTable';
 import Modal from '@/components/ui/Modal';
+
+// Forms
 import SaleForm from '@/components/forms/SaleForm';
+import PurchaseOrderForm from '@/components/forms/PurchaseOrderForm';
+import InventoryItemForm from '@/components/forms/InventoryItemForm';
+import DebtorForm from '@/components/forms/DebtorForm';
+import CreditorForm from '@/components/forms/CreditorForm';
 
 import {
   BanknotesIcon,
@@ -33,50 +39,111 @@ export default function DashboardPage() {
   const [modalState, setModalState] = useState({ open: false, title: '', content: null });
   const { selectedCompany } = useAppContext();
   
-  // State for dynamic data
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const formatCurrency = (value) => `৳${(value ?? 0).toLocaleString('en-IN')}`;
 
-  // Fetch data from API
-  useEffect(() => {
-    if (selectedCompany) {
-      setLoading(true);
-      fetch(`/api/dashboard?companyId=${selectedCompany.id}`)
-        .then((res) => res.json())
-        .then((fetchedData) => {
-          setData(fetchedData);
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error("Failed to fetch dashboard data", err);
-          setLoading(false);
-        });
+  // --- 1. Fetch Dashboard Data ---
+  const fetchDashboardData = useCallback(async () => {
+    if (!selectedCompany) return;
+    setLoading(true);
+    try {
+        const res = await fetch(`/api/dashboard?companyId=${selectedCompany.id}`);
+        const fetchedData = await res.json();
+        setData(fetchedData);
+    } catch (err) {
+        console.error("Failed to fetch dashboard data", err);
+    } finally {
+        setLoading(false);
     }
   }, [selectedCompany]);
 
-  const handleOpenModal = (title, formComponent) => {
-    setModalState({ open: true, title: `Add New ${title}`, content: formComponent });
+  useEffect(() => { fetchDashboardData(); }, [fetchDashboardData]);
+
+  // --- 2. Generic Save Handler for All Forms ---
+  const handleSave = async (type, formData) => {
+    try {
+        const res = await fetch(`/api/data?type=${type}&companyId=${selectedCompany.id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+
+        if (res.ok) {
+            setModalState((prev) => ({ ...prev, open: false }));
+            fetchDashboardData(); // Refresh dashboard stats immediately
+        } else {
+            alert('Failed to save data. Please try again.');
+        }
+    } catch (error) {
+        console.error(error);
+        alert('An error occurred while saving.');
+    }
   };
 
-  const handleCloseModal = () =>
-    setModalState((prev) => ({ ...prev, open: false, title: '', content: null }));
+  const handleCloseModal = () => setModalState((prev) => ({ ...prev, open: false }));
 
-  if (!selectedCompany) {
-    return <DashboardLayout><div>Loading Company Data...</div></DashboardLayout>;
-  }
+  // --- 3. Helper to Open Specific Forms ---
+  const openModal = (type) => {
+    let title = '';
+    let FormComponent = null;
+    let dataType = '';
 
-  if (loading) {
-    return <DashboardLayout><div>Loading Dashboard...</div></DashboardLayout>;
-  }
+    switch (type) {
+        case 'sale':
+            title = 'Record New Sale';
+            dataType = 'sales';
+            FormComponent = SaleForm;
+            break;
+        case 'purchase':
+            title = 'Record Purchase Order';
+            dataType = 'purchases';
+            FormComponent = PurchaseOrderForm;
+            break;
+        case 'product':
+            title = 'Add Inventory Item';
+            dataType = 'inventory';
+            FormComponent = InventoryItemForm;
+            break;
+        case 'debtor':
+            title = 'Add Customer (Debtor)';
+            dataType = 'debtors';
+            FormComponent = DebtorForm;
+            break;
+        case 'creditor':
+            title = 'Add Supplier (Creditor)';
+            dataType = 'creditors';
+            FormComponent = CreditorForm;
+            break;
+        default: return;
+    }
+
+    setModalState({
+        open: true,
+        title,
+        content: (
+            <FormComponent 
+                onSave={(data) => handleSave(dataType, data)} 
+                onCancel={handleCloseModal} 
+            />
+        )
+    });
+  };
+
+  if (!selectedCompany) return <DashboardLayout><div>Loading...</div></DashboardLayout>;
+  if (loading && !data) return <DashboardLayout><div>Loading Dashboard...</div></DashboardLayout>;
 
   if (!data || Object.keys(data).length === 0) {
     return (
       <DashboardLayout>
-        <div className="p-4 text-center">
-            <h3 className="text-lg font-medium text-gray-900">No data available for {selectedCompany.name}</h3>
-            <p className="text-gray-500">Please configure the dashboard data source.</p>
+        <div className="p-12 text-center">
+            <h3 className="text-xl font-bold text-gray-900">Welcome to {selectedCompany.name}</h3>
+            <p className="text-gray-500 mt-2">Your dashboard is ready. Start by adding some data!</p>
+            <div className="mt-6 flex justify-center gap-4">
+                <button onClick={() => openModal('sale')} className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500">Add Sale</button>
+                <button onClick={() => openModal('product')} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">Add Product</button>
+            </div>
         </div>
       </DashboardLayout>
     );
@@ -96,6 +163,7 @@ export default function DashboardPage() {
         <div className="sm:flex sm:items-center sm:justify-between">
           <h3 className="text-base font-semibold leading-6 text-gray-900">Dashboard Overview</h3>
 
+          {/* --- Add New Dropdown --- */}
           <Menu as="div" className="relative inline-block text-left">
             <div>
               <Menu.Button className="inline-flex w-full items-center justify-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
@@ -114,25 +182,21 @@ export default function DashboardPage() {
               leaveFrom="transform opacity-100 scale-100"
               leaveTo="transform opacity-0 scale-95"
             >
-              <Menu.Items className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+              <Menu.Items className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
                 <div className="py-1">
-                  <Menu.Item>
-                    {({ active }) => (
-                      <button
-                        type="button"
-                        onClick={() => handleOpenModal('Sale', <SaleForm onSave={handleCloseModal} onCancel={handleCloseModal} />)}
-                        className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}
-                      >
-                        Add Sale
-                      </button>
-                    )}
-                  </Menu.Item>
+                  <Menu.Item>{({ active }) => <button onClick={() => openModal('sale')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Sale Invoice</button>}</Menu.Item>
+                  <Menu.Item>{({ active }) => <button onClick={() => openModal('purchase')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Purchase Order</button>}</Menu.Item>
+                  <Menu.Item>{({ active }) => <button onClick={() => openModal('product')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Inventory Item</button>}</Menu.Item>
+                  <div className="border-t border-gray-100 my-1"></div>
+                  <Menu.Item>{({ active }) => <button onClick={() => openModal('debtor')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Customer</button>}</Menu.Item>
+                  <Menu.Item>{({ active }) => <button onClick={() => openModal('creditor')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Supplier</button>}</Menu.Item>
                 </div>
               </Menu.Items>
             </Transition>
           </Menu>
         </div>
 
+        {/* Stats Grid */}
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {data.stats?.map((item) => {
             const Icon = iconMap[item.icon] || BanknotesIcon;
@@ -147,28 +211,20 @@ export default function DashboardPage() {
           })}
         </div>
 
+        {/* Rest of Dashboard */}
         <div>
-          <h3 className="text-base font-semibold leading-6 text-gray-900 mb-4">
-            Financial Health Overview
-          </h3>
+          <h3 className="text-base font-semibold leading-6 text-gray-900 mb-4">Financial Health Overview</h3>
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              {data.profitability && <ProfitabilityRatios data={data.profitability} />}
-            </div>
+            <div className="lg:col-span-2">{data.profitability && <ProfitabilityRatios data={data.profitability} />}</div>
             {data.currentRatio && <CurrentRatio data={data.currentRatio} />}
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
-          <div className="lg:col-span-3">
-            {data.topExpenses && <TopExpenses data={data.topExpenses} />}
-          </div>
-          <div className="lg:col-span-2">
-            {data.revenueSources && <RevenueSources data={data.revenueSources} />}
-          </div>
+          <div className="lg:col-span-3">{data.topExpenses && <TopExpenses data={data.topExpenses} />}</div>
+          <div className="lg:col-span-2">{data.revenueSources && <RevenueSources data={data.revenueSources} />}</div>
         </div>
 
-        {/* Always render charts - RevenueChart currently uses internal static data */}
         <div className="grid grid-cols-1 gap-5">
             <RevenueChart />
         </div>
