@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+// src/pages/fixed-assets.js
+
+import { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -10,78 +12,68 @@ import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/20/solid';
 export default function FixedAssetsPage() {
   const [modalState, setModalState] = useState({ open: false, mode: 'add', asset: null });
   const { selectedCompany } = useAppContext();
-  const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
-
   const [assets, setAssets] = useState([]);
-  const [stats, setStats] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchData = useCallback(async () => {
-    if (!selectedCompany) return;
-    setIsLoading(true);
-    try {
-        const res = await fetch(`/api/data?type=fixed-assets&companyId=${selectedCompany.id}`);
-        const data = await res.json();
-        setAssets(Array.isArray(data) ? data : []);
-    } catch (error) {
-        console.error("Failed to fetch fixed assets:", error);
-    } finally {
-        setIsLoading(false);
-    }
-  }, [selectedCompany]);
+  const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  const handleRemove = async (asset) => {
-    if(!confirm(`Remove ${asset.name}?`)) return;
-    try {
-        const res = await fetch(`/api/data?type=fixed-assets&companyId=${selectedCompany.id}`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: asset.id })
-        });
-        if(res.ok) fetchData();
-    } catch (e) { console.error(e); }
+  const fetchData = async () => {
+      if(!selectedCompany) return;
+      setIsLoading(true);
+      try {
+          const res = await fetch(`/api/assets?company_id=${selectedCompany.id}`);
+          const data = await res.json();
+          if(data.success) setAssets(data.data);
+      } catch(e) { console.error(e); }
+      finally { setIsLoading(false); }
   };
+
+  useEffect(() => { fetchData(); }, [selectedCompany]);
+
+  const totalCost = assets.reduce((sum, a) => sum + Number(a.cost), 0);
+  const totalBookValue = assets.reduce((sum, a) => sum + Number(a.bookValue), 0);
+
+  const stats = [
+    { name: 'Total Asset Cost', stat: formatCurrency(totalCost) },
+    { name: 'Total Current Book Value', stat: formatCurrency(totalBookValue) },
+    { name: 'Total Assets', stat: assets.length },
+  ];
 
   const handleSave = async (formData) => {
-    const method = modalState.mode === 'edit' ? 'PUT' : 'POST';
-    try {
-        const res = await fetch(`/api/data?type=fixed-assets&companyId=${selectedCompany.id}`, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
-        });
-        if(res.ok) {
-            setModalState({ ...modalState, open: false });
-            fetchData();
-        }
-    } catch (e) { console.error(e); }
+      const payload = { 
+          ...formData, 
+          company_id: selectedCompany.id,
+          id: modalState.mode === 'add' ? `FA-${Date.now()}` : modalState.asset.id 
+      };
+      
+      const method = modalState.mode === 'add' ? 'POST' : 'PUT';
+      const url = modalState.mode === 'add' ? '/api/assets' : `/api/assets/${modalState.asset.id}`;
+
+      try {
+          const res = await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+          if(res.ok) {
+              setModalState({ open: false, mode: 'add', asset: null });
+              fetchData();
+          } else { alert('Failed to save'); }
+      } catch(e) { console.error(e); alert('Error saving data'); }
   };
 
-  useEffect(() => {
-    const totalCost = assets.reduce((sum, a) => sum + Number(a.cost), 0);
-    const totalBookValue = assets.reduce((sum, a) => sum + Number(a.bookValue), 0);
-
-    setStats([
-        { name: 'Total Asset Cost', stat: formatCurrency(totalCost) },
-        { name: 'Total Current Book Value', stat: formatCurrency(totalBookValue) },
-        { name: 'Total Assets', stat: assets.length },
-    ]);
-  }, [assets]);
-
-  const handleAdd = () => setModalState({ open: true, mode: 'add', asset: null });
-  const handleEdit = (asset) => setModalState({ open: true, mode: 'edit', asset });
-  const handleCancel = () => setModalState({ ...modalState, open: false });
+  const handleRemove = async (asset) => {
+      if(!confirm(`Delete ${asset.name}?`)) return;
+      try {
+          const res = await fetch(`/api/assets/${asset.id}`, { method: 'DELETE' });
+          if(res.ok) fetchData();
+      } catch(e) { console.error(e); }
+  };
 
   return (
     <DashboardLayout>
       <Modal open={modalState.open} setOpen={(val) => setModalState({...modalState, open: val})} title={`${modalState.mode === 'add' ? 'Add' : 'Edit'} Fixed Asset`}>
-        <FixedAssetForm asset={modalState.asset} onSave={handleSave} onCancel={handleCancel} />
+        <FixedAssetForm asset={modalState.asset} onSave={handleSave} onCancel={() => setModalState({...modalState, open: false})} />
       </Modal>
 
       <PageHeader title="Fixed Assets Register" description="A list of all long-term assets owned by the company.">
-        <button onClick={handleAdd} type="button" className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+        <button onClick={() => setModalState({ open: true, mode: 'add', asset: null })} type="button" className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
           <PlusIcon className="-ml-0.5 mr-1.5 h-5 w-5 inline" /> Add Asset
         </button>
       </PageHeader>
@@ -95,7 +87,7 @@ export default function FixedAssetsPage() {
         <div className="flow-root">
           <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
             <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-              {isLoading ? <p className="text-center py-4 text-gray-500">Loading...</p> : (
+              {isLoading ? <p>Loading...</p> : (
               <table className="min-w-full divide-y divide-gray-300">
                 <thead className="bg-gray-50">
                   <tr>
@@ -116,7 +108,7 @@ export default function FixedAssetsPage() {
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-red-500 text-right">({formatCurrency(asset.depreciation)})</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm font-semibold text-gray-900 text-right">{formatCurrency(asset.bookValue)}</td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                        <button onClick={() => handleEdit(asset)} className="text-indigo-600 hover:text-indigo-900"><PencilIcon className="h-5 w-5" /></button>
+                        <button onClick={() => setModalState({ open: true, mode: 'edit', asset })} className="text-indigo-600 hover:text-indigo-900"><PencilIcon className="h-5 w-5" /></button>
                         <button onClick={() => handleRemove(asset)} className="ml-4 text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
                       </td>
                     </tr>

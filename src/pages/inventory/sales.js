@@ -1,4 +1,6 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+// src/pages/inventory/sales.js
+
+import { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -15,7 +17,7 @@ const StatusBadge = ({ status }) => {
         'Unpaid': 'bg-red-100 text-red-800',
     };
     return (
-        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${statusColors[status] || 'bg-gray-100'}`}>
+        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${statusColors[status] || 'bg-gray-100 text-gray-800'}`}>
             {status}
         </span>
     );
@@ -25,54 +27,24 @@ export default function SalesPage() {
   const [modalState, setModalState] = useState({ open: false, mode: 'add', sale: null });
   const [searchQuery, setSearchQuery] = useState('');
   const { selectedCompany } = useAppContext();
-  const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
-
   const [sales, setSales] = useState([]);
-  const [stats, setStats] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchData = useCallback(async () => {
-    if (!selectedCompany) return;
-    setIsLoading(true);
-    try {
-        const res = await fetch(`/api/data?type=sales&companyId=${selectedCompany.id}`);
-        const data = await res.json();
-        setSales(Array.isArray(data) ? data : []);
-    } catch (error) {
-        console.error("Failed to fetch sales:", error);
-    } finally {
-        setIsLoading(false);
-    }
-  }, [selectedCompany]);
+  const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  const handleRemove = async (sale) => {
-    if(!confirm(`Remove Invoice ${sale.id}?`)) return;
-    try {
-        const res = await fetch(`/api/data?type=sales&companyId=${selectedCompany.id}`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: sale.id })
-        });
-        if(res.ok) fetchData();
-    } catch (e) { console.error(e); }
+  const fetchData = async () => {
+      if(!selectedCompany) return;
+      setIsLoading(true);
+      try {
+          // Updated to use the dedicated API endpoint
+          const res = await fetch(`/api/sales?company_id=${selectedCompany.id}`);
+          const data = await res.json();
+          if(data.success) setSales(data.data);
+      } catch(e) { console.error(e); }
+      finally { setIsLoading(false); }
   };
 
-  const handleSave = async (formData) => {
-    const method = modalState.mode === 'edit' ? 'PUT' : 'POST';
-    try {
-        const res = await fetch(`/api/data?type=sales&companyId=${selectedCompany.id}`, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
-        });
-        if(res.ok) {
-            setModalState({ ...modalState, open: false });
-            fetchData();
-        }
-    } catch (e) { console.error(e); }
-  };
+  useEffect(() => { fetchData(); }, [selectedCompany]);
 
   const filteredSales = useMemo(() => {
     if (!searchQuery) return sales;
@@ -82,29 +54,55 @@ export default function SalesPage() {
     );
   }, [sales, searchQuery]);
 
-  useEffect(() => {
-    const totalSales = sales.reduce((sum, s) => sum + Number(s.amount), 0);
-    const unpaidInvoices = sales.filter(s => s.status === 'Unpaid').length;
+  const totalSales = sales.reduce((sum, s) => sum + Number(s.amount), 0);
+  const unpaidInvoices = sales.filter(s => s.status === 'Unpaid').length;
 
-    setStats([
-        { name: 'Total Sales (YTD)', stat: formatCurrency(totalSales) },
-        { name: 'Unpaid Invoices', stat: unpaidInvoices },
-        { name: 'Total Invoices', stat: sales.length },
-    ]);
-  }, [sales]);
+  const stats = [
+    { name: 'Total Sales (YTD)', stat: formatCurrency(totalSales) },
+    { name: 'Unpaid Invoices', stat: unpaidInvoices },
+    { name: 'Total Invoices', stat: sales.length },
+  ];
 
-  const handleAdd = () => setModalState({ open: true, mode: 'add', sale: null });
-  const handleEdit = (sale) => setModalState({ open: true, mode: 'edit', sale });
-  const handleCancel = () => setModalState({ ...modalState, open: false });
+  const handleSave = async (formData) => {
+      // Generate a temporary ID for new sales if one isn't provided
+      const payload = { 
+          ...formData, 
+          company_id: selectedCompany.id,
+          id: modalState.mode === 'add' ? `INV-${Date.now()}` : modalState.sale.id 
+      };
+      
+      const method = modalState.mode === 'add' ? 'POST' : 'PUT';
+      const url = modalState.mode === 'add' ? '/api/sales' : `/api/sales/${modalState.sale.id}`;
+
+      try {
+          const res = await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+          if(res.ok) {
+              setModalState({ open: false, mode: 'add', sale: null });
+              fetchData();
+          } else { 
+              const errorData = await res.json();
+              alert(`Failed to save: ${errorData.error || 'Unknown error'}`); 
+          }
+      } catch(e) { console.error(e); alert('Error saving data'); }
+  };
+
+  const handleRemove = async (sale) => {
+      if(!confirm(`Delete Invoice ${sale.id}?`)) return;
+      try {
+          const res = await fetch(`/api/sales/${sale.id}`, { method: 'DELETE' });
+          if(res.ok) fetchData();
+          else alert('Failed to delete');
+      } catch(e) { console.error(e); }
+  };
 
   return (
     <DashboardLayout>
       <Modal open={modalState.open} setOpen={(val) => setModalState({...modalState, open: val})} title={`${modalState.mode === 'add' ? 'Add' : 'Edit'} Sale Invoice`}>
-        <SaleForm sale={modalState.sale} onSave={handleSave} onCancel={handleCancel} />
+        <SaleForm sale={modalState.sale} onSave={handleSave} onCancel={() => setModalState({...modalState, open: false})} />
       </Modal>
 
       <PageHeader title="Sales Invoices" description="A list of all sales invoices issued by the company.">
-        <button onClick={handleAdd} type="button" className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+        <button onClick={() => setModalState({ open: true, mode: 'add', sale: null })} type="button" className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
           <PlusIcon className="-ml-0.5 mr-1.5 h-5 w-5 inline" /> New Invoice
         </button>
       </PageHeader>
@@ -117,7 +115,10 @@ export default function SalesPage() {
         <div className="sm:flex sm:items-center sm:justify-between mb-4">
             <div className="w-full max-w-xs">
               <label htmlFor="search" className="sr-only">Search</label>
-              <input id="search" name="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full rounded-md border-0 bg-white py-1.5 pl-3 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="Filter by Invoice# or Customer..." type="search" />
+              <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><MagnifyingGlassIcon className="h-5 w-5 text-gray-400" /></div>
+                  <input id="search" name="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full rounded-md border-0 bg-white py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="Filter by Invoice# or Customer..." type="search" />
+              </div>
             </div>
             <div className="mt-4 sm:mt-0">
                 <FilterButtons periods={['1M', '3M', '6M', '1Y']} />
@@ -127,7 +128,7 @@ export default function SalesPage() {
         <div className="flow-root">
           <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
             <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-              {isLoading ? <p className="text-center">Loading...</p> : (
+              {isLoading ? <p>Loading...</p> : (
               <table className="min-w-full divide-y divide-gray-300">
                 <thead className="bg-gray-50">
                   <tr>
@@ -148,7 +149,7 @@ export default function SalesPage() {
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{formatCurrency(s.amount)}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500"><StatusBadge status={s.status} /></td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                        <button onClick={() => handleEdit(s)} className="text-indigo-600 hover:text-indigo-900"><PencilIcon className="h-5 w-5" /></button>
+                        <button onClick={() => setModalState({ open: true, mode: 'edit', sale: s })} className="text-indigo-600 hover:text-indigo-900"><PencilIcon className="h-5 w-5" /></button>
                         <button onClick={() => handleRemove(s)} className="ml-4 text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
                       </td>
                     </tr>
