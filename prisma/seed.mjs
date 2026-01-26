@@ -1,3 +1,5 @@
+// prisma/seed.mjs
+
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { 
@@ -18,7 +20,7 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Start seeding ...');
 
-  // 1. Clear existing data (Optional: helps avoid conflicts during dev)
+  // 1. Clear existing data to avoid unique key conflicts during re-seeding
   await prisma.process_loss.deleteMany();
   await prisma.chart_of_accounts.deleteMany();
   await prisma.fixed_assets.deleteMany();
@@ -32,7 +34,6 @@ async function main() {
 
   // 2. Seed Companies & Dashboard Stats
   for (const company of companies) {
-    // Get the complex dashboard stats for this company from mockData
     const stats = dashboardData[company.id] || {};
 
     await prisma.companies.create({
@@ -40,14 +41,13 @@ async function main() {
         id: company.id,
         name: company.name,
         shortName: company.shortName,
-        dashboard_stats: stats, // Store the nested JSON object directly
+        dashboard_stats: stats, 
       },
     });
     console.log(`Created company: ${company.name}`);
   }
 
   // 3. Seed Users
-  // Admin
   const adminPassword = await bcrypt.hash('admin123', 10);
   await prisma.users.create({
     data: {
@@ -58,7 +58,6 @@ async function main() {
     },
   });
 
-  // User for ARS Lube
   const userPassword = await bcrypt.hash('user123', 10);
   await prisma.users.create({
     data: {
@@ -70,7 +69,6 @@ async function main() {
     },
   });
 
-  // User for ARS Corp
   await prisma.users.create({
     data: {
       email: 'corp@arsgroup.com',
