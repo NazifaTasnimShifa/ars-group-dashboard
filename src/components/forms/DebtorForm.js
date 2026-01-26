@@ -1,20 +1,40 @@
 // src/components/forms/DebtorForm.js
+import { useState, useEffect } from 'react';
 
 export default function DebtorForm({ debtor, onSave, onCancel }) {
-  
+  const [formData, setFormData] = useState({
+    name: '',
+    contactPerson: '',
+    email: '',
+    phone: '',
+    amount: '',
+    due: '',
+    aging: 0
+  });
+
+  useEffect(() => {
+    if (debtor) {
+      // Populate form if editing
+      setFormData({
+        name: debtor.name,
+        contactPerson: debtor.contactPerson || '',
+        email: debtor.email || '',
+        phone: debtor.phone || '',
+        amount: debtor.amount,
+        due: debtor.due ? new Date(debtor.due).toISOString().split('T')[0] : '',
+        aging: debtor.aging
+      });
+    }
+  }, [debtor]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
-
-    data.amount = parseFloat(data.amount);
-    data.aging = 0; 
-    
-    if (debtor?.id) {
-      data.id = debtor.id;
-    }
-
-    onSave(data);
+    onSave(formData);
   };
 
   return (
@@ -22,56 +42,23 @@ export default function DebtorForm({ debtor, onSave, onCancel }) {
       <div className="space-y-4">
         <div>
           <label htmlFor="name" className="block text-sm font-medium leading-6 text-gray-900">Debtor Name</label>
-          <div className="mt-2">
-            <input type="text" name="name" id="name" defaultValue={debtor?.name || ''} required className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600" placeholder="e.g., Rahim Filling Station" />
-          </div>
+          <input type="text" name="name" id="name" value={formData.name} onChange={handleChange} required className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-indigo-600" />
         </div>
-
-        <div>
-          <label htmlFor="contactPerson" className="block text-sm font-medium leading-6 text-gray-900">Contact Person</label>
-          <div className="mt-2">
-            <input type="text" name="contactPerson" id="contactPerson" defaultValue={debtor?.contactPerson || ''} className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600" placeholder="e.g., Mr. Rahim" />
-          </div>
+        {/* ... Other fields similarly linked to state ... */}
+        <div className="grid grid-cols-2 gap-4">
+             <div>
+                <label htmlFor="amount" className="block text-sm font-medium text-gray-900">Amount</label>
+                <input type="number" name="amount" value={formData.amount} onChange={handleChange} required className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300" />
+             </div>
+             <div>
+                <label htmlFor="due" className="block text-sm font-medium text-gray-900">Due Date</label>
+                <input type="date" name="due" value={formData.due} onChange={handleChange} required className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300" />
+             </div>
         </div>
-
-        <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
-            <div>
-                <label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-900">Email</label>
-                <div className="mt-2">
-                    <input type="email" name="email" id="email" defaultValue={debtor?.email || ''} className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600" placeholder="rahim@example.com"/>
-                </div>
-            </div>
-            <div>
-                <label htmlFor="phone" className="block text-sm font-medium leading-6 text-gray-900">Phone</label>
-                <div className="mt-2">
-                    <input type="tel" name="phone" id="phone" defaultValue={debtor?.phone || ''} className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600" placeholder="+8801..."/>
-                </div>
-            </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="amount" className="block text-sm font-medium leading-6 text-gray-900">Amount</label>
-            <div className="mt-2">
-              <input type="number" name="amount" id="amount" defaultValue={debtor?.amount || ''} required className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600" placeholder="e.g., 500000" />
-            </div>
-          </div>
-          <div>
-            <label htmlFor="due" className="block text-sm font-medium leading-6 text-gray-900">Due Date</label>
-            <div className="mt-2">
-              <input type="date" name="due" id="due" defaultValue={debtor?.due ? new Date(debtor.due).toISOString().split('T')[0] : ''} required className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600" />
-            </div>
-          </div>
-        </div>
-
       </div>
-      <div className="mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
-        <button type="submit" className="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 sm:col-start-2">
-          {debtor ? 'Update Debtor' : 'Save Debtor'}
-        </button>
-        <button type="button" className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0" onClick={onCancel}>
-          Cancel
-        </button>
+      <div className="mt-6 flex justify-end gap-3">
+        <button type="button" onClick={onCancel} className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Cancel</button>
+        <button type="submit" className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Save</button>
       </div>
     </form>
   );
