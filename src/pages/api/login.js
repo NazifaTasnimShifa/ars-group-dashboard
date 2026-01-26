@@ -1,9 +1,7 @@
 // src/pages/api/login.js
 
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma'; // Use the shared helper!
 import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -22,24 +20,22 @@ export default async function handler(req, res) {
       where: { email: email },
     });
 
-    // Validate password
-    // Note: In a real production app with new users, use bcrypt.hashSync to create passwords first.
+    // Check if user exists AND password matches
+    // user.password is the hash from the DB, 'password' is the plaintext input
     if (user && bcrypt.compareSync(password, user.password)) {
       
       // Remove sensitive data before sending to frontend
-      const { password, ...userWithoutPassword } = user;
+      const { password: _, ...userWithoutPassword } = user;
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         user: userWithoutPassword
       });
     } else {
-      res.status(401).json({ success: false, message: 'Invalid email or password.' });
+      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
   } catch (error) {
     console.error("Login API Error:", error);
-    res.status(500).json({ success: false, message: 'An internal server error occurred.' });
-  } finally {
-    await prisma.$disconnect();
+    return res.status(500).json({ success: false, message: 'An internal server error occurred.' });
   }
 }
