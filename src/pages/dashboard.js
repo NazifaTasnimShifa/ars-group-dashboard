@@ -1,9 +1,8 @@
 // src/pages/dashboard.js
 
-import { useState, Fragment } from 'react';
+import { useState, useEffect, Fragment } from 'react'; // Added useEffect
 import { Menu, Transition } from '@headlessui/react';
 import { useAppContext } from '@/contexts/AppContext';
-import { dashboardData } from '@/data/mockData';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import StatCard from '@/components/dashboard/StatCard';
 import ProfitabilityRatios from '@/components/dashboard/ProfitabilityRatios';
@@ -14,12 +13,7 @@ import RevenueChart from '@/components/dashboard/RevenueChart';
 import DebtorsTable from '@/components/dashboard/DebtorsTable';
 import CreditorsTable from '@/components/dashboard/CreditorsTable';
 import Modal from '@/components/ui/Modal';
-
-import DebtorForm from '@/components/forms/DebtorForm';
-import CreditorForm from '@/components/forms/CreditorForm';
-import InventoryItemForm from '@/components/forms/InventoryItemForm';
 import SaleForm from '@/components/forms/SaleForm';
-import FixedAssetForm from '@/components/forms/FixedAssetForm';
 
 import {
   BanknotesIcon,
@@ -38,11 +32,29 @@ const iconMap = {
 export default function DashboardPage() {
   const [modalState, setModalState] = useState({ open: false, title: '', content: null });
   const { selectedCompany } = useAppContext();
+  
+  // State for dynamic data
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const formatCurrency = (value) => `৳${(value ?? 0).toLocaleString('en-IN')}`;
 
-  // Safe access to data
-  const data = selectedCompany ? dashboardData[selectedCompany.id] : null;
+  // Fetch data from API
+  useEffect(() => {
+    if (selectedCompany) {
+      setLoading(true);
+      fetch(`/api/dashboard?companyId=${selectedCompany.id}`)
+        .then((res) => res.json())
+        .then((fetchedData) => {
+          setData(fetchedData);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch dashboard data", err);
+          setLoading(false);
+        });
+    }
+  }, [selectedCompany]);
 
   const handleOpenModal = (title, formComponent) => {
     setModalState({ open: true, title: `Add New ${title}`, content: formComponent });
@@ -55,7 +67,11 @@ export default function DashboardPage() {
     return <DashboardLayout><div>Loading Company Data...</div></DashboardLayout>;
   }
 
-  if (!data) {
+  if (loading) {
+    return <DashboardLayout><div>Loading Dashboard...</div></DashboardLayout>;
+  }
+
+  if (!data || Object.keys(data).length === 0) {
     return (
       <DashboardLayout>
         <div className="p-4 text-center">
@@ -111,7 +127,6 @@ export default function DashboardPage() {
                       </button>
                     )}
                   </Menu.Item>
-                  {/* Add other menu items as needed */}
                 </div>
               </Menu.Items>
             </Transition>
@@ -119,7 +134,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {data.stats.map((item) => {
+          {data.stats?.map((item) => {
             const Icon = iconMap[item.icon] || BanknotesIcon;
             return (
               <StatCard
@@ -138,27 +153,25 @@ export default function DashboardPage() {
           </h3>
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <ProfitabilityRatios data={data.profitability} />
+              {data.profitability && <ProfitabilityRatios data={data.profitability} />}
             </div>
-            <CurrentRatio data={data.currentRatio} />
+            {data.currentRatio && <CurrentRatio data={data.currentRatio} />}
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
           <div className="lg:col-span-3">
-            <TopExpenses data={data.topExpenses} />
+            {data.topExpenses && <TopExpenses data={data.topExpenses} />}
           </div>
           <div className="lg:col-span-2">
-            <RevenueSources data={data.revenueSources} />
+            {data.revenueSources && <RevenueSources data={data.revenueSources} />}
           </div>
         </div>
 
-        {/* Only render charts/tables if data exists to prevent crashes with empty mock data */}
-        {data.revenueChart && (
-             <div className="grid grid-cols-1 gap-5">
-                <RevenueChart data={data.revenueChart} />
-            </div>
-        )}
+        {/* Always render charts - RevenueChart currently uses internal static data */}
+        <div className="grid grid-cols-1 gap-5">
+            <RevenueChart />
+        </div>
        
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <DebtorsTable />
