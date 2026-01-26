@@ -17,7 +17,7 @@ const StatusBadge = ({ status }) => {
         'Unpaid': 'bg-red-100 text-red-800',
     };
     return (
-        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${statusColors[status]}`}>
+        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${statusColors[status] || 'bg-gray-100'}`}>
             {status}
         </span>
     );
@@ -33,22 +33,48 @@ export default function SalesPage() {
   const [stats, setStats] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (selectedCompany) {
-      setIsLoading(true);
-      fetch(`/api/data?type=sales&companyId=${selectedCompany.id}`)
-        .then(res => res.json())
-        .then(data => {
-          setSales(Array.isArray(data) ? data : []);
-          setIsLoading(false);
-        })
-        .catch(error => {
-          console.error("Failed to fetch sales:", error);
-          setSales([]);
-          setIsLoading(false);
-        });
+  const fetchData = async () => {
+    if (!selectedCompany) return;
+    setIsLoading(true);
+    try {
+        const res = await fetch(`/api/data?type=sales&companyId=${selectedCompany.id}`);
+        const data = await res.json();
+        setSales(Array.isArray(data) ? data : []);
+    } catch (error) {
+        console.error("Failed to fetch sales:", error);
+    } finally {
+        setIsLoading(false);
     }
-  }, [selectedCompany]);
+  };
+
+  useEffect(() => { fetchData(); }, [selectedCompany]);
+
+  const handleRemove = async (sale) => {
+    if(!confirm(`Remove Invoice ${sale.id}?`)) return;
+    try {
+        const res = await fetch(`/api/data?type=sales&companyId=${selectedCompany.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: sale.id })
+        });
+        if(res.ok) fetchData();
+    } catch (e) { console.error(e); }
+  };
+
+  const handleSave = async (formData) => {
+    const method = modalState.mode === 'edit' ? 'PUT' : 'POST';
+    try {
+        const res = await fetch(`/api/data?type=sales&companyId=${selectedCompany.id}`, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        if(res.ok) {
+            setModalState({ ...modalState, open: false });
+            fetchData();
+        }
+    } catch (e) { console.error(e); }
+  };
 
   const filteredSales = useMemo(() => {
     if (!searchQuery) return sales;
@@ -71,9 +97,7 @@ export default function SalesPage() {
 
   const handleAdd = () => setModalState({ open: true, mode: 'add', sale: null });
   const handleEdit = (sale) => setModalState({ open: true, mode: 'edit', sale });
-  const handleRemove = (sale) => alert(`This would remove Invoice ${sale.id}.`);
-  const handleSave = () => setModalState({ open: false, mode: 'add', sale: null });
-  const handleCancel = () => setModalState({ open: false, mode: 'add', sale: null });
+  const handleCancel = () => setModalState({ ...modalState, open: false });
 
   return (
     <DashboardLayout>
@@ -105,34 +129,34 @@ export default function SalesPage() {
         <div className="flow-root">
           <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
             <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-              {isLoading ? <p className="text-center py-4 text-gray-500">Loading...</p> : (
-                <table className="min-w-full divide-y divide-gray-300">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Invoice #</th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Customer</th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date</th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Amount</th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
-                      <th className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Actions</span></th>
+              {isLoading ? <p className="text-center">Loading...</p> : (
+              <table className="min-w-full divide-y divide-gray-300">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Invoice #</th>
+                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Customer</th>
+                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date</th>
+                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Amount</th>
+                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
+                    <th className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {filteredSales.map((s) => (
+                    <tr key={s.id}>
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-indigo-600 sm:pl-0 hover:underline cursor-pointer">{s.id}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{s.customer}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{new Date(s.date).toLocaleDateString()}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{formatCurrency(s.amount)}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500"><StatusBadge status={s.status} /></td>
+                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+                        <button onClick={() => handleEdit(s)} className="text-indigo-600 hover:text-indigo-900"><PencilIcon className="h-5 w-5" /></button>
+                        <button onClick={() => handleRemove(s)} className="ml-4 text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {filteredSales.map((s) => (
-                      <tr key={s.id}>
-                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-indigo-600 sm:pl-0 hover:underline cursor-pointer">{s.id}</td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{s.customer}</td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{new Date(s.date).toLocaleDateString()}</td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{formatCurrency(s.amount)}</td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500"><StatusBadge status={s.status} /></td>
-                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                          <button onClick={() => handleEdit(s)} className="text-indigo-600 hover:text-indigo-900"><PencilIcon className="h-5 w-5" /></button>
-                          <button onClick={() => handleRemove(s)} className="ml-4 text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  ))}
+                </tbody>
+              </table>
               )}
             </div>
           </div>

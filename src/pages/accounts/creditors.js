@@ -15,56 +15,75 @@ export default function CreditorsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const { selectedCompany } = useAppContext();
 
-  // --- State for live data ---
   const [creditors, setCreditors] = useState([]);
   const [stats, setStats] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
-  // --- Fetch Data ---
-  useEffect(() => {
-    if (selectedCompany) {
-      setIsLoading(true);
-      fetch(`/api/data?type=creditors&companyId=${selectedCompany.id}`)
-        .then(res => res.json())
-        .then(data => {
-          setCreditors(Array.isArray(data) ? data : []);
-          setIsLoading(false);
-        })
-        .catch(error => {
-          console.error("Failed to fetch creditors:", error);
-          setCreditors([]);
-          setIsLoading(false);
-        });
+  // --- API FUNCTIONS ---
+  const fetchData = async () => {
+    if (!selectedCompany) return;
+    setIsLoading(true);
+    try {
+        const res = await fetch(`/api/data?type=creditors&companyId=${selectedCompany.id}`);
+        const data = await res.json();
+        setCreditors(Array.isArray(data) ? data : []);
+    } catch (error) {
+        console.error("Failed to fetch creditors:", error);
+    } finally {
+        setIsLoading(false);
     }
-  }, [selectedCompany]);
+  };
 
-  // --- Filter & Compute Stats ---
+  const handleRemove = async (creditor) => {
+    if(!confirm(`Delete ${creditor.name}?`)) return;
+    try {
+        const res = await fetch(`/api/data?type=creditors&companyId=${selectedCompany.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: creditor.id })
+        });
+        if(res.ok) fetchData();
+    } catch (e) { console.error(e); }
+  };
+
+  const handleSave = async (formData) => {
+    const method = modalState.mode === 'edit' ? 'PUT' : 'POST';
+    try {
+        const res = await fetch(`/api/data?type=creditors&companyId=${selectedCompany.id}`, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        if(res.ok) {
+            setModalState({ ...modalState, open: false });
+            fetchData();
+        }
+    } catch (e) { console.error(e); }
+  };
+
+  // --- EFFECTS & UTILS ---
+  useEffect(() => { fetchData(); }, [selectedCompany]);
+
   const filteredCreditors = useMemo(() => {
     if (!searchQuery) return creditors;
-    return creditors.filter(creditor => 
-      creditor.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    return creditors.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [creditors, searchQuery]);
 
   useEffect(() => {
     const totalPayables = creditors.reduce((sum, c) => sum + Number(c.amount), 0);
     const dueSoon = creditors.filter(c => c.aging < 30 && c.aging >= 0).length;
-
     setStats([
       { name: 'Total Payables', stat: formatCurrency(totalPayables) },
       { name: 'Due within 30 Days', stat: dueSoon },
-      { name: 'Avg. Payment Period', stat: '28 Days' }, // Mock stat calculation
+      { name: 'Avg. Payment Period', stat: '28 Days' },
     ]);
   }, [creditors]);
 
-  // --- Handlers ---
   const handleAdd = () => setModalState({ open: true, mode: 'add', creditor: null });
   const handleEdit = (creditor) => setModalState({ open: true, mode: 'edit', creditor });
-  const handleRemove = (creditor) => alert(`This would remove ${creditor.name}.`);
-  const handleSave = () => setModalState({ open: false, mode: 'add', creditor: null });
-  const handleCancel = () => setModalState({ open: false, mode: 'add', creditor: null });
+  const handleCancel = () => setModalState({ ...modalState, open: false });
 
   return (
     <DashboardLayout>
@@ -85,7 +104,6 @@ export default function CreditorsPage() {
       <div className="rounded-lg bg-white p-6 shadow">
         <div className="mb-4 xl:flex xl:items-center xl:justify-between">
             <div className="w-full max-w-xs">
-              <label htmlFor="search" className="sr-only">Search</label>
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                   <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
@@ -108,7 +126,7 @@ export default function CreditorsPage() {
                       <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Name</th>
                       <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Amount Due</th>
                       <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Due Date</th>
-                      <th className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Edit</span></th>
+                      <th className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Actions</span></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">

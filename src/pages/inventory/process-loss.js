@@ -9,21 +9,35 @@ import PageStat from '@/components/ui/PageStat';
 import FilterButtons from '@/components/ui/FilterButtons';
 import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid';
 
-const ProcessLossForm = ({ onSave, onCancel }) => (
-    <form onSubmit={(e) => { e.preventDefault(); onSave(); }}>
+const ProcessLossForm = ({ onSave, onCancel }) => {
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+        data.quantity = parseFloat(data.quantity);
+        // Add ID for new item
+        data.id = `PL-${Date.now().toString().slice(-6)}`;
+        data.date = new Date().toISOString(); // Current timestamp
+        data.unit = 'Unit'; // Default unit if not in form
+        
+        onSave(data);
+    };
+
+    return (
+    <form onSubmit={handleSubmit}>
         <div className="space-y-4">
             <div>
                 <label htmlFor="product" className="block text-sm font-medium">Product Name</label>
-                <input type="text" id="product" required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+                <input type="text" name="product" id="product" required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label htmlFor="quantity" className="block text-sm font-medium">Quantity Lost</label>
-                    <input type="number" id="quantity" required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
+                    <input type="number" name="quantity" id="quantity" required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
                 </div>
                 <div>
                     <label htmlFor="type" className="block text-sm font-medium">Loss Type</label>
-                    <select id="type" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    <select name="type" id="type" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                         <option>Vaporization</option>
                         <option>Spillage</option>
                         <option>Damage</option>
@@ -33,7 +47,7 @@ const ProcessLossForm = ({ onSave, onCancel }) => (
             </div>
             <div>
                 <label htmlFor="notes" className="block text-sm font-medium">Notes</label>
-                <textarea id="notes" rows={3} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
+                <textarea name="notes" id="notes" rows={3} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
             </div>
         </div>
          <div className="mt-6 flex justify-end gap-3">
@@ -41,7 +55,8 @@ const ProcessLossForm = ({ onSave, onCancel }) => (
             <button type="submit" className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Record Loss</button>
         </div>
     </form>
-);
+    );
+};
 
 export default function ProcessLossPage() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -52,22 +67,35 @@ export default function ProcessLossPage() {
   const [stats, setStats] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (selectedCompany) {
-      setIsLoading(true);
-      fetch(`/api/data?type=process-loss&companyId=${selectedCompany.id}`)
-        .then(res => res.json())
-        .then(data => {
-          setLosses(Array.isArray(data) ? data : []);
-          setIsLoading(false);
-        })
-        .catch(error => {
-          console.error("Failed to fetch process loss:", error);
-          setLosses([]);
-          setIsLoading(false);
-        });
+  const fetchData = async () => {
+    if (!selectedCompany) return;
+    setIsLoading(true);
+    try {
+        const res = await fetch(`/api/data?type=process-loss&companyId=${selectedCompany.id}`);
+        const data = await res.json();
+        setLosses(Array.isArray(data) ? data : []);
+    } catch (error) {
+        console.error("Failed to fetch process loss:", error);
+    } finally {
+        setIsLoading(false);
     }
-  }, [selectedCompany]);
+  };
+
+  useEffect(() => { fetchData(); }, [selectedCompany]);
+
+  const handleSave = async (formData) => {
+    try {
+        const res = await fetch(`/api/data?type=process-loss&companyId=${selectedCompany.id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        if(res.ok) {
+            setModalOpen(false);
+            fetchData();
+        }
+    } catch (e) { console.error(e); }
+  };
 
   const filteredLosses = useMemo(() => {
     if (!searchQuery) return losses;
@@ -81,15 +109,15 @@ export default function ProcessLossPage() {
     const totalLossQty = losses.reduce((sum, item) => sum + Number(item.quantity), 0);
     setStats([
         { name: 'Total Loss Events', stat: losses.length },
-        { name: 'Total Quantity Lost', stat: `${totalLossQty.toFixed(2)} Units` }, // Simplified unit
-        { name: 'Most Common Type', stat: 'Vaporization' }, // Mock calc
+        { name: 'Total Quantity Lost', stat: `${totalLossQty.toFixed(2)} Units` },
+        { name: 'Most Common Type', stat: 'Vaporization' },
     ]);
   }, [losses]);
 
   return (
     <DashboardLayout>
       <Modal open={modalOpen} setOpen={setModalOpen} title="Record New Process Loss">
-        <ProcessLossForm onSave={() => setModalOpen(false)} onCancel={() => setModalOpen(false)} />
+        <ProcessLossForm onSave={handleSave} onCancel={() => setModalOpen(false)} />
       </Modal>
 
       <PageHeader title="Process & System Loss" description="Log and track non-sale reductions in inventory like vaporization or spillage.">
@@ -121,31 +149,31 @@ export default function ProcessLossPage() {
         <div className="flow-root">
           <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
             <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-              {isLoading ? <p className="text-center py-4 text-gray-500">Loading...</p> : (
-                <table className="min-w-full divide-y divide-gray-300">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Event ID</th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date</th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Product</th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Type</th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Quantity</th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Notes</th>
+              {isLoading ? <p className="text-center">Loading...</p> : (
+              <table className="min-w-full divide-y divide-gray-300">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Event ID</th>
+                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date</th>
+                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Product</th>
+                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Type</th>
+                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Quantity</th>
+                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {filteredLosses.map((loss) => (
+                    <tr key={loss.id}>
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">{loss.id}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{new Date(loss.date).toLocaleDateString()}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{loss.product}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{loss.type}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-red-600 font-semibold">{loss.quantity} {loss.unit}</td>
+                      <td className="px-3 py-4 text-sm text-gray-500 max-w-xs truncate">{loss.notes}</td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {filteredLosses.map((loss) => (
-                      <tr key={loss.id}>
-                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">{loss.id}</td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{new Date(loss.date).toLocaleDateString()}</td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{loss.product}</td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{loss.type}</td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-red-600 font-semibold">{loss.quantity} {loss.unit}</td>
-                        <td className="px-3 py-4 text-sm text-gray-500 max-w-xs truncate">{loss.notes}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  ))}
+                </tbody>
+              </table>
               )}
             </div>
           </div>

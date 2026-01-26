@@ -17,7 +17,7 @@ const StatusBadge = ({ status }) => {
     'Out of Stock': 'bg-red-100 text-red-800',
   };
   return (
-    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${statusColors[status]}`}>
+    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${statusColors[status] || 'bg-gray-100 text-gray-800'}`}>
       {status}
     </span>
   );
@@ -34,22 +34,48 @@ export default function InventoryStatusPage() {
 
   const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
-  useEffect(() => {
-    if (selectedCompany) {
-      setIsLoading(true);
-      fetch(`/api/data?type=inventory&companyId=${selectedCompany.id}`)
-        .then(res => res.json())
-        .then(data => {
-          setInventory(Array.isArray(data) ? data : []);
-          setIsLoading(false);
-        })
-        .catch(error => {
-          console.error("Failed to fetch inventory:", error);
-          setInventory([]);
-          setIsLoading(false);
-        });
+  const fetchData = async () => {
+    if (!selectedCompany) return;
+    setIsLoading(true);
+    try {
+        const res = await fetch(`/api/data?type=inventory&companyId=${selectedCompany.id}`);
+        const data = await res.json();
+        setInventory(Array.isArray(data) ? data : []);
+    } catch (error) {
+        console.error("Failed to fetch inventory:", error);
+    } finally {
+        setIsLoading(false);
     }
-  }, [selectedCompany]);
+  };
+
+  useEffect(() => { fetchData(); }, [selectedCompany]);
+
+  const handleRemove = async (item) => {
+    if(!confirm(`Remove ${item.name}?`)) return;
+    try {
+        const res = await fetch(`/api/data?type=inventory&companyId=${selectedCompany.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: item.id })
+        });
+        if(res.ok) fetchData();
+    } catch (e) { console.error(e); }
+  };
+
+  const handleSave = async (formData) => {
+    const method = modalState.mode === 'edit' ? 'PUT' : 'POST';
+    try {
+        const res = await fetch(`/api/data?type=inventory&companyId=${selectedCompany.id}`, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        if(res.ok) {
+            setModalState({ ...modalState, open: false });
+            fetchData();
+        }
+    } catch (e) { console.error(e); }
+  };
 
   const filteredInventory = useMemo(() => {
     if (!searchQuery) return inventory;
@@ -73,12 +99,9 @@ export default function InventoryStatusPage() {
     ]);
   }, [inventory]);
 
-  // Handlers
   const handleAdd = () => setModalState({ open: true, mode: 'add', item: null });
   const handleEdit = (item) => setModalState({ open: true, mode: 'edit', item });
-  const handleRemove = (item) => alert(`This would remove ${item.name}.`);
-  const handleSave = () => setModalState({ open: false, mode: 'add', item: null });
-  const handleCancel = () => setModalState({ open: false, mode: 'add', item: null });
+  const handleCancel = () => setModalState({ ...modalState, open: false });
 
   return (
     <DashboardLayout>
@@ -103,7 +126,6 @@ export default function InventoryStatusPage() {
       <div className="rounded-lg bg-white p-6 shadow">
         <div className="sm:flex sm:items-center sm:justify-between mb-4">
           <div className="w-full max-w-xs">
-            <label htmlFor="search" className="sr-only">Search</label>
             <div className="relative">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                 <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />

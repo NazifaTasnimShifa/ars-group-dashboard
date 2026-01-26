@@ -17,7 +17,7 @@ const StatusBadge = ({ status }) => {
         'Unpaid': 'bg-red-100 text-red-800',
     };
     return (
-        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${statusColors[status]}`}>
+        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${statusColors[status] || 'bg-gray-100'}`}>
             {status}
         </span>
     );
@@ -33,22 +33,48 @@ export default function PurchasesPage() {
   const [stats, setStats] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (selectedCompany) {
-      setIsLoading(true);
-      fetch(`/api/data?type=purchases&companyId=${selectedCompany.id}`)
-        .then(res => res.json())
-        .then(data => {
-          setPurchases(Array.isArray(data) ? data : []);
-          setIsLoading(false);
-        })
-        .catch(error => {
-          console.error("Failed to fetch purchases:", error);
-          setPurchases([]);
-          setIsLoading(false);
-        });
+  const fetchData = async () => {
+    if (!selectedCompany) return;
+    setIsLoading(true);
+    try {
+        const res = await fetch(`/api/data?type=purchases&companyId=${selectedCompany.id}`);
+        const data = await res.json();
+        setPurchases(Array.isArray(data) ? data : []);
+    } catch (error) {
+        console.error("Failed to fetch purchases:", error);
+    } finally {
+        setIsLoading(false);
     }
-  }, [selectedCompany]);
+  };
+
+  useEffect(() => { fetchData(); }, [selectedCompany]);
+
+  const handleRemove = async (purchase) => {
+    if(!confirm(`Remove ${purchase.id}?`)) return;
+    try {
+        const res = await fetch(`/api/data?type=purchases&companyId=${selectedCompany.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: purchase.id })
+        });
+        if(res.ok) fetchData();
+    } catch (e) { console.error(e); }
+  };
+
+  const handleSave = async (formData) => {
+    const method = modalState.mode === 'edit' ? 'PUT' : 'POST';
+    try {
+        const res = await fetch(`/api/data?type=purchases&companyId=${selectedCompany.id}`, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        if(res.ok) {
+            setModalState({ ...modalState, open: false });
+            fetchData();
+        }
+    } catch (e) { console.error(e); }
+  };
 
   const filteredPurchases = useMemo(() => {
     if (!searchQuery) return purchases;
@@ -72,9 +98,7 @@ export default function PurchasesPage() {
 
   const handleAdd = () => setModalState({ open: true, mode: 'add', purchase: null });
   const handleEdit = (purchase) => setModalState({ open: true, mode: 'edit', purchase });
-  const handleRemove = (purchase) => alert(`This would remove ${purchase.id}.`);
-  const handleSave = () => setModalState({ open: false, mode: 'add', purchase: null });
-  const handleCancel = () => setModalState({ open: false, mode: 'add', purchase: null });
+  const handleCancel = () => setModalState({ ...modalState, open: false });
 
   return (
     <DashboardLayout>
@@ -110,34 +134,34 @@ export default function PurchasesPage() {
         <div className="flow-root">
           <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
             <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-              {isLoading ? <p className="text-center py-4 text-gray-500">Loading...</p> : (
-                <table className="min-w-full divide-y divide-gray-300">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">PO Number</th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Supplier</th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date</th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Amount</th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
-                      <th className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Actions</span></th>
+              {isLoading ? <p className="text-center">Loading...</p> : (
+              <table className="min-w-full divide-y divide-gray-300">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">PO Number</th>
+                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Supplier</th>
+                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date</th>
+                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Amount</th>
+                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
+                    <th className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {filteredPurchases.map((p) => (
+                    <tr key={p.id}>
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-indigo-600 sm:pl-0 hover:underline cursor-pointer">{p.id}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{p.supplier}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{new Date(p.date).toLocaleDateString()}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{formatCurrency(p.amount)}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500"><StatusBadge status={p.status} /></td>
+                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+                        <button onClick={() => handleEdit(p)} className="text-indigo-600 hover:text-indigo-900"><PencilIcon className="h-5 w-5" /></button>
+                        <button onClick={() => handleRemove(p)} className="ml-4 text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {filteredPurchases.map((p) => (
-                      <tr key={p.id}>
-                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-indigo-600 sm:pl-0 hover:underline cursor-pointer">{p.id}</td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{p.supplier}</td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{new Date(p.date).toLocaleDateString()}</td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{formatCurrency(p.amount)}</td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500"><StatusBadge status={p.status} /></td>
-                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                          <button onClick={() => handleEdit(p)} className="text-indigo-600 hover:text-indigo-900"><PencilIcon className="h-5 w-5" /></button>
-                          <button onClick={() => handleRemove(p)} className="ml-4 text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  ))}
+                </tbody>
+              </table>
               )}
             </div>
           </div>
