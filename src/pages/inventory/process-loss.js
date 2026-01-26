@@ -1,6 +1,6 @@
 // src/pages/inventory/process-loss.js
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -67,7 +67,7 @@ export default function ProcessLossPage() {
   const [stats, setStats] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!selectedCompany) return;
     setIsLoading(true);
     try {
@@ -79,9 +79,9 @@ export default function ProcessLossPage() {
     } finally {
         setIsLoading(false);
     }
-  };
+  }, [selectedCompany]);
 
-  useEffect(() => { fetchData(); }, [selectedCompany]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleSave = async (formData) => {
     try {
@@ -149,31 +149,31 @@ export default function ProcessLossPage() {
         <div className="flow-root">
           <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
             <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-              {isLoading ? <p className="text-center">Loading...</p> : (
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Event ID</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Product</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Type</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Quantity</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Notes</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {filteredLosses.map((loss) => (
-                    <tr key={loss.id}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">{loss.id}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{new Date(loss.date).toLocaleDateString()}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{loss.product}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{loss.type}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-red-600 font-semibold">{loss.quantity} {loss.unit}</td>
-                      <td className="px-3 py-4 text-sm text-gray-500 max-w-xs truncate">{loss.notes}</td>
+              {isLoading ? <p className="text-center py-4 text-gray-500">Loading...</p> : (
+                <table className="min-w-full divide-y divide-gray-300">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Event ID</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Product</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Type</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Quantity</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Notes</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {filteredLosses.map((loss) => (
+                      <tr key={loss.id}>
+                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">{loss.id}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{new Date(loss.date).toLocaleDateString()}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{loss.product}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{loss.type}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-red-600 font-semibold">{loss.quantity} {loss.unit}</td>
+                        <td className="px-3 py-4 text-sm text-gray-500 max-w-xs truncate">{loss.notes}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
           </div>

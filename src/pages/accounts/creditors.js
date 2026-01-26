@@ -1,6 +1,6 @@
 // src/pages/accounts/creditors.js
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -22,7 +22,7 @@ export default function CreditorsPage() {
   const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
   // --- API FUNCTIONS ---
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!selectedCompany) return;
     setIsLoading(true);
     try {
@@ -34,7 +34,7 @@ export default function CreditorsPage() {
     } finally {
         setIsLoading(false);
     }
-  };
+  }, [selectedCompany]);
 
   const handleRemove = async (creditor) => {
     if(!confirm(`Delete ${creditor.name}?`)) return;
@@ -64,7 +64,7 @@ export default function CreditorsPage() {
   };
 
   // --- EFFECTS & UTILS ---
-  useEffect(() => { fetchData(); }, [selectedCompany]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const filteredCreditors = useMemo(() => {
     if (!searchQuery) return creditors;
@@ -104,6 +104,7 @@ export default function CreditorsPage() {
       <div className="rounded-lg bg-white p-6 shadow">
         <div className="mb-4 xl:flex xl:items-center xl:justify-between">
             <div className="w-full max-w-xs">
+              <label htmlFor="search" className="sr-only">Search</label>
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                   <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
@@ -126,7 +127,7 @@ export default function CreditorsPage() {
                       <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Name</th>
                       <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Amount Due</th>
                       <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Due Date</th>
-                      <th className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Actions</span></th>
+                      <th className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Edit</span></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">

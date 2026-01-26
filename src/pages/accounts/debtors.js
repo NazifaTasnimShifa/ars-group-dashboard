@@ -1,6 +1,6 @@
 // src/pages/accounts/debtors.js
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -22,7 +22,7 @@ export default function DebtorsPage() {
   const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
   // --- FETCH DATA ---
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!selectedCompany) return;
     setIsLoading(true);
     try {
@@ -34,9 +34,9 @@ export default function DebtorsPage() {
     } finally {
         setIsLoading(false);
     }
-  };
+  }, [selectedCompany]);
 
-  useEffect(() => { fetchData(); }, [selectedCompany]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   // --- STATS & FILTERING ---
   const filteredDebtors = useMemo(() => {
@@ -59,7 +59,6 @@ export default function DebtorsPage() {
 
   // --- ACTION HANDLERS ---
   
-  // 1. DELETE
   const handleRemove = async (debtor) => {
     if(!confirm(`Are you sure you want to delete ${debtor.name}?`)) return;
 
@@ -70,7 +69,7 @@ export default function DebtorsPage() {
             body: JSON.stringify({ id: debtor.id })
         });
         if(res.ok) {
-            fetchData(); // Refresh table
+            fetchData(); 
         } else {
             alert('Failed to delete debtor');
         }
@@ -79,7 +78,6 @@ export default function DebtorsPage() {
     }
   };
 
-  // 2. CREATE / UPDATE
   const handleSave = async (formData) => {
     const method = modalState.mode === 'edit' ? 'PUT' : 'POST';
     
@@ -92,7 +90,7 @@ export default function DebtorsPage() {
 
         if(res.ok) {
             setModalState({ ...modalState, open: false });
-            fetchData(); // Refresh table
+            fetchData(); 
         } else {
             alert('Failed to save debtor');
         }

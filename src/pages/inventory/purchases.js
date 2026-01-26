@@ -1,6 +1,6 @@
 // src/pages/inventory/purchases.js
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -33,7 +33,7 @@ export default function PurchasesPage() {
   const [stats, setStats] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!selectedCompany) return;
     setIsLoading(true);
     try {
@@ -45,9 +45,9 @@ export default function PurchasesPage() {
     } finally {
         setIsLoading(false);
     }
-  };
+  }, [selectedCompany]);
 
-  useEffect(() => { fetchData(); }, [selectedCompany]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleRemove = async (purchase) => {
     if(!confirm(`Remove ${purchase.id}?`)) return;
@@ -134,7 +134,7 @@ export default function PurchasesPage() {
         <div className="flow-root">
           <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
             <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-              {isLoading ? <p className="text-center">Loading...</p> : (
+              {isLoading ? <p className="text-center py-4 text-gray-500">Loading...</p> : (
               <table className="min-w-full divide-y divide-gray-300">
                 <thead className="bg-gray-50">
                   <tr>

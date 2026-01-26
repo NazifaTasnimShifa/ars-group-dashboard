@@ -67,7 +67,6 @@ export default function DebtorForm({ debtor, onSave, onCancel }) {
           <div>
             <label htmlFor="due" className="block text-sm font-medium leading-6 text-gray-900">Due Date</label>
             <div className="mt-2">
-              // Default to a future date if new
               <input type="date" name="due" id="due" defaultValue={debtor?.due ? new Date(debtor.due).toISOString().split('T')[0] : ''} required className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600" />
             </div>
           </div>

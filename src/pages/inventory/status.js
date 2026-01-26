@@ -1,6 +1,6 @@
 // src/pages/inventory/status.js
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -34,7 +34,7 @@ export default function InventoryStatusPage() {
 
   const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!selectedCompany) return;
     setIsLoading(true);
     try {
@@ -46,9 +46,9 @@ export default function InventoryStatusPage() {
     } finally {
         setIsLoading(false);
     }
-  };
+  }, [selectedCompany]);
 
-  useEffect(() => { fetchData(); }, [selectedCompany]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleRemove = async (item) => {
     if(!confirm(`Remove ${item.name}?`)) return;
@@ -126,6 +126,7 @@ export default function InventoryStatusPage() {
       <div className="rounded-lg bg-white p-6 shadow">
         <div className="sm:flex sm:items-center sm:justify-between mb-4">
           <div className="w-full max-w-xs">
+            <label htmlFor="search" className="sr-only">Search</label>
             <div className="relative">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                 <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
