@@ -263,7 +263,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-5">
-            <RevenueChart />
+            <RevenueChart chartData={data.revenueChart} />
         </div>
        
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">

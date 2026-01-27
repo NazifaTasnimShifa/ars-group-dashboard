@@ -5,38 +5,32 @@ import FilterButtons from '@/components/ui/FilterButtons';
 const options = {
   responsive: true,
   maintainAspectRatio: false,
-  plugins: {
-    legend: { position: 'top' },
-    title: { display: false },
-  },
+  plugins: { legend: { position: 'top' }, title: { display: false } },
 };
 
-const labels = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+export default function RevenueChart({ chartData }) {
+  // Default fallback if no data passed
+  const labels = chartData?.labels || ['Jan', 'Feb', 'Mar'];
+  const revenueData = chartData?.data || [0, 0, 0];
 
-const data = {
-  labels,
-  datasets: [
-    {
-      label: 'Revenue',
-      data: [350000, 420000, 400000, 450000, 500000, 480000, 410000, 380000, 390000, 420000, 390000, 346846],
-      borderColor: 'rgb(54, 162, 235)',
-      backgroundColor: 'rgba(54, 162, 235, 0.5)',
-    },
-    {
-      label: 'Expenses',
-      data: [600000, 650000, 620000, 700000, 710000, 680000, 630000, 590000, 610000, 640000, 600000, 520000],
-      borderColor: 'rgb(255, 99, 132)',
-      backgroundColor: 'rgba(255, 99, 132, 0.5)',
-    },
-  ],
-};
+  const data = {
+    labels,
+    datasets: [
+      {
+        label: 'Revenue',
+        data: revenueData,
+        borderColor: 'rgb(54, 162, 235)',
+        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+      },
+      // You can add Expense line here if you calculate monthly expenses similarly in the API
+    ],
+  };
 
-export default function RevenueChart() {
   return (
     <div className="h-96 rounded-lg bg-white p-4 shadow flex flex-col">
        <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold text-gray-900">Revenue vs Expenses</h3>
-            <FilterButtons periods={['1M', '6M', '1Y']} />
+            <h3 className="font-semibold text-gray-900">Revenue Trends (2024-2025)</h3>
+            <FilterButtons periods={['1Y']} />
         </div>
       <div className="flex-grow relative">
         <Line options={options} data={data} />
