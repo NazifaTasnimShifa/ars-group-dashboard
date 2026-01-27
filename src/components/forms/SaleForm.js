@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 
 export default function SaleForm({ sale, onSave, onCancel }) {
-  const { selectedCompany } = useAppContext();
+  const { selectedCompany, token } = useAppContext();
   const [products, setProducts] = useState([]);
   const [items, setItems] = useState([]);
   const [customer, setCustomer] = useState('');
@@ -16,7 +16,8 @@ export default function SaleForm({ sale, onSave, onCancel }) {
       if (!selectedCompany) return;
       setLoadingProducts(true);
       try {
-        const res = await fetch(`/api/inventory?company_id=${selectedCompany.id}`);
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const res = await fetch(`/api/inventory?company_id=${selectedCompany.id}`, { headers });
         const data = await res.json();
         // Handle different possible API responses
         if (data.success && Array.isArray(data.data)) {
@@ -33,7 +34,7 @@ export default function SaleForm({ sale, onSave, onCancel }) {
       }
     }
     fetchProducts();
-  }, [selectedCompany]);
+  }, [selectedCompany, token]);
 
   const addItem = () => {
     setItems([...items, { productId: '', quantity: 1, price: 0 }]);
