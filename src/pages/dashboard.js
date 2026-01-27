@@ -5,6 +5,11 @@ import { useState, useEffect, useCallback, Fragment } from 'react';
 import { Menu, Transition } from '@headlessui/react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+
+// Owner Dashboard Components
+import { CashPulseCard, OperationalSnapshot, LiabilityWatch, CompanyBreakdown } from '@/components/owner-dashboard';
+
+// Existing Dashboard Components
 import StatCard from '@/components/dashboard/StatCard';
 import ProfitabilityRatios from '@/components/dashboard/ProfitabilityRatios';
 import CurrentRatio from '@/components/dashboard/CurrentRatio';
@@ -30,6 +35,7 @@ import {
   PlusCircleIcon,
   BuildingOffice2Icon,
   GlobeAltIcon,
+  CalendarDaysIcon,
 } from '@heroicons/react/24/outline';
 
 const iconMap = {
@@ -48,11 +54,13 @@ export default function DashboardPage() {
     isSuperOwner, 
     isViewingAllBusinesses,
     formatCurrency,
+    formatDate,
     loading: authLoading 
   } = useAppContext();
   
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   // --- 1. Fetch Dashboard Data ---
   const fetchDashboardData = useCallback(async () => {
@@ -197,7 +205,7 @@ export default function DashboardPage() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="text-gray-500">Loading Dashboard...</div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
         </div>
       </DashboardLayout>
     );
@@ -218,12 +226,6 @@ export default function DashboardPage() {
                 ? `Your ${currentBusiness.name} dashboard is ready. Start by adding some data!`
                 : 'Please wait while we load your dashboard...'}
           </p>
-          {currentBusiness && (
-            <div className="mt-6 flex justify-center gap-4">
-              <button onClick={() => openModal('sale')} className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500">Add Sale</button>
-              <button onClick={() => openModal('product')} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">Add Product</button>
-            </div>
-          )}
         </div>
       </DashboardLayout>
     );
@@ -239,36 +241,47 @@ export default function DashboardPage() {
         {modalState.content}
       </Modal>
 
-      <div className="space-y-8">
-        {/* Header with Company Switcher */}
+      <div className="space-y-6">
+        {/* Header with Company Switcher and Date Picker */}
         <div className="sm:flex sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-base font-semibold leading-6 text-gray-900">
-              {isSuperOwner ? 'Owner Dashboard' : 'Dashboard Overview'}
+            <h3 className="text-xl font-bold text-gray-900">
+              {isSuperOwner ? 'Owner Dashboard' : 'Dashboard'}
             </h3>
             {isSuperOwner && (
               <p className="mt-1 text-sm text-gray-500">
                 {isViewingAllBusinesses 
-                  ? 'Viewing combined data from all companies' 
+                  ? 'Combined view of all companies' 
                   : `Viewing: ${currentBusiness?.name}`}
               </p>
             )}
           </div>
 
           <div className="mt-4 sm:mt-0 flex items-center gap-3">
+            {/* Date Picker */}
+            <div className="flex items-center bg-white rounded-md border border-gray-300 px-3 py-2">
+              <CalendarDaysIcon className="h-5 w-5 text-gray-400 mr-2" />
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="text-sm text-gray-700 border-0 focus:ring-0 p-0"
+              />
+            </div>
+
             {/* Company Switcher (Super Owner Only) */}
             {isSuperOwner && (
               <Menu as="div" className="relative inline-block text-left">
                 <Menu.Button className="inline-flex items-center gap-x-2 rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
                   {isViewingAllBusinesses ? (
                     <>
-                      <GlobeAltIcon className="h-5 w-5 text-gray-400" />
+                      <GlobeAltIcon className="h-5 w-5 text-indigo-500" />
                       All Companies
                     </>
                   ) : (
                     <>
                       <BuildingOffice2Icon className="h-5 w-5 text-gray-400" />
-                      {currentBusiness?.shortName || 'Select Company'}
+                      {currentBusiness?.shortName || 'Select'}
                     </>
                   )}
                   <ChevronDownIcon className="h-5 w-5 text-gray-400" />
@@ -292,7 +305,7 @@ export default function DashboardPage() {
                             className={`${active ? 'bg-gray-100' : ''} ${isViewingAllBusinesses ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'} flex w-full items-center px-4 py-2 text-sm`}
                           >
                             <GlobeAltIcon className="mr-3 h-5 w-5" />
-                            All Companies (Combined)
+                            All Companies
                           </button>
                         )}
                       </Menu.Item>
@@ -305,10 +318,7 @@ export default function DashboardPage() {
                               className={`${active ? 'bg-gray-100' : ''} ${currentBusiness?.id === business.id ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'} flex w-full items-center px-4 py-2 text-sm`}
                             >
                               <BuildingOffice2Icon className="mr-3 h-5 w-5" />
-                              <div className="text-left">
-                                <div>{business.name}</div>
-                                <div className="text-xs text-gray-400">{business.type === 'PETROL_PUMP' ? 'Fuel Station' : 'Lubricant Dist.'}</div>
-                              </div>
+                              {business.name}
                             </button>
                           )}
                         </Menu.Item>
@@ -321,13 +331,11 @@ export default function DashboardPage() {
 
             {/* Add New Dropdown */}
             <Menu as="div" className="relative inline-block text-left">
-              <div>
-                <Menu.Button className="inline-flex w-full items-center justify-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
-                  <PlusCircleIcon className="h-5 w-5" aria-hidden="true" />
-                  Add New
-                  <ChevronDownIcon className="ml-2 h-5 w-5 text-indigo-200" aria-hidden="true" />
-                </Menu.Button>
-              </div>
+              <Menu.Button className="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                <PlusCircleIcon className="h-5 w-5" />
+                Add New
+                <ChevronDownIcon className="h-5 w-5 text-indigo-200" />
+              </Menu.Button>
 
               <Transition
                 as={Fragment}
@@ -338,7 +346,7 @@ export default function DashboardPage() {
                 leaveFrom="transform opacity-100 scale-100"
                 leaveTo="transform opacity-0 scale-95"
               >
-                <Menu.Items className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+                <Menu.Items className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
                   <div className="py-1">
                     <Menu.Item>{({ active }) => <button onClick={() => openModal('sale')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Sale Invoice</button>}</Menu.Item>
                     <Menu.Item>{({ active }) => <button onClick={() => openModal('purchase')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Purchase Order</button>}</Menu.Item>
@@ -353,22 +361,43 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {data.stats?.map((item) => {
-            const Icon = iconMap[item.icon] || BanknotesIcon;
-            return (
-              <StatCard
-                key={item.name}
-                title={item.name}
-                value={formatCurrency(item.value)}
-                icon={Icon}
-              />
-            );
-          })}
-        </div>
+        {/* Owner Dashboard Sections */}
+        {isSuperOwner && (
+          <>
+            {/* Cash & Bank Pulse */}
+            <CashPulseCard data={data.cashPulse} formatCurrency={formatCurrency} />
+            
+            {/* Operational Snapshot */}
+            <OperationalSnapshot data={data.operationalSnapshot} formatCurrency={formatCurrency} />
+            
+            {/* Liability Watch */}
+            <LiabilityWatch data={data.liabilityWatch} formatCurrency={formatCurrency} />
+            
+            {/* Company Breakdown */}
+            {isViewingAllBusinesses && (
+              <CompanyBreakdown companies={data.companies} formatCurrency={formatCurrency} />
+            )}
+          </>
+        )}
 
-        {/* Rest of Dashboard */}
+        {/* Stats Grid (for non-owner or single company view) */}
+        {(!isSuperOwner || currentBusiness) && data.stats && (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {data.stats.map((item) => {
+              const Icon = iconMap[item.icon] || BanknotesIcon;
+              return (
+                <StatCard
+                  key={item.name}
+                  title={item.name}
+                  value={formatCurrency(item.value)}
+                  icon={Icon}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {/* Financial Health Overview */}
         <div>
           <h3 className="text-base font-semibold leading-6 text-gray-900 mb-4">Financial Health Overview</h3>
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
