@@ -8,6 +8,7 @@ const AppContext = createContext();
 export function AppProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [token, setToken] = useState(null);
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -33,14 +34,16 @@ export function AppProvider({ children }) {
     const initAuth = async () => {
       try {
         const storedUser = sessionStorage.getItem('user');
+        const storedToken = sessionStorage.getItem('token');
         const storedCompany = sessionStorage.getItem('selectedCompany');
 
         // Always fetch fresh companies list
         const fetchedCompanies = await fetchCompanies();
 
-        if (storedUser) {
+        if (storedUser && storedToken) {
           const parsedUser = JSON.parse(storedUser);
           setUser(parsedUser);
+          setToken(storedToken);
           setIsAuthenticated(true);
 
           if (storedCompany) {
@@ -69,21 +72,34 @@ export function AppProvider({ children }) {
 
       if (data.success) {
         const loggedInUser = data.user;
-        
+        const authToken = data.token;
+
         setUser(loggedInUser);
+        setToken(authToken);
         setIsAuthenticated(true);
-        
+
         // Ensure we have the latest company list
         const currentCompanies = await fetchCompanies();
-        
-        sessionStorage.setItem('user', JSON.stringify(loggedInUser));
 
-        if (loggedInUser.role === 'admin') {
-          router.push('/select-company');
-        } else if (loggedInUser.role === 'user' && loggedInUser.company_id) {
+        sessionStorage.setItem('user', JSON.stringify(loggedInUser));
+        sessionStorage.setItem('token', authToken);
+
+        // Role-based redirection
+        if (loggedInUser.role === 'ADMIN' || loggedInUser.role === 'MANAGER') {
+          if (loggedInUser.role === 'ADMIN' || !loggedInUser.company_id) {
+            router.push('/select-company');
+          } else {
+            const companyObj = currentCompanies.find(c => c.id === loggedInUser.company_id);
+            if (companyObj) {
+              selectCompany(companyObj.id);
+            } else {
+              router.push('/select-company');
+            }
+          }
+        } else if (loggedInUser.role === 'USER' && loggedInUser.company_id) {
           // Find company object
           const companyObj = currentCompanies.find(c => c.id === loggedInUser.company_id);
-          
+
           if (companyObj) {
             selectCompany(companyObj.id);
           } else {
@@ -105,9 +121,11 @@ export function AppProvider({ children }) {
 
   const logout = () => {
     setUser(null);
+    setToken(null);
     setIsAuthenticated(false);
     setSelectedCompany(null);
     sessionStorage.removeItem('user');
+    sessionStorage.removeItem('token');
     sessionStorage.removeItem('selectedCompany');
     router.push('/login');
   };
@@ -129,6 +147,7 @@ export function AppProvider({ children }) {
 
   const value = {
     user,
+    token,
     isAuthenticated,
     companies,
     selectedCompany,
