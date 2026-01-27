@@ -10,6 +10,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ... (Rest of your models: companies, users, debtors, etc. remain the same)
 model companies {
   id                String              @id @db.VarChar(50)
   name              String              @db.VarChar(255)
@@ -34,7 +35,7 @@ model users {
   id         Int        @id @default(autoincrement())
   email      String     @unique @db.VarChar(255)
   password   String     @db.VarChar(255)
-  role       Role       @default(USER)
+  role       users_role @default(user)
   name       String     @db.VarChar(255)
   company_id String?    @db.VarChar(50)
   company    companies? @relation(fields: [company_id], references: [id], onDelete: SetNull)
@@ -76,28 +77,16 @@ model inventory_items {
   salePrice  Decimal   @db.Decimal(12, 2)
   status     String    @db.VarChar(50)
   company    companies @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  sale_items sale_items[]
 }
 
 model sales {
-  id          Int          @id @default(autoincrement())
-  company_id  String       @db.VarChar(50)
-  customer    String?      @db.VarChar(255)
-  date        DateTime     @default(now())
-  totalAmount Decimal      @db.Decimal(12, 2)
-  status      String       @db.VarChar(50)
-  company     companies    @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  items       sale_items[]
-}
-
-model sale_items {
-  id         Int             @id @default(autoincrement())
-  sale_id    Int
-  product_id String          @db.VarChar(50)
-  quantity   Int
-  price      Decimal         @db.Decimal(12, 2)
-  sale       sales           @relation(fields: [sale_id], references: [id], onDelete: Cascade)
-  product    inventory_items @relation(fields: [product_id], references: [id])
+  id         String    @id @db.VarChar(50)
+  company_id String    @db.VarChar(50)
+  customer   String    @db.VarChar(255)
+  date       DateTime  @db.Date
+  amount     Decimal   @db.Decimal(12, 2)
+  status     String    @db.VarChar(50)
+  company    companies @relation(fields: [company_id], references: [id], onDelete: Cascade)
 }
 
 model purchases {
@@ -143,8 +132,7 @@ model chart_of_accounts {
   company    companies @relation(fields: [company_id], references: [id], onDelete: Cascade)
 }
 
-enum Role {
-  USER
-  MANAGER
-  ADMIN
+enum users_role {
+  admin
+  user
 }

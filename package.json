@@ -23,7 +23,6 @@
     "chart.js": "^4.5.0",
     "flowbite": "^3.1.2",
     "flowbite-react": "^0.12.9",
-    "jsonwebtoken": "^9.0.3",
     "next": "15.5.4",
     "react": "19.1.0",
     "react-chartjs-2": "^5.3.0",

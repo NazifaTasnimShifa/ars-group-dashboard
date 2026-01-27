@@ -37,8 +37,8 @@ const iconMap = {
 
 export default function DashboardPage() {
   const [modalState, setModalState] = useState({ open: false, title: '', content: null });
-  const { selectedCompany, token } = useAppContext();
-
+  const { selectedCompany } = useAppContext();
+  
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -49,18 +49,17 @@ export default function DashboardPage() {
     if (!selectedCompany) return;
     setLoading(true);
     try {
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/dashboard?company_id=${selectedCompany.id}`, { headers });
-      const fetchedData = await res.json();
-      if (fetchedData.success) {
-        setData(fetchedData.data);
-      }
+        const res = await fetch(`/api/dashboard?company_id=${selectedCompany.id}`);
+        const fetchedData = await res.json();
+        if (fetchedData.success) {
+            setData(fetchedData.data);
+        }
     } catch (err) {
-      console.error("Failed to fetch dashboard data", err);
+        console.error("Failed to fetch dashboard data", err);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  }, [selectedCompany, token]);
+  }, [selectedCompany]);
 
   useEffect(() => { fetchDashboardData(); }, [fetchDashboardData]);
 
@@ -71,56 +70,51 @@ export default function DashboardPage() {
 
     // Determine URL and ID logic based on type
     switch (type) {
-      case 'sales':
-        url = '/api/sales';
-        // payload.id is handled by backend (autoincrement Int)
-        break;
-      case 'purchases':
-        url = '/api/purchases';
-        payload.id = `PO-${Date.now()}`;
-        break;
-      case 'inventory':
-        url = '/api/inventory';
-        payload.id = `ITM-${Date.now()}`;
-        break;
-      case 'debtors':
-        url = '/api/debtors';
-        // ID is auto-increment, do not send it
-        delete payload.id;
-        break;
-      case 'creditors':
-        url = '/api/creditors';
-        // ID is auto-increment, do not send it
-        delete payload.id;
-        break;
-      default:
-        alert('Unknown data type');
-        return;
+        case 'sales':
+            url = '/api/sales';
+            payload.id = `INV-${Date.now()}`;
+            break;
+        case 'purchases':
+            url = '/api/purchases';
+            payload.id = `PO-${Date.now()}`;
+            break;
+        case 'inventory':
+            url = '/api/inventory';
+            payload.id = `ITM-${Date.now()}`;
+            break;
+        case 'debtors':
+            url = '/api/debtors';
+            // ID is auto-increment, do not send it
+            delete payload.id;
+            break;
+        case 'creditors':
+            url = '/api/creditors';
+            // ID is auto-increment, do not send it
+            delete payload.id;
+            break;
+        default:
+            alert('Unknown data type');
+            return;
     }
 
     try {
-      const headers = {
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      };
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
 
-      const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload)
-      });
-
-      if (res.ok) {
-        setModalState((prev) => ({ ...prev, open: false }));
-        alert('Saved successfully!');
-        fetchDashboardData();
-      } else {
-        const err = await res.json();
-        alert(`Failed to save: ${err.error || err.message || 'Unknown error'}`);
-      }
+        if (res.ok) {
+            setModalState((prev) => ({ ...prev, open: false }));
+            alert('Saved successfully!');
+            fetchDashboardData(); 
+        } else {
+            const err = await res.json();
+            alert(`Failed to save: ${err.error || err.message || 'Unknown error'}`);
+        }
     } catch (error) {
-      console.error(error);
-      alert('An error occurred while saving.');
+        console.error(error);
+        alert('An error occurred while saving.');
     }
   };
 
@@ -133,43 +127,43 @@ export default function DashboardPage() {
     let dataType = '';
 
     switch (type) {
-      case 'sale':
-        title = 'Record New Sale';
-        dataType = 'sales';
-        FormComponent = SaleForm;
-        break;
-      case 'purchase':
-        title = 'Record Purchase Order';
-        dataType = 'purchases';
-        FormComponent = PurchaseOrderForm;
-        break;
-      case 'product':
-        title = 'Add Inventory Item';
-        dataType = 'inventory';
-        FormComponent = InventoryItemForm;
-        break;
-      case 'debtor':
-        title = 'Add Customer (Debtor)';
-        dataType = 'debtors';
-        FormComponent = DebtorForm;
-        break;
-      case 'creditor':
-        title = 'Add Supplier (Creditor)';
-        dataType = 'creditors';
-        FormComponent = CreditorForm;
-        break;
-      default: return;
+        case 'sale':
+            title = 'Record New Sale';
+            dataType = 'sales';
+            FormComponent = SaleForm;
+            break;
+        case 'purchase':
+            title = 'Record Purchase Order';
+            dataType = 'purchases';
+            FormComponent = PurchaseOrderForm;
+            break;
+        case 'product':
+            title = 'Add Inventory Item';
+            dataType = 'inventory';
+            FormComponent = InventoryItemForm;
+            break;
+        case 'debtor':
+            title = 'Add Customer (Debtor)';
+            dataType = 'debtors';
+            FormComponent = DebtorForm;
+            break;
+        case 'creditor':
+            title = 'Add Supplier (Creditor)';
+            dataType = 'creditors';
+            FormComponent = CreditorForm;
+            break;
+        default: return;
     }
 
     setModalState({
-      open: true,
-      title,
-      content: (
-        <FormComponent
-          onSave={(data) => handleSave(dataType, data)}
-          onCancel={handleCloseModal}
-        />
-      )
+        open: true,
+        title,
+        content: (
+            <FormComponent 
+                onSave={(data) => handleSave(dataType, data)} 
+                onCancel={handleCloseModal} 
+            />
+        )
     });
   };
 
@@ -181,12 +175,12 @@ export default function DashboardPage() {
     return (
       <DashboardLayout>
         <div className="p-12 text-center">
-          <h3 className="text-xl font-bold text-gray-900">Welcome to {selectedCompany.name}</h3>
-          <p className="text-gray-500 mt-2">Your dashboard is ready. Start by adding some data!</p>
-          <div className="mt-6 flex justify-center gap-4">
-            <button onClick={() => openModal('sale')} className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500">Add Sale</button>
-            <button onClick={() => openModal('product')} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">Add Product</button>
-          </div>
+            <h3 className="text-xl font-bold text-gray-900">Welcome to {selectedCompany.name}</h3>
+            <p className="text-gray-500 mt-2">Your dashboard is ready. Start by adding some data!</p>
+            <div className="mt-6 flex justify-center gap-4">
+                <button onClick={() => openModal('sale')} className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500">Add Sale</button>
+                <button onClick={() => openModal('product')} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">Add Product</button>
+            </div>
         </div>
       </DashboardLayout>
     );
@@ -225,7 +219,7 @@ export default function DashboardPage() {
               leaveFrom="transform opacity-100 scale-100"
               leaveTo="transform opacity-0 scale-95"
             >
-              <Menu.Items className="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+              <Menu.Items className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
                 <div className="py-1">
                   <Menu.Item>{({ active }) => <button onClick={() => openModal('sale')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Sale Invoice</button>}</Menu.Item>
                   <Menu.Item>{({ active }) => <button onClick={() => openModal('purchase')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Purchase Order</button>}</Menu.Item>
@@ -269,9 +263,9 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-5">
-          <RevenueChart chartData={data.revenueChart} />
+            <RevenueChart chartData={data.revenueChart} />
         </div>
-
+       
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <DebtorsTable />
           <CreditorsTable />

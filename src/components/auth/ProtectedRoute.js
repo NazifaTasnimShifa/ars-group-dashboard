@@ -4,8 +4,8 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAppContext } from '@/contexts/AppContext';
 
-const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const { isAuthenticated, user, selectedCompany, loading } = useAppContext();
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, selectedCompany, loading } = useAppContext();
   const router = useRouter();
 
   useEffect(() => {
@@ -16,20 +16,12 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
       return;
     }
 
-    // Role check
-    if (allowedRoles.length > 0 && user && !allowedRoles.includes(user.role)) {
-      // If user doesn't have required role, redirect to dashboard or login
-      // Use replace to avoid history stack issues
-      console.warn(`Access denied. User role ${user.role} is not in [${allowedRoles.join(', ')}]`);
-      router.replace('/dashboard'); // or /unauthorized
-      return;
-    }
-
     // If logged in but no company selected (and not on the selection page)
+    // redirect to selection (Admins) or back to login if something is broken
     if (isAuthenticated && !selectedCompany && router.pathname !== '/select-company') {
       router.replace('/select-company');
     }
-  }, [isAuthenticated, selectedCompany, router, loading, user, allowedRoles]);
+  }, [isAuthenticated, selectedCompany, router, loading]);
 
   if (loading) {
     return (
@@ -41,10 +33,6 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
 
   // Render children if conditions are met
   if ((isAuthenticated && selectedCompany) || (isAuthenticated && router.pathname === '/select-company')) {
-    // Second check for rendering safety
-    if (allowedRoles.length > 0 && user && !allowedRoles.includes(user.role)) {
-      return null;
-    }
     return children;
   }
 

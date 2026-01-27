@@ -1,8 +1,7 @@
 // src/pages/api/creditors/index.js
 import prisma from '@/lib/prisma';
-import { withAuth } from '@/lib/middleware';
 
-async function handler(req, res) {
+export default async function handler(req, res) {
   const { method } = req;
   const { company_id } = req.query;
 
@@ -38,5 +37,3 @@ async function handler(req, res) {
     res.status(500).json({ success: false, error: error.message });
   }
 }
-
-export default withAuth(handler, ['admin', 'manager', 'user']);

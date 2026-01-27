@@ -1,8 +1,7 @@
 // src/pages/api/debtors/index.js
 import prisma from '@/lib/prisma';
-import { withAuth } from '@/lib/middleware';
 
-async function handler(req, res) {
+export default async function handler(req, res) {
   const { method } = req;
   const { company_id } = req.query;
 
@@ -18,7 +17,8 @@ async function handler(req, res) {
         break;
 
       case 'POST':
-        const { id, ...dataToSave } = req.body;
+        // Do NOT manually set 'id' for auto-increment fields
+        const { id, ...dataToSave } = req.body; 
         const debtor = await prisma.debtors.create({
           data: {
             ...dataToSave,
@@ -38,5 +38,3 @@ async function handler(req, res) {
     res.status(500).json({ success: false, error: error.message });
   }
 }
-
-export default withAuth(handler, ['admin', 'manager', 'user']);
