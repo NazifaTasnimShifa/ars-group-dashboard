@@ -37,7 +37,7 @@ const iconMap = {
 
 export default function DashboardPage() {
   const [modalState, setModalState] = useState({ open: false, title: '', content: null });
-  const { selectedCompany } = useAppContext();
+  const { selectedCompany, token } = useAppContext();
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -49,7 +49,8 @@ export default function DashboardPage() {
     if (!selectedCompany) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/dashboard?company_id=${selectedCompany.id}`);
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch(`/api/dashboard?company_id=${selectedCompany.id}`, { headers });
       const fetchedData = await res.json();
       if (fetchedData.success) {
         setData(fetchedData.data);
@@ -59,7 +60,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedCompany]);
+  }, [selectedCompany, token]);
 
   useEffect(() => { fetchDashboardData(); }, [fetchDashboardData]);
 
@@ -98,9 +99,14 @@ export default function DashboardPage() {
     }
 
     try {
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
+
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(payload)
       });
 
@@ -219,7 +225,7 @@ export default function DashboardPage() {
               leaveFrom="transform opacity-100 scale-100"
               leaveTo="transform opacity-0 scale-95"
             >
-              <Menu.Items className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+              <Menu.Items className="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
                 <div className="py-1">
                   <Menu.Item>{({ active }) => <button onClick={() => openModal('sale')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Sale Invoice</button>}</Menu.Item>
                   <Menu.Item>{({ active }) => <button onClick={() => openModal('purchase')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Purchase Order</button>}</Menu.Item>
