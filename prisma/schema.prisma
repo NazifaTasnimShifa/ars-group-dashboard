@@ -1,4 +1,5 @@
 // prisma/schema.prisma
+// ARS ERP Dashboard - Complete Database Schema
 
 generator client {
   provider = "prisma-client-js"
@@ -6,133 +7,1422 @@ generator client {
 
 datasource db {
   provider = "mysql"
-  // CORRECTED: Use env() to keep your password safe
   url      = env("DATABASE_URL")
 }
 
-// ... (Rest of your models: companies, users, debtors, etc. remain the same)
-model companies {
-  id                String              @id @db.VarChar(50)
-  name              String              @db.VarChar(255)
-  shortName         String              @db.VarChar(100)
-  dashboard_stats   Json?
-  balance_sheet     Json?
-  income_statement  Json?
-  cash_flow         Json?
-  trial_balance     Json?
-  users             users[]
-  debtors           debtors[]
-  creditors         creditors[]
-  inventory_items   inventory_items[]
-  sales             sales[]
-  purchases         purchases[]
-  fixed_assets      fixed_assets[]
-  process_loss      process_loss[]
-  chart_of_accounts chart_of_accounts[]
+// ============================================
+// CORE BUSINESS ENTITIES
+// ============================================
+
+model Business {
+  id          String   @id @default(cuid())
+  code        String   @unique @db.VarChar(20)
+  name        String   @db.VarChar(255)
+  shortName   String   @db.VarChar(50)
+  type        BusinessType
+  address     String?  @db.Text
+  phone       String?  @db.VarChar(20)
+  email       String?  @db.VarChar(100)
+  gstin       String?  @db.VarChar(20)
+  pan         String?  @db.VarChar(15)
+  logoUrl     String?  @db.VarChar(500)
+  settings    Json?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  branches         Branch[]
+  users            User[]
+  fuelTypes        FuelType[]
+  productCategories ProductCategory[]
+  customers        Customer[]
+  suppliers        Supplier[]
+  chartOfAccounts  ChartOfAccount[]
+  departments      Department[]
+  employees        Employee[]
+
+  @@map("businesses")
 }
 
-model users {
-  id         Int        @id @default(autoincrement())
-  email      String     @unique @db.VarChar(255)
-  password   String     @db.VarChar(255)
-  role       users_role @default(user)
-  name       String     @db.VarChar(255)
-  company_id String?    @db.VarChar(50)
-  company    companies? @relation(fields: [company_id], references: [id], onDelete: SetNull)
+enum BusinessType {
+  PETROL_PUMP
+  LUBRICANT
 }
 
-model debtors {
-  id            Int       @id @default(autoincrement())
-  company_id    String    @db.VarChar(50)
+model Branch {
+  id          String   @id @default(cuid())
+  businessId  String
+  code        String   @db.VarChar(20)
+  name        String   @db.VarChar(255)
+  address     String?  @db.Text
+  phone       String?  @db.VarChar(20)
+  managerId   String?
+  isActive    Boolean  @default(true)
+  settings    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business       Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  storageTanks   StorageTank[]
+  pumps          Pump[]
+  shifts         Shift[]
+  cylinderStock  CylinderStock[]
+  inventoryStock InventoryStock[]
+  employees      Employee[]
+  bankAccounts   BankAccount[]
+
+  @@unique([businessId, code])
+  @@map("branches")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique @db.VarChar(255)
+  password      String    @db.VarChar(255)
   name          String    @db.VarChar(255)
-  contactPerson String?   @db.VarChar(255)
-  email         String?   @db.VarChar(255)
-  phone         String?   @db.VarChar(50)
-  amount        Decimal   @db.Decimal(12, 2)
-  due           DateTime  @db.Date
-  aging         Int
-  company       companies @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  phone         String?   @db.VarChar(20)
+  roleId        String
+  businessId    String?
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  role         Role       @relation(fields: [roleId], references: [id])
+  business     Business?  @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  auditLogs    AuditLog[]
+  shiftInstances ShiftInstance[] @relation("ShiftOperator")
+
+  @@map("users")
 }
 
-model creditors {
-  id            Int       @id @default(autoincrement())
-  company_id    String    @db.VarChar(50)
-  name          String    @db.VarChar(255)
-  contactPerson String?   @db.VarChar(255)
-  amount        Decimal   @db.Decimal(12, 2)
-  due           DateTime  @db.Date
-  aging         Int
-  company       companies @relation(fields: [company_id], references: [id], onDelete: Cascade)
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique @db.VarChar(50)
+  displayName String   @db.VarChar(100)
+  description String?  @db.Text
+  permissions Json
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users User[]
+
+  @@map("roles")
 }
 
-model inventory_items {
-  id         String    @id @db.VarChar(50)
-  company_id String    @db.VarChar(50)
-  name       String    @db.VarChar(255)
-  sku        String    @db.VarChar(100)
-  category   String    @db.VarChar(100)
-  stock      Int
-  unit       String    @db.VarChar(50)
-  costPrice  Decimal   @db.Decimal(12, 2)
-  salePrice  Decimal   @db.Decimal(12, 2)
-  status     String    @db.VarChar(50)
-  company    companies @relation(fields: [company_id], references: [id], onDelete: Cascade)
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String
+  action      String   @db.VarChar(100)
+  entityType  String   @db.VarChar(100)
+  entityId    String?  @db.VarChar(100)
+  oldData     Json?
+  newData     Json?
+  ipAddress   String?  @db.VarChar(50)
+  userAgent   String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
 }
 
-model sales {
-  id         String    @id @db.VarChar(50)
-  company_id String    @db.VarChar(50)
-  customer   String    @db.VarChar(255)
-  date       DateTime  @db.Date
-  amount     Decimal   @db.Decimal(12, 2)
-  status     String    @db.VarChar(50)
-  company    companies @relation(fields: [company_id], references: [id], onDelete: Cascade)
+// ============================================
+// PETROL PUMP - TANKS & FUEL
+// ============================================
+
+model FuelType {
+  id                String   @id @default(cuid())
+  businessId        String
+  name              String   @db.VarChar(100)
+  code              String   @db.VarChar(20)
+  density           Decimal? @db.Decimal(10, 4)
+  currentPrice      Decimal  @db.Decimal(10, 2)
+  permissibleLoss   Decimal  @default(0.25) @db.Decimal(5, 2)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  business      Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  storageTanks  StorageTank[]
+  nozzles       Nozzle[]
+  fuelReceipts  FuelReceipt[]
+  processLosses ProcessLoss[]
+  fuelSales     FuelSale[]
+
+  @@unique([businessId, code])
+  @@map("fuel_types")
 }
 
-model purchases {
-  id         String    @id @db.VarChar(50)
-  company_id String    @db.VarChar(50)
-  supplier   String    @db.VarChar(255)
-  date       DateTime  @db.Date
-  amount     Decimal   @db.Decimal(12, 2)
-  status     String    @db.VarChar(50)
-  company    companies @relation(fields: [company_id], references: [id], onDelete: Cascade)
+model StorageTank {
+  id                    String    @id @default(cuid())
+  branchId              String
+  fuelTypeId            String
+  tankNumber            String    @db.VarChar(20)
+  capacityLiters        Decimal   @db.Decimal(12, 2)
+  currentStock          Decimal   @default(0) @db.Decimal(12, 2)
+  lastCalibrationDate   DateTime?
+  nextCalibrationDate   DateTime?
+  isActive              Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  branch        Branch         @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  fuelType      FuelType       @relation(fields: [fuelTypeId], references: [id])
+  dipReadings   DipReading[]
+  fuelReceipts  FuelReceipt[]
+  nozzles       Nozzle[]
+
+  @@unique([branchId, tankNumber])
+  @@map("storage_tanks")
 }
 
-model fixed_assets {
-  id              String    @id @db.VarChar(50)
-  company_id      String    @db.VarChar(50)
-  name            String    @db.VarChar(255)
-  acquisitionDate DateTime  @db.Date
-  cost            Decimal   @db.Decimal(15, 2)
-  depreciation    Decimal   @db.Decimal(15, 2)
-  bookValue       Decimal   @db.Decimal(15, 2)
-  company         companies @relation(fields: [company_id], references: [id], onDelete: Cascade)
+model DipReading {
+  id              String   @id @default(cuid())
+  tankId          String
+  shiftInstanceId String?
+  readingDate     DateTime @db.Date
+  readingTime     DateTime @db.Time(0)
+  readingType     DipReadingType
+  dipMm           Decimal  @db.Decimal(10, 2)
+  calculatedStock Decimal  @db.Decimal(12, 2)
+  temperature     Decimal? @db.Decimal(5, 2)
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now())
+
+  tank          StorageTank    @relation(fields: [tankId], references: [id], onDelete: Cascade)
+  shiftInstance ShiftInstance? @relation(fields: [shiftInstanceId], references: [id])
+
+  @@map("dip_readings")
 }
 
-model process_loss {
-  id         String    @id @db.VarChar(50)
-  company_id String    @db.VarChar(50)
-  date       DateTime  @db.Date
-  product    String    @db.VarChar(255)
-  type       String    @db.VarChar(100)
-  quantity   Decimal   @db.Decimal(12, 2)
-  unit       String    @db.VarChar(50)
-  notes      String?   @db.Text
-  company    companies @relation(fields: [company_id], references: [id], onDelete: Cascade)
+enum DipReadingType {
+  OPENING
+  CLOSING
+  RECEIPT
+  VERIFICATION
 }
 
-model chart_of_accounts {
-  id         Int       @id @default(autoincrement())
-  company_id String    @db.VarChar(50)
-  code       Int
-  name       String    @db.VarChar(255)
-  type       String    @db.VarChar(50)
-  balance    Decimal   @db.Decimal(15, 2)
-  company    companies @relation(fields: [company_id], references: [id], onDelete: Cascade)
+model FuelReceipt {
+  id              String   @id @default(cuid())
+  tankId          String
+  fuelTypeId      String
+  supplierId      String?
+  receiptDate     DateTime @db.Date
+  challanNumber   String   @db.VarChar(50)
+  tankerNumber    String?  @db.VarChar(30)
+  driverName      String?  @db.VarChar(100)
+  expectedQty     Decimal  @db.Decimal(12, 2)
+  receivedQty     Decimal  @db.Decimal(12, 2)
+  shortage        Decimal  @default(0) @db.Decimal(12, 2)
+  temperature     Decimal? @db.Decimal(5, 2)
+  density         Decimal? @db.Decimal(10, 4)
+  invoiceNumber   String?  @db.VarChar(50)
+  invoiceAmount   Decimal? @db.Decimal(15, 2)
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tank      StorageTank @relation(fields: [tankId], references: [id])
+  fuelType  FuelType    @relation(fields: [fuelTypeId], references: [id])
+  supplier  Supplier?   @relation(fields: [supplierId], references: [id])
+
+  @@map("fuel_receipts")
 }
 
-enum users_role {
-  admin
-  user
+// ============================================
+// PETROL PUMP - PUMPS & NOZZLES
+// ============================================
+
+model Pump {
+  id                String   @id @default(cuid())
+  branchId          String
+  pumpNumber        String   @db.VarChar(20)
+  make              String?  @db.VarChar(100)
+  model             String?  @db.VarChar(100)
+  serialNumber      String?  @db.VarChar(100)
+  installationDate  DateTime? @db.Date
+  isMpu             Boolean  @default(false)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  nozzles  Nozzle[]
+
+  @@unique([branchId, pumpNumber])
+  @@map("pumps")
+}
+
+model Nozzle {
+  id                    String   @id @default(cuid())
+  pumpId                String
+  tankId                String
+  fuelTypeId            String
+  nozzleNumber          String   @db.VarChar(20)
+  currentMeterReading   Decimal  @default(0) @db.Decimal(15, 2)
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  pump          Pump           @relation(fields: [pumpId], references: [id], onDelete: Cascade)
+  tank          StorageTank    @relation(fields: [tankId], references: [id])
+  fuelType      FuelType       @relation(fields: [fuelTypeId], references: [id])
+  meterReadings MeterReading[]
+  fuelSales     FuelSale[]
+
+  @@unique([pumpId, nozzleNumber])
+  @@map("nozzles")
+}
+
+model MeterReading {
+  id              String   @id @default(cuid())
+  nozzleId        String
+  shiftInstanceId String
+  readingType     MeterReadingType
+  readingValue    Decimal  @db.Decimal(15, 2)
+  readingTime     DateTime
+  createdAt       DateTime @default(now())
+
+  nozzle        Nozzle        @relation(fields: [nozzleId], references: [id], onDelete: Cascade)
+  shiftInstance ShiftInstance @relation(fields: [shiftInstanceId], references: [id])
+
+  @@map("meter_readings")
+}
+
+enum MeterReadingType {
+  OPENING
+  CLOSING
+  TESTING
+}
+
+// ============================================
+// PETROL PUMP - SHIFTS
+// ============================================
+
+model Shift {
+  id          String   @id @default(cuid())
+  branchId    String
+  name        String   @db.VarChar(50)
+  startTime   String   @db.VarChar(10)
+  endTime     String   @db.VarChar(10)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  branch         Branch          @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  shiftInstances ShiftInstance[]
+
+  @@unique([branchId, name])
+  @@map("shifts")
+}
+
+model ShiftInstance {
+  id              String        @id @default(cuid())
+  shiftId         String
+  date            DateTime      @db.Date
+  operatorId      String
+  status          ShiftStatus   @default(OPEN)
+  openingCash     Decimal       @default(0) @db.Decimal(12, 2)
+  closingCash     Decimal?      @db.Decimal(12, 2)
+  totalSales      Decimal       @default(0) @db.Decimal(15, 2)
+  totalCollections Decimal      @default(0) @db.Decimal(15, 2)
+  shortage        Decimal       @default(0) @db.Decimal(12, 2)
+  excess          Decimal       @default(0) @db.Decimal(12, 2)
+  notes           String?       @db.Text
+  openedAt        DateTime      @default(now())
+  closedAt        DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  shift          Shift          @relation(fields: [shiftId], references: [id])
+  operator       User           @relation("ShiftOperator", fields: [operatorId], references: [id])
+  dipReadings    DipReading[]
+  meterReadings  MeterReading[]
+  fuelSales      FuelSale[]
+
+  @@map("shift_instances")
+}
+
+enum ShiftStatus {
+  OPEN
+  PENDING_CLOSE
+  CLOSED
+}
+
+model FuelSale {
+  id              String      @id @default(cuid())
+  shiftInstanceId String
+  nozzleId        String
+  fuelTypeId      String
+  customerId      String?
+  saleTime        DateTime    @default(now())
+  quantity        Decimal     @db.Decimal(12, 2)
+  pricePerLiter   Decimal     @db.Decimal(10, 2)
+  totalAmount     Decimal     @db.Decimal(15, 2)
+  paymentMode     PaymentMode
+  vehicleNumber   String?     @db.VarChar(20)
+  receiptNumber   String?     @db.VarChar(50)
+  notes           String?     @db.Text
+  createdAt       DateTime    @default(now())
+
+  shiftInstance ShiftInstance @relation(fields: [shiftInstanceId], references: [id])
+  nozzle        Nozzle        @relation(fields: [nozzleId], references: [id])
+  fuelType      FuelType      @relation(fields: [fuelTypeId], references: [id])
+  customer      Customer?     @relation(fields: [customerId], references: [id])
+
+  @@map("fuel_sales")
+}
+
+enum PaymentMode {
+  CASH
+  CREDIT
+  UPI
+  CARD
+  FLEET_CARD
+  WALLET
+  CHEQUE
+  BANK_TRANSFER
+}
+
+// ============================================
+// PETROL PUMP - CYLINDERS
+// ============================================
+
+model CylinderType {
+  id              String   @id @default(cuid())
+  name            String   @db.VarChar(100)
+  weight          Decimal  @db.Decimal(6, 2)
+  depositAmount   Decimal  @db.Decimal(10, 2)
+  currentPrice    Decimal  @db.Decimal(10, 2)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  cylinderStock        CylinderStock[]
+  cylinderTransactions CylinderTransaction[]
+
+  @@map("cylinder_types")
+}
+
+model CylinderStock {
+  id              String   @id @default(cuid())
+  branchId        String
+  cylinderTypeId  String
+  filledQty       Int      @default(0)
+  emptyQty        Int      @default(0)
+  damagedQty      Int      @default(0)
+  updatedAt       DateTime @updatedAt
+
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  cylinderType CylinderType @relation(fields: [cylinderTypeId], references: [id])
+
+  @@unique([branchId, cylinderTypeId])
+  @@map("cylinder_stock")
+}
+
+model CylinderCustomer {
+  id                  String   @id @default(cuid())
+  name                String   @db.VarChar(255)
+  phone               String   @db.VarChar(20)
+  address             String?  @db.Text
+  depositAmount       Decimal  @default(0) @db.Decimal(12, 2)
+  cylindersWithCustomer Int    @default(0)
+  registrationDate    DateTime @default(now())
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  transactions CylinderTransaction[]
+
+  @@map("cylinder_customers")
+}
+
+model CylinderTransaction {
+  id                String              @id @default(cuid())
+  customerId        String
+  cylinderTypeId    String
+  transactionDate   DateTime            @default(now())
+  transactionType   CylinderTxnType
+  quantity          Int
+  pricePerCylinder  Decimal?            @db.Decimal(10, 2)
+  depositAmount     Decimal?            @db.Decimal(10, 2)
+  totalAmount       Decimal             @db.Decimal(12, 2)
+  paymentMode       PaymentMode
+  receiptNumber     String?             @db.VarChar(50)
+  notes             String?             @db.Text
+  createdAt         DateTime            @default(now())
+
+  customer     CylinderCustomer @relation(fields: [customerId], references: [id])
+  cylinderType CylinderType     @relation(fields: [cylinderTypeId], references: [id])
+
+  @@map("cylinder_transactions")
+}
+
+enum CylinderTxnType {
+  ISSUE_NEW
+  SWAP
+  RETURN
+  DEPOSIT_COLLECT
+  DEPOSIT_REFUND
+}
+
+// ============================================
+// PETROL PUMP - PROCESS LOSS
+// ============================================
+
+model ProcessLoss {
+  id              String        @id @default(cuid())
+  fuelTypeId      String
+  date            DateTime      @db.Date
+  lossType        LossType
+  bookStock       Decimal       @db.Decimal(12, 2)
+  physicalStock   Decimal       @db.Decimal(12, 2)
+  lossQuantity    Decimal       @db.Decimal(12, 2)
+  lossPercent     Decimal       @db.Decimal(6, 4)
+  isWithinLimit   Boolean
+  estimatedValue  Decimal       @db.Decimal(15, 2)
+  claimNumber     String?       @db.VarChar(50)
+  claimStatus     ClaimStatus?
+  recoveredAmount Decimal?      @db.Decimal(15, 2)
+  notes           String?       @db.Text
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  fuelType FuelType @relation(fields: [fuelTypeId], references: [id])
+
+  @@map("process_losses")
+}
+
+enum LossType {
+  EVAPORATION
+  TRANSIT
+  SPILLAGE
+  LEAKAGE
+  TESTING
+  OTHER
+}
+
+enum ClaimStatus {
+  PENDING
+  FILED
+  APPROVED
+  REJECTED
+  RECOVERED
+}
+
+// ============================================
+// PRODUCTS & INVENTORY
+// ============================================
+
+model ProductCategory {
+  id          String   @id @default(cuid())
+  businessId  String
+  parentId    String?
+  name        String   @db.VarChar(100)
+  code        String   @db.VarChar(20)
+  description String?  @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business   Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  parent     ProductCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children   ProductCategory[] @relation("CategoryHierarchy")
+  products   Product[]
+
+  @@unique([businessId, code])
+  @@map("product_categories")
+}
+
+model Product {
+  id              String   @id @default(cuid())
+  categoryId      String
+  name            String   @db.VarChar(255)
+  code            String   @db.VarChar(50)
+  description     String?  @db.Text
+  hsnCode         String?  @db.VarChar(20)
+  taxRate         Decimal  @default(18) @db.Decimal(5, 2)
+  reorderLevel    Int      @default(10)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  category         ProductCategory   @relation(fields: [categoryId], references: [id])
+  variants         ProductVariant[]
+  
+  @@unique([categoryId, code])
+  @@map("products")
+}
+
+model ProductVariant {
+  id                 String   @id @default(cuid())
+  productId          String
+  sku                String   @unique @db.VarChar(50)
+  name               String   @db.VarChar(255)
+  packSize           String   @db.VarChar(50)
+  unit               String   @db.VarChar(20)
+  mrp                Decimal  @db.Decimal(12, 2)
+  retailerPrice      Decimal  @db.Decimal(12, 2)
+  dealerPrice        Decimal  @db.Decimal(12, 2)
+  distributorPrice   Decimal  @db.Decimal(12, 2)
+  costPrice          Decimal  @db.Decimal(12, 2)
+  barcode            String?  @db.VarChar(50)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  product        Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventoryStock InventoryStock[]
+  batches        Batch[]
+  orderItems     SalesOrderItem[]
+  invoiceItems   SalesInvoiceItem[]
+  purchaseItems  PurchaseOrderItem[]
+  grnItems       GoodsReceiptItem[]
+
+  @@map("product_variants")
+}
+
+model InventoryStock {
+  id               String   @id @default(cuid())
+  branchId         String
+  productVariantId String
+  quantity         Decimal  @default(0) @db.Decimal(12, 2)
+  reservedQty      Decimal  @default(0) @db.Decimal(12, 2)
+  averageCost      Decimal  @default(0) @db.Decimal(12, 2)
+  updatedAt        DateTime @updatedAt
+
+  branch         Branch         @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
+
+  @@unique([branchId, productVariantId])
+  @@map("inventory_stock")
+}
+
+model Batch {
+  id               String   @id @default(cuid())
+  productVariantId String
+  batchNumber      String   @db.VarChar(50)
+  manufacturingDate DateTime? @db.Date
+  expiryDate       DateTime? @db.Date
+  receivedQty      Decimal  @db.Decimal(12, 2)
+  currentQty       Decimal  @db.Decimal(12, 2)
+  costPrice        Decimal  @db.Decimal(12, 2)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
+
+  @@unique([productVariantId, batchNumber])
+  @@map("batches")
+}
+
+// ============================================
+// CUSTOMERS & SUPPLIERS
+// ============================================
+
+model Customer {
+  id              String       @id @default(cuid())
+  businessId      String
+  code            String       @db.VarChar(20)
+  name            String       @db.VarChar(255)
+  customerType    CustomerType
+  contactPerson   String?      @db.VarChar(100)
+  phone           String?      @db.VarChar(20)
+  email           String?      @db.VarChar(100)
+  address         String?      @db.Text
+  gstin           String?      @db.VarChar(20)
+  pan             String?      @db.VarChar(15)
+  creditLimit     Decimal      @default(0) @db.Decimal(15, 2)
+  creditDays      Int          @default(30)
+  outstandingAmount Decimal    @default(0) @db.Decimal(15, 2)
+  priceTier       PriceTier    @default(RETAILER)
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  fuelSales      FuelSale[]
+  salesOrders    SalesOrder[]
+  salesInvoices  SalesInvoice[]
+  debtorLedger   DebtorLedger[]
+
+  @@unique([businessId, code])
+  @@map("customers")
+}
+
+enum CustomerType {
+  RETAIL
+  DEALER
+  DISTRIBUTOR
+  FLEET
+  CORPORATE
+}
+
+enum PriceTier {
+  MRP
+  RETAILER
+  DEALER
+  DISTRIBUTOR
+  SPECIAL
+}
+
+model Supplier {
+  id              String   @id @default(cuid())
+  businessId      String
+  code            String   @db.VarChar(20)
+  name            String   @db.VarChar(255)
+  contactPerson   String?  @db.VarChar(100)
+  phone           String?  @db.VarChar(20)
+  email           String?  @db.VarChar(100)
+  address         String?  @db.Text
+  gstin           String?  @db.VarChar(20)
+  pan             String?  @db.VarChar(15)
+  paymentTerms    Int      @default(30)
+  outstandingAmount Decimal @default(0) @db.Decimal(15, 2)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  business        Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  fuelReceipts    FuelReceipt[]
+  purchaseOrders  PurchaseOrder[]
+  goodsReceipts   GoodsReceipt[]
+  creditorLedger  CreditorLedger[]
+
+  @@unique([businessId, code])
+  @@map("suppliers")
+}
+
+// ============================================
+// SALES & DISTRIBUTION (LUBRICANT)
+// ============================================
+
+model SalesOrder {
+  id             String          @id @default(cuid())
+  orderNumber    String          @unique @db.VarChar(30)
+  customerId     String
+  orderDate      DateTime        @db.Date
+  expectedDelivery DateTime?     @db.Date
+  status         SalesOrderStatus @default(DRAFT)
+  subtotal       Decimal         @db.Decimal(15, 2)
+  taxAmount      Decimal         @db.Decimal(15, 2)
+  discountAmount Decimal         @default(0) @db.Decimal(15, 2)
+  totalAmount    Decimal         @db.Decimal(15, 2)
+  notes          String?         @db.Text
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  customer Customer          @relation(fields: [customerId], references: [id])
+  items    SalesOrderItem[]
+  invoices SalesInvoice[]
+
+  @@map("sales_orders")
+}
+
+enum SalesOrderStatus {
+  DRAFT
+  CONFIRMED
+  PROCESSING
+  DISPATCHED
+  DELIVERED
+  CANCELLED
+}
+
+model SalesOrderItem {
+  id               String   @id @default(cuid())
+  orderId          String
+  productVariantId String
+  quantity         Decimal  @db.Decimal(12, 2)
+  unitPrice        Decimal  @db.Decimal(12, 2)
+  discountPercent  Decimal  @default(0) @db.Decimal(5, 2)
+  taxRate          Decimal  @db.Decimal(5, 2)
+  taxAmount        Decimal  @db.Decimal(12, 2)
+  lineTotal        Decimal  @db.Decimal(15, 2)
+
+  order          SalesOrder     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
+
+  @@map("sales_order_items")
+}
+
+model SalesInvoice {
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique @db.VarChar(30)
+  orderId         String?
+  customerId      String
+  invoiceDate     DateTime      @db.Date
+  dueDate         DateTime      @db.Date
+  status          InvoiceStatus @default(UNPAID)
+  subtotal        Decimal       @db.Decimal(15, 2)
+  taxAmount       Decimal       @db.Decimal(15, 2)
+  discountAmount  Decimal       @default(0) @db.Decimal(15, 2)
+  totalAmount     Decimal       @db.Decimal(15, 2)
+  paidAmount      Decimal       @default(0) @db.Decimal(15, 2)
+  eInvoiceNumber  String?       @db.VarChar(100)
+  eWayBillNumber  String?       @db.VarChar(50)
+  notes           String?       @db.Text
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  order        SalesOrder?        @relation(fields: [orderId], references: [id])
+  customer     Customer           @relation(fields: [customerId], references: [id])
+  items        SalesInvoiceItem[]
+  dispatchNote DispatchNote?
+
+  @@map("sales_invoices")
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model SalesInvoiceItem {
+  id               String   @id @default(cuid())
+  invoiceId        String
+  productVariantId String
+  batchId          String?
+  quantity         Decimal  @db.Decimal(12, 2)
+  unitPrice        Decimal  @db.Decimal(12, 2)
+  discountPercent  Decimal  @default(0) @db.Decimal(5, 2)
+  taxRate          Decimal  @db.Decimal(5, 2)
+  taxAmount        Decimal  @db.Decimal(12, 2)
+  lineTotal        Decimal  @db.Decimal(15, 2)
+
+  invoice        SalesInvoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
+
+  @@map("sales_invoice_items")
+}
+
+model DispatchNote {
+  id              String         @id @default(cuid())
+  dispatchNumber  String         @unique @db.VarChar(30)
+  invoiceId       String         @unique
+  dispatchDate    DateTime       @db.Date
+  vehicleNumber   String?        @db.VarChar(30)
+  driverName      String?        @db.VarChar(100)
+  driverPhone     String?        @db.VarChar(20)
+  transporterId   String?
+  deliveryStatus  DeliveryStatus @default(DISPATCHED)
+  deliveredAt     DateTime?
+  receivedBy      String?        @db.VarChar(100)
+  notes           String?        @db.Text
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  invoice SalesInvoice @relation(fields: [invoiceId], references: [id])
+
+  @@map("dispatch_notes")
+}
+
+enum DeliveryStatus {
+  PENDING
+  DISPATCHED
+  IN_TRANSIT
+  DELIVERED
+  RETURNED
+}
+
+// ============================================
+// PURCHASE MANAGEMENT
+// ============================================
+
+model PurchaseOrder {
+  id               String          @id @default(cuid())
+  poNumber         String          @unique @db.VarChar(30)
+  supplierId       String
+  orderDate        DateTime        @db.Date
+  expectedDelivery DateTime?       @db.Date
+  status           POStatus        @default(DRAFT)
+  subtotal         Decimal         @db.Decimal(15, 2)
+  taxAmount        Decimal         @db.Decimal(15, 2)
+  totalAmount      Decimal         @db.Decimal(15, 2)
+  notes            String?         @db.Text
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  supplier      Supplier           @relation(fields: [supplierId], references: [id])
+  items         PurchaseOrderItem[]
+  goodsReceipts GoodsReceipt[]
+
+  @@map("purchase_orders")
+}
+
+enum POStatus {
+  DRAFT
+  SENT
+  CONFIRMED
+  PARTIAL_RECEIVED
+  RECEIVED
+  CANCELLED
+}
+
+model PurchaseOrderItem {
+  id               String   @id @default(cuid())
+  poId             String
+  productVariantId String
+  quantity         Decimal  @db.Decimal(12, 2)
+  receivedQty      Decimal  @default(0) @db.Decimal(12, 2)
+  unitPrice        Decimal  @db.Decimal(12, 2)
+  taxRate          Decimal  @db.Decimal(5, 2)
+  taxAmount        Decimal  @db.Decimal(12, 2)
+  lineTotal        Decimal  @db.Decimal(15, 2)
+
+  purchaseOrder  PurchaseOrder  @relation(fields: [poId], references: [id], onDelete: Cascade)
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
+
+  @@map("purchase_order_items")
+}
+
+model GoodsReceipt {
+  id                String    @id @default(cuid())
+  grnNumber         String    @unique @db.VarChar(30)
+  poId              String?
+  supplierId        String
+  receiptDate       DateTime  @db.Date
+  status            GRNStatus @default(PENDING)
+  qualityCheckStatus QCStatus @default(PENDING)
+  invoiceNumber     String?   @db.VarChar(50)
+  invoiceDate       DateTime? @db.Date
+  invoiceAmount     Decimal?  @db.Decimal(15, 2)
+  notes             String?   @db.Text
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  purchaseOrder PurchaseOrder?     @relation(fields: [poId], references: [id])
+  supplier      Supplier           @relation(fields: [supplierId], references: [id])
+  items         GoodsReceiptItem[]
+
+  @@map("goods_receipts")
+}
+
+enum GRNStatus {
+  PENDING
+  VERIFIED
+  COMPLETED
+  CANCELLED
+}
+
+enum QCStatus {
+  PENDING
+  PASSED
+  FAILED
+  PARTIAL
+}
+
+model GoodsReceiptItem {
+  id               String   @id @default(cuid())
+  grnId            String
+  productVariantId String
+  orderedQty       Decimal  @db.Decimal(12, 2)
+  receivedQty      Decimal  @db.Decimal(12, 2)
+  acceptedQty      Decimal  @db.Decimal(12, 2)
+  rejectedQty      Decimal  @default(0) @db.Decimal(12, 2)
+  batchNumber      String?  @db.VarChar(50)
+  expiryDate       DateTime? @db.Date
+  qualityStatus    QCStatus @default(PENDING)
+  notes            String?  @db.Text
+
+  goodsReceipt   GoodsReceipt   @relation(fields: [grnId], references: [id], onDelete: Cascade)
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
+
+  @@map("goods_receipt_items")
+}
+
+// ============================================
+// FINANCIAL - CHART OF ACCOUNTS
+// ============================================
+
+model ChartOfAccount {
+  id          String      @id @default(cuid())
+  businessId  String
+  code        String      @db.VarChar(20)
+  name        String      @db.VarChar(255)
+  accountType AccountType
+  parentId    String?
+  balance     Decimal     @default(0) @db.Decimal(18, 2)
+  isActive    Boolean     @default(true)
+  isSystem    Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  business       Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  parent         ChartOfAccount?  @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children       ChartOfAccount[] @relation("AccountHierarchy")
+  journalLines   JournalEntryLine[]
+
+  @@unique([businessId, code])
+  @@map("chart_of_accounts")
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+model JournalEntry {
+  id            String       @id @default(cuid())
+  entryNumber   String       @unique @db.VarChar(30)
+  entryDate     DateTime     @db.Date
+  entryType     JournalType
+  referenceType String?      @db.VarChar(50)
+  referenceId   String?
+  description   String       @db.Text
+  totalDebit    Decimal      @db.Decimal(18, 2)
+  totalCredit   Decimal      @db.Decimal(18, 2)
+  isPosted      Boolean      @default(false)
+  postedAt      DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  lines JournalEntryLine[]
+
+  @@map("journal_entries")
+}
+
+enum JournalType {
+  GENERAL
+  SALES
+  PURCHASE
+  RECEIPT
+  PAYMENT
+  ADJUSTMENT
+}
+
+model JournalEntryLine {
+  id          String   @id @default(cuid())
+  journalId   String
+  accountId   String
+  description String?  @db.VarChar(255)
+  debitAmount Decimal  @default(0) @db.Decimal(18, 2)
+  creditAmount Decimal @default(0) @db.Decimal(18, 2)
+
+  journal JournalEntry   @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  account ChartOfAccount @relation(fields: [accountId], references: [id])
+
+  @@map("journal_entry_lines")
+}
+
+// ============================================
+// FINANCIAL - DEBTORS & CREDITORS
+// ============================================
+
+model DebtorLedger {
+  id              String      @id @default(cuid())
+  customerId      String
+  transactionDate DateTime    @db.Date
+  transactionType DebtorTxnType
+  referenceType   String      @db.VarChar(50)
+  referenceId     String
+  description     String      @db.VarChar(255)
+  debitAmount     Decimal     @default(0) @db.Decimal(15, 2)
+  creditAmount    Decimal     @default(0) @db.Decimal(15, 2)
+  balance         Decimal     @db.Decimal(15, 2)
+  createdAt       DateTime    @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@map("debtor_ledger")
+}
+
+enum DebtorTxnType {
+  INVOICE
+  RECEIPT
+  CREDIT_NOTE
+  DEBIT_NOTE
+  ADJUSTMENT
+}
+
+model CreditorLedger {
+  id              String        @id @default(cuid())
+  supplierId      String
+  transactionDate DateTime      @db.Date
+  transactionType CreditorTxnType
+  referenceType   String        @db.VarChar(50)
+  referenceId     String
+  description     String        @db.VarChar(255)
+  debitAmount     Decimal       @default(0) @db.Decimal(15, 2)
+  creditAmount    Decimal       @default(0) @db.Decimal(15, 2)
+  balance         Decimal       @db.Decimal(15, 2)
+  createdAt       DateTime      @default(now())
+
+  supplier Supplier @relation(fields: [supplierId], references: [id])
+
+  @@map("creditor_ledger")
+}
+
+enum CreditorTxnType {
+  INVOICE
+  PAYMENT
+  DEBIT_NOTE
+  CREDIT_NOTE
+  ADJUSTMENT
+}
+
+// ============================================
+// FINANCIAL - BANK & CASH
+// ============================================
+
+model BankAccount {
+  id            String   @id @default(cuid())
+  branchId      String
+  bankName      String   @db.VarChar(100)
+  accountName   String   @db.VarChar(255)
+  accountNumber String   @db.VarChar(50)
+  ifscCode      String   @db.VarChar(20)
+  accountType   BankAccountType
+  currentBalance Decimal @default(0) @db.Decimal(18, 2)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  branch       Branch            @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  transactions BankTransaction[]
+
+  @@map("bank_accounts")
+}
+
+enum BankAccountType {
+  CURRENT
+  SAVINGS
+  OVERDRAFT
+}
+
+model BankTransaction {
+  id              String          @id @default(cuid())
+  bankAccountId   String
+  transactionDate DateTime        @db.Date
+  transactionType BankTxnType
+  referenceNumber String?         @db.VarChar(50)
+  description     String          @db.VarChar(255)
+  depositAmount   Decimal         @default(0) @db.Decimal(15, 2)
+  withdrawalAmount Decimal        @default(0) @db.Decimal(15, 2)
+  balance         Decimal         @db.Decimal(18, 2)
+  isReconciled    Boolean         @default(false)
+  reconciledAt    DateTime?
+  createdAt       DateTime        @default(now())
+
+  bankAccount BankAccount @relation(fields: [bankAccountId], references: [id])
+
+  @@map("bank_transactions")
+}
+
+enum BankTxnType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER_IN
+  TRANSFER_OUT
+  INTEREST
+  CHARGES
+  CHEQUE_DEPOSIT
+  CHEQUE_ISSUE
+}
+
+// ============================================
+// FINANCIAL - FIXED ASSETS
+// ============================================
+
+model FixedAsset {
+  id                  String           @id @default(cuid())
+  assetCode           String           @unique @db.VarChar(30)
+  name                String           @db.VarChar(255)
+  category            AssetCategory
+  acquisitionDate     DateTime         @db.Date
+  acquisitionCost     Decimal          @db.Decimal(15, 2)
+  usefulLifeYears     Int
+  depreciationMethod  DepreciationMethod
+  depreciationRate    Decimal          @db.Decimal(5, 2)
+  accumulatedDepreciation Decimal      @default(0) @db.Decimal(15, 2)
+  bookValue           Decimal          @db.Decimal(15, 2)
+  location            String?          @db.VarChar(100)
+  status              AssetStatus      @default(ACTIVE)
+  disposalDate        DateTime?        @db.Date
+  disposalValue       Decimal?         @db.Decimal(15, 2)
+  notes               String?          @db.Text
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  depreciationRecords DepreciationRecord[]
+
+  @@map("fixed_assets")
+}
+
+enum AssetCategory {
+  LAND
+  BUILDING
+  PLANT_MACHINERY
+  VEHICLE
+  FURNITURE
+  COMPUTER
+  OTHER
+}
+
+enum DepreciationMethod {
+  STRAIGHT_LINE
+  WRITTEN_DOWN_VALUE
+  SUM_OF_YEARS
+}
+
+enum AssetStatus {
+  ACTIVE
+  DISPOSED
+  WRITTEN_OFF
+}
+
+model DepreciationRecord {
+  id                  String   @id @default(cuid())
+  assetId             String
+  periodMonth         Int
+  periodYear          Int
+  openingValue        Decimal  @db.Decimal(15, 2)
+  depreciationAmount  Decimal  @db.Decimal(15, 2)
+  closingValue        Decimal  @db.Decimal(15, 2)
+  isPosted            Boolean  @default(false)
+  createdAt           DateTime @default(now())
+
+  asset FixedAsset @relation(fields: [assetId], references: [id])
+
+  @@unique([assetId, periodMonth, periodYear])
+  @@map("depreciation_records")
+}
+
+// ============================================
+// HR & PAYROLL
+// ============================================
+
+model Department {
+  id          String   @id @default(cuid())
+  businessId  String
+  name        String   @db.VarChar(100)
+  code        String   @db.VarChar(20)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business  Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  employees Employee[]
+
+  @@unique([businessId, code])
+  @@map("departments")
+}
+
+model Designation {
+  id          String   @id @default(cuid())
+  name        String   @db.VarChar(100)
+  level       Int      @default(1)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  employees Employee[]
+
+  @@map("designations")
+}
+
+model Employee {
+  id                String       @id @default(cuid())
+  businessId        String
+  branchId          String
+  employeeCode      String       @db.VarChar(20)
+  name              String       @db.VarChar(255)
+  departmentId      String
+  designationId     String
+  dateOfJoining     DateTime     @db.Date
+  dateOfBirth       DateTime?    @db.Date
+  gender            Gender?
+  phone             String?      @db.VarChar(20)
+  email             String?      @db.VarChar(100)
+  address           String?      @db.Text
+  bankAccountNumber String?      @db.VarChar(30)
+  bankName          String?      @db.VarChar(100)
+  bankIfsc          String?      @db.VarChar(20)
+  pan               String?      @db.VarChar(15)
+  aadhar            String?      @db.VarChar(15)
+  pfNumber          String?      @db.VarChar(30)
+  esiNumber         String?      @db.VarChar(30)
+  basicSalary       Decimal      @db.Decimal(12, 2)
+  hra               Decimal      @default(0) @db.Decimal(12, 2)
+  da                Decimal      @default(0) @db.Decimal(12, 2)
+  conveyance        Decimal      @default(0) @db.Decimal(12, 2)
+  specialAllowance  Decimal      @default(0) @db.Decimal(12, 2)
+  reportingManagerId String?
+  isActive          Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  business         Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  branch           Branch             @relation(fields: [branchId], references: [id])
+  department       Department         @relation(fields: [departmentId], references: [id])
+  designation      Designation        @relation(fields: [designationId], references: [id])
+  attendance       AttendanceRecord[]
+  leaveApplications LeaveApplication[]
+  salaryAdjustments SalaryAdjustment[]
+  payslips         Payslip[]
+
+  @@unique([businessId, employeeCode])
+  @@map("employees")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+model AttendanceRecord {
+  id             String         @id @default(cuid())
+  employeeId     String
+  date           DateTime       @db.Date
+  status         AttendanceStatus
+  checkIn        DateTime?      @db.Time(0)
+  checkOut       DateTime?      @db.Time(0)
+  overtimeHours  Decimal        @default(0) @db.Decimal(4, 2)
+  notes          String?        @db.VarChar(255)
+  createdAt      DateTime       @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, date])
+  @@map("attendance_records")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  LEAVE
+  HOLIDAY
+  WEEKEND
+}
+
+model LeaveType {
+  id              String   @id @default(cuid())
+  name            String   @db.VarChar(50)
+  code            String   @unique @db.VarChar(10)
+  daysPerYear     Int
+  carryForward    Boolean  @default(false)
+  maxCarryForward Int      @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  applications LeaveApplication[]
+
+  @@map("leave_types")
+}
+
+model LeaveApplication {
+  id          String      @id @default(cuid())
+  employeeId  String
+  leaveTypeId String
+  fromDate    DateTime    @db.Date
+  toDate      DateTime    @db.Date
+  days        Decimal     @db.Decimal(4, 1)
+  reason      String      @db.Text
+  status      LeaveStatus @default(PENDING)
+  approvedBy  String?
+  approvedAt  DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  employee  Employee  @relation(fields: [employeeId], references: [id])
+  leaveType LeaveType @relation(fields: [leaveTypeId], references: [id])
+
+  @@map("leave_applications")
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model SalaryAdjustment {
+  id              String         @id @default(cuid())
+  employeeId      String
+  month           Int
+  year            Int
+  adjustmentType  AdjustmentType
+  referenceType   String?        @db.VarChar(50)
+  referenceId     String?
+  amount          Decimal        @db.Decimal(12, 2)
+  description     String         @db.VarChar(255)
+  status          AdjustmentStatus @default(PENDING)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@map("salary_adjustments")
+}
+
+enum AdjustmentType {
+  SHORTAGE
+  PENALTY
+  INCENTIVE
+  ADVANCE_RECOVERY
+  LOAN_RECOVERY
+  OTHER_DEDUCTION
+  OTHER_ADDITION
+}
+
+enum AdjustmentStatus {
+  PENDING
+  APPLIED
+  CANCELLED
+}
+
+model Payslip {
+  id              String   @id @default(cuid())
+  employeeId      String
+  month           Int
+  year            Int
+  basicSalary     Decimal  @db.Decimal(12, 2)
+  hra             Decimal  @default(0) @db.Decimal(12, 2)
+  da              Decimal  @default(0) @db.Decimal(12, 2)
+  conveyance      Decimal  @default(0) @db.Decimal(12, 2)
+  specialAllowance Decimal @default(0) @db.Decimal(12, 2)
+  overtimePay     Decimal  @default(0) @db.Decimal(12, 2)
+  otherEarnings   Decimal  @default(0) @db.Decimal(12, 2)
+  grossSalary     Decimal  @db.Decimal(12, 2)
+  pfEmployee      Decimal  @default(0) @db.Decimal(12, 2)
+  esiEmployee     Decimal  @default(0) @db.Decimal(12, 2)
+  tds             Decimal  @default(0) @db.Decimal(12, 2)
+  shortageDeduction Decimal @default(0) @db.Decimal(12, 2)
+  otherDeductions Decimal  @default(0) @db.Decimal(12, 2)
+  totalDeductions Decimal  @db.Decimal(12, 2)
+  netSalary       Decimal  @db.Decimal(12, 2)
+  daysWorked      Int
+  daysAbsent      Int      @default(0)
+  leaveDays       Decimal  @default(0) @db.Decimal(4, 1)
+  status          PayslipStatus @default(DRAFT)
+  paidAt          DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, month, year])
+  @@map("payslips")
+}
+
+enum PayslipStatus {
+  DRAFT
+  APPROVED
+  PAID
+  CANCELLED
 }
