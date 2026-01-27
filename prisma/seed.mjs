@@ -22,13 +22,13 @@ const COMPANIES = [
 ];
 
 const CUSTOMERS = {
-  ars_lube: ['Rahim Transport', 'Karim Motors', 'Dhaka Bus Svc', 'Chittagong Lines', 'Padma Logistics', 'Express Courier', 'Yellow Cab Co'],
-  ars_corp: ['Beximco Dealer A', 'SENA Distributor', 'Jamuna Gas Point', 'Bashundhara Agent', 'Local Retailer #105', 'City Gas Station']
+  ars_lube: ['Rahim Transport', 'Karim Motors', 'Dhaka Bus Svc', 'Chittagong Lines', 'Padma Logistics'],
+  ars_corp: ['Beximco Dealer A', 'SENA Distributor', 'Jamuna Gas Point', 'Bashundhara Agent']
 };
 
 const SUPPLIERS = {
-  ars_lube: ['Govt. Fuel Depot', 'Meghna Petroleum', 'Jamuna Oil Co', 'Standard Asiatic Oil', 'Lubricant Imports Inc.'],
-  ars_corp: ['Beximco LPG Plant', 'SENA Kalyan Sangstha', 'Omera LPG HQ', 'Bashundhara Gas Factory']
+  ars_lube: ['Govt. Fuel Depot', 'Meghna Petroleum', 'Jamuna Oil Co'],
+  ars_corp: ['Beximco LPG Plant', 'SENA Kalyan Sangstha', 'Omera LPG HQ']
 };
 
 const INVENTORY = {
@@ -36,54 +36,80 @@ const INVENTORY = {
     { name: 'Petrol (Octane)', sku: 'FUL-OCT', category: 'Fuel', unit: 'Litre', cost: 125, sale: 135 },
     { name: 'Diesel', sku: 'FUL-DSL', category: 'Fuel', unit: 'Litre', cost: 108, sale: 115 },
     { name: 'Mobil 1 5W-30', sku: 'LUB-M5W', category: 'Lubricant', unit: 'Can', cost: 4200, sale: 4800 },
-    { name: 'Shell Helix HX7', sku: 'LUB-SH7', category: 'Lubricant', unit: 'Can', cost: 3500, sale: 3900 },
-    { name: 'Brake Fluid DOT4', sku: 'MSC-BF4', category: 'Misc', unit: 'Bottle', cost: 450, sale: 600 }
   ],
   ars_corp: [
     { name: 'LPG 12KG Cylinder', sku: 'LPG-12KG', category: 'LPG', unit: 'Cylinder', cost: 1150, sale: 1450 },
     { name: 'LPG 35KG Commercial', sku: 'LPG-35KG', category: 'LPG', unit: 'Cylinder', cost: 3200, sale: 3800 },
-    { name: 'LPG 45KG Industrial', sku: 'LPG-45KG', category: 'LPG', unit: 'Cylinder', cost: 4100, sale: 4900 },
-    { name: 'Safety Valve', sku: 'ACC-VAL', category: 'Accessories', unit: 'Pcs', cost: 250, sale: 450 }
   ]
 };
 
 const ACCOUNTS = {
   ars_lube: [
-    { code: 1001, name: 'Cash in Hand', type: 'Asset', balance: 0 }, // Will calculate
-    { code: 1002, name: 'Bank Asia - 1022', type: 'Asset', balance: 0 },
-    { code: 3001, name: 'Sales Revenue', type: 'Income', balance: 0 },
-    { code: 4001, name: 'Cost of Goods Sold', type: 'Expense', balance: 0 },
-    { code: 4002, name: 'Office Rent', type: 'Expense', balance: 0 },
-    { code: 4003, name: 'Staff Salaries', type: 'Expense', balance: 0 },
+    { code: 1001, name: 'Cash in Hand', type: 'Asset', balance: 500000 },
+    { code: 4002, name: 'Office Rent', type: 'Expense', balance: 120000 },
+    { code: 4003, name: 'Staff Salaries', type: 'Expense', balance: 350000 },
   ],
   ars_corp: [
-    { code: 1001, name: 'Cash @ Bank', type: 'Asset', balance: 0 },
-    { code: 3001, name: 'Commission Income', type: 'Income', balance: 0 },
-    { code: 4001, name: 'Logistics Expense', type: 'Expense', balance: 0 },
+    { code: 1001, name: 'Cash @ Bank', type: 'Asset', balance: 1200000 },
+    { code: 4001, name: 'Logistics Expense', type: 'Expense', balance: 450000 },
   ]
 };
 
 async function main() {
   console.log('🗑️  Cleaning database...');
-  await prisma.process_loss.deleteMany();
-  await prisma.chart_of_accounts.deleteMany();
-  await prisma.fixed_assets.deleteMany();
-  await prisma.purchases.deleteMany();
-  await prisma.sales.deleteMany();
-  await prisma.inventory_items.deleteMany();
-  await prisma.creditors.deleteMany();
-  await prisma.debtors.deleteMany();
-  await prisma.users.deleteMany();
-  await prisma.companies.deleteMany();
+  try {
+    await prisma.process_loss.deleteMany();
+    await prisma.chart_of_accounts.deleteMany();
+    await prisma.fixed_assets.deleteMany();
+    await prisma.purchases.deleteMany();
+    await prisma.sales.deleteMany();
+    await prisma.inventory_items.deleteMany();
+    await prisma.creditors.deleteMany();
+    await prisma.debtors.deleteMany();
+    await prisma.users.deleteMany();
+    await prisma.companies.deleteMany();
+  } catch(e) {
+    console.log("Cleanup failed (tables might not exist), continuing...");
+  }
 
   console.log('🏢 Seeding Companies & Users...');
   
-  // 1. Users & Companies
-  const hashedPassword = await bcrypt.hash('admin123', 10);
-  
+  // 1. Create Companies
+  for (const company of COMPANIES) {
+    await prisma.companies.create({
+      data: {
+        id: company.id,
+        name: company.name,
+        shortName: company.shortName,
+        dashboard_stats: {}, // Important: Created empty, populated by API
+      },
+    });
+  }
+
+  // 2. Create Users (Exact credentials requested)
+  const passwordHash = await bcrypt.hash('123456', 10);
+
+  // Admin
   await prisma.users.create({
-    data: { email: 'admin@arsgroup.com', password: hashedPassword, name: 'Super Admin', role: 'admin' },
+    data: { email: 'admin@arsgroup.com', password: passwordHash, name: 'Super Admin', role: 'admin' },
   });
+
+  // Managers
+  await prisma.users.create({
+    data: { email: 'manager.lube@arsgroup.com', password: passwordHash, name: 'Lube Manager', role: 'user', company_id: 'ars_lube' },
+  });
+  await prisma.users.create({
+    data: { email: 'manager.corp@arsgroup.com', password: passwordHash, name: 'Corp Manager', role: 'user', company_id: 'ars_corp' },
+  });
+
+  // Users
+  await prisma.users.create({
+    data: { email: 'user.lube@arsgroup.com', password: passwordHash, name: 'Lube User', role: 'user', company_id: 'ars_lube' },
+  });
+  await prisma.users.create({
+    data: { email: 'user.corp@arsgroup.com', password: passwordHash, name: 'Corp User', role: 'user', company_id: 'ars_corp' },
+  });
+
 
   const startDate = new Date('2024-07-01');
   const endDate = new Date('2025-06-30');
@@ -91,26 +117,7 @@ async function main() {
   for (const company of COMPANIES) {
     console.log(`\n🚀 Processing ${company.name}...`);
     
-    await prisma.companies.create({
-      data: {
-        id: company.id,
-        name: company.name,
-        shortName: company.shortName,
-        dashboard_stats: {}, // Will be dynamic now
-      },
-    });
-
-    await prisma.users.create({
-      data: {
-        email: `${company.shortName.toLowerCase().replace(' ', '')}@arsgroup.com`,
-        password: hashedPassword,
-        name: `${company.shortName} Manager`,
-        role: 'user',
-        company_id: company.id,
-      },
-    });
-
-    // 2. Inventory
+    // 3. Inventory
     const invItems = [];
     for (const item of INVENTORY[company.id]) {
       const created = await prisma.inventory_items.create({
@@ -130,41 +137,40 @@ async function main() {
       invItems.push(created);
     }
 
-    // 3. Transactions (Sales & Purchases)
-    let totalSales = 0;
-    let totalPurchases = 0;
-    
+    // 4. Transactions (Sales & Purchases)
     // Generate ~150 sales spread over the year
     for (let i = 0; i < 150; i++) {
       const date = randomDate(startDate, endDate);
       const item = getRandomItem(invItems);
       const qty = getRandomInt(1, 20);
       const amount = parseFloat((qty * Number(item.salePrice)).toFixed(2));
-      const status = Math.random() > 0.3 ? 'Paid' : 'Unpaid';
       
+      const uniqueId = `INV-${company.id.substring(4,7).toUpperCase()}-${1000 + i}`;
+
       await prisma.sales.create({
         data: {
-          id: `INV-${date.getFullYear()}${(date.getMonth()+1).toString().padStart(2, '0')}-${getRandomInt(1000, 9999)}`,
+          id: uniqueId,
           company_id: company.id,
           customer: getRandomItem(CUSTOMERS[company.id]),
           date: date,
           amount: amount,
-          status: status
+          status: Math.random() > 0.3 ? 'Paid' : 'Unpaid'
         }
       });
-      totalSales += amount;
     }
 
     // Generate ~50 purchases
     for (let i = 0; i < 50; i++) {
       const date = randomDate(startDate, endDate);
       const item = getRandomItem(invItems);
-      const qty = getRandomInt(50, 200); // Bulk buying
+      const qty = getRandomInt(50, 200);
       const amount = parseFloat((qty * Number(item.costPrice)).toFixed(2));
       
+      const uniqueId = `PO-${company.id.substring(4,7).toUpperCase()}-${2000 + i}`;
+
       await prisma.purchases.create({
         data: {
-          id: `PO-${date.getFullYear()}-${getRandomInt(100, 999)}`,
+          id: uniqueId,
           company_id: company.id,
           supplier: getRandomItem(SUPPLIERS[company.id]),
           date: date,
@@ -172,15 +178,14 @@ async function main() {
           status: Math.random() > 0.2 ? 'Paid' : 'Unpaid'
         }
       });
-      totalPurchases += amount;
     }
 
-    // 4. Debtors & Creditors (Outstanding balances)
-    for (const cust of CUSTOMERS[company.id].slice(0, 4)) {
+    // 5. Debtors & Creditors
+    for (let i = 0; i < 5; i++) {
       await prisma.debtors.create({
         data: {
           company_id: company.id,
-          name: cust,
+          name: getRandomItem(CUSTOMERS[company.id]),
           amount: getRandomFloat(10000, 150000),
           due: randomDate(new Date('2025-05-01'), new Date('2025-08-01')),
           aging: getRandomInt(10, 90)
@@ -188,11 +193,11 @@ async function main() {
       });
     }
 
-    for (const supp of SUPPLIERS[company.id].slice(0, 3)) {
+    for (let i = 0; i < 4; i++) {
       await prisma.creditors.create({
         data: {
           company_id: company.id,
-          name: supp,
+          name: getRandomItem(SUPPLIERS[company.id]),
           amount: getRandomFloat(50000, 500000),
           due: randomDate(new Date('2025-06-01'), new Date('2025-09-01')),
           aging: getRandomInt(0, 45)
@@ -200,7 +205,7 @@ async function main() {
       });
     }
 
-    // 5. Fixed Assets
+    // 6. Fixed Assets
     await prisma.fixed_assets.create({
       data: {
         id: `FA-${company.id}-001`,
@@ -213,22 +218,15 @@ async function main() {
       }
     });
 
-    // 6. Chart of Accounts (Balances)
-    // We update the seed balances roughly based on the generated transaction totals
+    // 7. Chart of Accounts (Balances)
     for (const acc of ACCOUNTS[company.id]) {
-      let bal = 0;
-      if (acc.type === 'Income') bal = totalSales;
-      else if (acc.name.includes('Cost')) bal = totalPurchases;
-      else if (acc.type === 'Asset' && acc.name.includes('Cash')) bal = (totalSales - totalPurchases) + 500000; // Starting capital
-      else bal = getRandomFloat(50000, 200000); // Random for other expenses
-
       await prisma.chart_of_accounts.create({
         data: {
           company_id: company.id,
           code: acc.code,
           name: acc.name,
           type: acc.type,
-          balance: parseFloat(bal.toFixed(2))
+          balance: parseFloat(acc.balance)
         }
       });
     }

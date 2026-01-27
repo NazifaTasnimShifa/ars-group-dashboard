@@ -12,113 +12,169 @@ export default async function handler(req, res) {
     const company = await prisma.companies.findUnique({ where: { id: String(companyId) } });
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
-    // 1. Calculate Aggregates
-    // Total Revenue (Sales)
+    // --- 1. Fetch Live Data for Calculations ---
+    
+    // Revenue (Sum of Sales)
     const salesAgg = await prisma.sales.aggregate({
       where: { company_id: String(companyId) },
       _sum: { amount: true }
     });
-    const revenue = Number(salesAgg._sum.amount || 0);
+    const totalRevenue = Number(salesAgg._sum.amount || 0);
 
-    // Total COGS/Purchases
+    // COGS (Sum of Purchases)
     const purchasesAgg = await prisma.purchases.aggregate({
       where: { company_id: String(companyId) },
       _sum: { amount: true }
     });
-    const purchases = Number(purchasesAgg._sum.amount || 0);
+    const totalPurchases = Number(purchasesAgg._sum.amount || 0);
 
     // Inventory Value
     const inventoryItems = await prisma.inventory_items.findMany({
       where: { company_id: String(companyId) }
     });
-    const inventoryValue = inventoryItems.reduce((acc, item) => acc + (Number(item.stock) * Number(item.costPrice)), 0);
+    const inventoryValue = inventoryItems.reduce((sum, item) => sum + (Number(item.stock) * Number(item.costPrice)), 0);
 
-    // Fixed Assets Value
+    // Fixed Assets
     const assetsAgg = await prisma.fixed_assets.aggregate({
       where: { company_id: String(companyId) },
-      _sum: { bookValue: true }
+      _sum: { bookValue: true, depreciation: true }
     });
-    const fixedAssets = Number(assetsAgg._sum.bookValue || 0);
+    const totalFixedAssets = Number(assetsAgg._sum.bookValue || 0);
+    const totalDepreciation = Number(assetsAgg._sum.depreciation || 0);
 
-    // Accounts Receivable (Debtors)
+    // Debtors & Creditors
     const debtorsAgg = await prisma.debtors.aggregate({
       where: { company_id: String(companyId) },
       _sum: { amount: true }
     });
-    const receivables = Number(debtorsAgg._sum.amount || 0);
+    const totalReceivables = Number(debtorsAgg._sum.amount || 0);
 
-    // Accounts Payable (Creditors)
     const creditorsAgg = await prisma.creditors.aggregate({
       where: { company_id: String(companyId) },
       _sum: { amount: true }
     });
-    const payables = Number(creditorsAgg._sum.amount || 0);
+    const totalPayables = Number(creditorsAgg._sum.amount || 0);
 
-    // --- Generate Report Data ---
+    // Expenses (from Chart of Accounts or mock calc)
+    const expenses = await prisma.chart_of_accounts.findMany({
+        where: { company_id: String(companyId), type: 'Expense' }
+    });
+    const totalOperatingExpenses = expenses.reduce((sum, acc) => sum + Number(acc.balance), 0);
+
+    // Cash (from Chart of Accounts)
+    const cashAccounts = await prisma.chart_of_accounts.findMany({
+        where: { company_id: String(companyId), type: 'Asset', name: { contains: 'Cash' } }
+    });
+    const totalCash = cashAccounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
+
+
+    // --- 2. Build Response Objects ---
 
     let reportData = {};
+    const dateStr = `As of ${new Date().toLocaleDateString()}`;
 
+    // INCOME STATEMENT
     if (type === 'income-statement') {
-      // Simple Income Statement Logic
-      // Revenue - Purchases = Gross Profit (Simplified)
-      // Gross Profit - Expenses (assumed 20% of sales for demo) = Net Profit
-      const operatingExpenses = Math.round(revenue * 0.15); // Mock estimation for demo
-      const grossProfit = revenue - purchases;
-      const netProfit = grossProfit - operatingExpenses;
-
-      reportData = {
-        date: `As of ${new Date().toLocaleDateString()}`,
-        revenue: { name: "Sales Revenue", amount: revenue },
-        costOfGoodsSold: { name: "Cost of Goods Sold (Purchases)", amount: purchases },
-        expenses: {
-          administrative: { name: "Est. Admin Expenses", amount: Math.round(operatingExpenses * 0.6) },
-          selling: { name: "Est. Selling Expenses", amount: Math.round(operatingExpenses * 0.4) },
-          financial: { name: "Financial Expenses", amount: 0 },
-        },
-        otherIncome: { name: "Other Income", amount: 0 }
-      };
+        const grossProfit = totalRevenue - totalPurchases;
+        // Mocking breakdown if data not granular
+        const adminExp = totalOperatingExpenses * 0.6; 
+        const sellingExp = totalOperatingExpenses * 0.4;
+        
+        reportData = {
+            date: dateStr,
+            revenue: { name: "Sales Revenue", amount: totalRevenue },
+            costOfGoodsSold: { name: "Cost of Goods Sold", amount: totalPurchases },
+            expenses: {
+                administrative: { name: "Administrative Expenses", amount: adminExp },
+                selling: { name: "Selling & Dist. Expenses", amount: sellingExp },
+                financial: { name: "Financial Expenses", amount: 0 }, // Add if you have loan interest
+            },
+            otherIncome: { name: "Other Income", amount: 0 }
+        };
     } 
+    // BALANCE SHEET
     else if (type === 'balance-sheet') {
-      // Simple Balance Sheet Logic
-      // Assets = Fixed Assets + Inventory + Receivables + Cash (Derived)
-      // Liabilities = Payables + Loans
-      // Equity = Assets - Liabilities
-      
-      const cashOnHand = Math.max(50000, (revenue - purchases - 200000)); // Mock cash calculation
-      const totalCurrentAssets = inventoryValue + receivables + cashOnHand;
-      const totalAssets = fixedAssets + totalCurrentAssets;
-      const totalLiabilities = payables; // Simplified
-      const equity = totalAssets - totalLiabilities;
+        // Equity = Assets - Liabilities
+        const totalAssets = totalFixedAssets + inventoryValue + totalReceivables + totalCash;
+        const totalLiabilities = totalPayables; 
+        const equity = totalAssets - totalLiabilities;
 
-      reportData = {
-        date: `As of ${new Date().toLocaleDateString()}`,
-        assets: {
-          nonCurrent: [
-            { name: "Property, Plant & Equipment", amount: fixedAssets }
-          ],
-          current: [
-            { name: "Inventories", amount: inventoryValue },
-            { name: "Accounts Receivable", amount: receivables },
-            { name: "Cash & Cash Equivalents", amount: cashOnHand },
-          ],
-        },
-        liabilities: {
-          nonCurrent: [
-            { name: "Long Term Loans", amount: 0 }
-          ],
-          current: [
-            { name: "Accounts Payable", amount: payables },
-            { name: "Tax Payable", amount: 0 },
-          ],
-        },
-        equity: [
-          { name: "Owners Equity", amount: equity }
-        ]
-      };
+        reportData = {
+            date: dateStr,
+            assets: {
+                nonCurrent: [
+                    { name: "Property, Plant & Equipment", amount: totalFixedAssets }
+                ],
+                current: [
+                    { name: "Inventories", amount: inventoryValue },
+                    { name: "Accounts Receivable", amount: totalReceivables },
+                    { name: "Cash & Cash Equivalents", amount: totalCash || 50000 }, // Fallback if 0
+                ]
+            },
+            liabilities: {
+                nonCurrent: [
+                    { name: "Long Term Loans", amount: 0 } 
+                ],
+                current: [
+                    { name: "Accounts Payable", amount: totalPayables }
+                ]
+            },
+            equity: [
+                { name: "Owner's Equity", amount: equity }
+            ]
+        };
     }
-    // Fallback for other reports to return empty safe objects
-    else {
-        reportData = { date: new Date().toLocaleDateString(), operating: [], investing: [], financing: [], accounts: [] };
+    // CASH FLOW
+    else if (type === 'cash-flow') {
+        const netProfit = (totalRevenue - totalPurchases) - totalOperatingExpenses;
+        
+        reportData = {
+            date: dateStr,
+            openingCash: 100000, // Mock opening
+            operating: [
+                { name: "Net Profit before Tax", amount: netProfit },
+                { name: "Depreciation", amount: totalDepreciation },
+                { name: "(Increase)/Decrease in Inventory", amount: -(inventoryValue * 0.1) }, // Mock change
+                { name: "(Increase)/Decrease in Receivables", amount: -(totalReceivables * 0.05) },
+                { name: "Increase/(Decrease) in Payables", amount: (totalPayables * 0.05) }
+            ],
+            investing: [
+                { name: "Purchase of Fixed Assets", amount: -50000 } // Mock
+            ],
+            financing: [
+                { name: "Loan Repayment", amount: 0 }
+            ]
+        };
+    }
+    // TRIAL BALANCE
+    else if (type === 'trial-balance') {
+        const accounts = [];
+        
+        // Add dynamic accounts
+        accounts.push({ name: 'Sales Revenue', debit: 0, credit: totalRevenue });
+        accounts.push({ name: 'Purchases (COGS)', debit: totalPurchases, credit: 0 });
+        accounts.push({ name: 'Inventory', debit: inventoryValue, credit: 0 });
+        accounts.push({ name: 'Accounts Receivable', debit: totalReceivables, credit: 0 });
+        accounts.push({ name: 'Accounts Payable', debit: 0, credit: totalPayables });
+        accounts.push({ name: 'Fixed Assets', debit: totalFixedAssets, credit: 0 });
+        accounts.push({ name: 'Cash & Bank', debit: totalCash, credit: 0 });
+        
+        // Add expenses
+        expenses.forEach(exp => {
+            accounts.push({ name: exp.name, debit: Number(exp.balance), credit: 0 });
+        });
+
+        // Balancing figure (Equity)
+        const totalDebits = accounts.reduce((sum, a) => sum + a.debit, 0);
+        const totalCredits = accounts.reduce((sum, a) => sum + a.credit, 0);
+        const equity = totalDebits - totalCredits;
+        
+        accounts.push({ name: "Capital / Retained Earnings", debit: 0, credit: equity });
+
+        reportData = {
+            date: dateStr,
+            accounts: accounts
+        };
     }
 
     return res.status(200).json(reportData);
