@@ -1,28 +1,36 @@
 // src/components/auth/ProtectedRoute.js
+// ARS ERP - Route Protection with Multi-Entity Support
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAppContext } from '@/contexts/AppContext';
 
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, selectedCompany, loading } = useAppContext();
+  const { isAuthenticated, currentBusiness, loading, isSuperOwner } = useAppContext();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
 
+    // Not authenticated - redirect to login
     if (!isAuthenticated) {
       router.replace('/login');
       return;
     }
 
-    // If logged in but no company selected (and not on the selection page)
-    // redirect to selection (Admins) or back to login if something is broken
-    if (isAuthenticated && !selectedCompany && router.pathname !== '/select-company') {
-      router.replace('/select-company');
+    // Super Owner has access to everything (even with no business selected = combined view)
+    if (isSuperOwner) {
+      return; // Super Owner always has access
     }
-  }, [isAuthenticated, selectedCompany, router, loading]);
 
+    // Regular user without a business assigned - redirect to login
+    if (isAuthenticated && !currentBusiness && router.pathname !== '/select-company') {
+      // For regular users, they need a business to be set
+      router.replace('/login');
+    }
+  }, [isAuthenticated, currentBusiness, router, loading, isSuperOwner]);
+
+  // Show loading spinner while checking auth
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -31,8 +39,11 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  // Render children if conditions are met
-  if ((isAuthenticated && selectedCompany) || (isAuthenticated && router.pathname === '/select-company')) {
+  // Render conditions:
+  // 1. Super Owner - always render (even without specific business)
+  // 2. Regular user with business assigned
+  // 3. Anyone on the select-company page
+  if (isSuperOwner || (isAuthenticated && currentBusiness) || (isAuthenticated && router.pathname === '/select-company')) {
     return children;
   }
 

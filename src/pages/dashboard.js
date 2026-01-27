@@ -1,4 +1,5 @@
 // src/pages/dashboard.js
+// ARS ERP - Main Dashboard with Owner View Support
 
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import { Menu, Transition } from '@headlessui/react';
@@ -27,6 +28,8 @@ import {
   ArrowDownIcon,
   ChevronDownIcon,
   PlusCircleIcon,
+  BuildingOffice2Icon,
+  GlobeAltIcon,
 } from '@heroicons/react/24/outline';
 
 const iconMap = {
@@ -37,84 +40,106 @@ const iconMap = {
 
 export default function DashboardPage() {
   const [modalState, setModalState] = useState({ open: false, title: '', content: null });
-  const { selectedCompany } = useAppContext();
+  const { 
+    user, 
+    currentBusiness, 
+    businesses, 
+    switchBusiness, 
+    isSuperOwner, 
+    isViewingAllBusinesses,
+    formatCurrency,
+    loading: authLoading 
+  } = useAppContext();
   
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const formatCurrency = (value) => `৳${(value ?? 0).toLocaleString('en-IN')}`;
-
   // --- 1. Fetch Dashboard Data ---
   const fetchDashboardData = useCallback(async () => {
-    if (!selectedCompany) return;
+    if (authLoading) return;
     setLoading(true);
     try {
-        const res = await fetch(`/api/dashboard?company_id=${selectedCompany.id}`);
-        const fetchedData = await res.json();
-        if (fetchedData.success) {
-            setData(fetchedData.data);
-        }
+      // Build query params based on current view
+      let url = '/api/dashboard';
+      if (currentBusiness) {
+        url += `?businessId=${currentBusiness.id}`;
+      } else if (isSuperOwner) {
+        // Super Owner viewing all - no filter
+        url += '?viewAll=true';
+      }
+      
+      const res = await fetch(url);
+      const fetchedData = await res.json();
+      if (fetchedData.success) {
+        setData(fetchedData.data);
+      }
     } catch (err) {
-        console.error("Failed to fetch dashboard data", err);
+      console.error("Failed to fetch dashboard data", err);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-  }, [selectedCompany]);
+  }, [currentBusiness, isSuperOwner, authLoading]);
 
   useEffect(() => { fetchDashboardData(); }, [fetchDashboardData]);
 
   // --- 2. Generic Save Handler for All Forms ---
   const handleSave = async (type, formData) => {
+    if (!currentBusiness && !isSuperOwner) {
+      alert('Please select a company first');
+      return;
+    }
+    
     let url = '';
-    let payload = { ...formData, company_id: selectedCompany.id };
+    let payload = { ...formData };
+    
+    if (currentBusiness) {
+      payload.businessId = currentBusiness.id;
+    }
 
-    // Determine URL and ID logic based on type
     switch (type) {
-        case 'sales':
-            url = '/api/sales';
-            payload.id = `INV-${Date.now()}`;
-            break;
-        case 'purchases':
-            url = '/api/purchases';
-            payload.id = `PO-${Date.now()}`;
-            break;
-        case 'inventory':
-            url = '/api/inventory';
-            payload.id = `ITM-${Date.now()}`;
-            break;
-        case 'debtors':
-            url = '/api/debtors';
-            // ID is auto-increment, do not send it
-            delete payload.id;
-            break;
-        case 'creditors':
-            url = '/api/creditors';
-            // ID is auto-increment, do not send it
-            delete payload.id;
-            break;
-        default:
-            alert('Unknown data type');
-            return;
+      case 'sales':
+        url = '/api/sales';
+        payload.id = `INV-${Date.now()}`;
+        break;
+      case 'purchases':
+        url = '/api/purchases';
+        payload.id = `PO-${Date.now()}`;
+        break;
+      case 'inventory':
+        url = '/api/inventory';
+        payload.id = `ITM-${Date.now()}`;
+        break;
+      case 'debtors':
+        url = '/api/debtors';
+        delete payload.id;
+        break;
+      case 'creditors':
+        url = '/api/creditors';
+        delete payload.id;
+        break;
+      default:
+        alert('Unknown data type');
+        return;
     }
 
     try {
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
-        if (res.ok) {
-            setModalState((prev) => ({ ...prev, open: false }));
-            alert('Saved successfully!');
-            fetchDashboardData(); 
-        } else {
-            const err = await res.json();
-            alert(`Failed to save: ${err.error || err.message || 'Unknown error'}`);
-        }
+      if (res.ok) {
+        setModalState((prev) => ({ ...prev, open: false }));
+        alert('Saved successfully!');
+        fetchDashboardData(); 
+      } else {
+        const err = await res.json();
+        alert(`Failed to save: ${err.error || err.message || 'Unknown error'}`);
+      }
     } catch (error) {
-        console.error(error);
-        alert('An error occurred while saving.');
+      console.error(error);
+      alert('An error occurred while saving.');
     }
   };
 
@@ -127,60 +152,78 @@ export default function DashboardPage() {
     let dataType = '';
 
     switch (type) {
-        case 'sale':
-            title = 'Record New Sale';
-            dataType = 'sales';
-            FormComponent = SaleForm;
-            break;
-        case 'purchase':
-            title = 'Record Purchase Order';
-            dataType = 'purchases';
-            FormComponent = PurchaseOrderForm;
-            break;
-        case 'product':
-            title = 'Add Inventory Item';
-            dataType = 'inventory';
-            FormComponent = InventoryItemForm;
-            break;
-        case 'debtor':
-            title = 'Add Customer (Debtor)';
-            dataType = 'debtors';
-            FormComponent = DebtorForm;
-            break;
-        case 'creditor':
-            title = 'Add Supplier (Creditor)';
-            dataType = 'creditors';
-            FormComponent = CreditorForm;
-            break;
-        default: return;
+      case 'sale':
+        title = 'Record New Sale';
+        dataType = 'sales';
+        FormComponent = SaleForm;
+        break;
+      case 'purchase':
+        title = 'Record Purchase Order';
+        dataType = 'purchases';
+        FormComponent = PurchaseOrderForm;
+        break;
+      case 'product':
+        title = 'Add Inventory Item';
+        dataType = 'inventory';
+        FormComponent = InventoryItemForm;
+        break;
+      case 'debtor':
+        title = 'Add Customer (Debtor)';
+        dataType = 'debtors';
+        FormComponent = DebtorForm;
+        break;
+      case 'creditor':
+        title = 'Add Supplier (Creditor)';
+        dataType = 'creditors';
+        FormComponent = CreditorForm;
+        break;
+      default: return;
     }
 
     setModalState({
-        open: true,
-        title,
-        content: (
-            <FormComponent 
-                onSave={(data) => handleSave(dataType, data)} 
-                onCancel={handleCloseModal} 
-            />
-        )
+      open: true,
+      title,
+      content: (
+        <FormComponent 
+          onSave={(data) => handleSave(dataType, data)} 
+          onCancel={handleCloseModal} 
+        />
+      )
     });
   };
 
-  if (!selectedCompany) return <DashboardLayout><div>Loading...</div></DashboardLayout>;
-  if (loading && !data) return <DashboardLayout><div>Loading Dashboard...</div></DashboardLayout>;
+  // Loading state
+  if (authLoading || (loading && !data)) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-gray-500">Loading Dashboard...</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
-  // Fallback if data is missing or empty
+  // Welcome message for empty dashboard
   if (!data || Object.keys(data).length === 0) {
     return (
       <DashboardLayout>
         <div className="p-12 text-center">
-            <h3 className="text-xl font-bold text-gray-900">Welcome to {selectedCompany.name}</h3>
-            <p className="text-gray-500 mt-2">Your dashboard is ready. Start by adding some data!</p>
+          <h3 className="text-xl font-bold text-gray-900">
+            Welcome, {user?.name || 'User'}!
+          </h3>
+          <p className="text-gray-500 mt-2">
+            {isSuperOwner 
+              ? 'Your Owner Dashboard is ready. Select a company or view combined data.'
+              : currentBusiness 
+                ? `Your ${currentBusiness.name} dashboard is ready. Start by adding some data!`
+                : 'Please wait while we load your dashboard...'}
+          </p>
+          {currentBusiness && (
             <div className="mt-6 flex justify-center gap-4">
-                <button onClick={() => openModal('sale')} className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500">Add Sale</button>
-                <button onClick={() => openModal('product')} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">Add Product</button>
+              <button onClick={() => openModal('sale')} className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500">Add Sale</button>
+              <button onClick={() => openModal('product')} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">Add Product</button>
             </div>
+          )}
         </div>
       </DashboardLayout>
     );
@@ -197,40 +240,117 @@ export default function DashboardPage() {
       </Modal>
 
       <div className="space-y-8">
+        {/* Header with Company Switcher */}
         <div className="sm:flex sm:items-center sm:justify-between">
-          <h3 className="text-base font-semibold leading-6 text-gray-900">Dashboard Overview</h3>
+          <div>
+            <h3 className="text-base font-semibold leading-6 text-gray-900">
+              {isSuperOwner ? 'Owner Dashboard' : 'Dashboard Overview'}
+            </h3>
+            {isSuperOwner && (
+              <p className="mt-1 text-sm text-gray-500">
+                {isViewingAllBusinesses 
+                  ? 'Viewing combined data from all companies' 
+                  : `Viewing: ${currentBusiness?.name}`}
+              </p>
+            )}
+          </div>
 
-          {/* --- Add New Dropdown --- */}
-          <Menu as="div" className="relative inline-block text-left">
-            <div>
-              <Menu.Button className="inline-flex w-full items-center justify-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
-                <PlusCircleIcon className="h-5 w-5" aria-hidden="true" />
-                Add New
-                <ChevronDownIcon className="ml-2 h-5 w-5 text-indigo-200" aria-hidden="true" />
-              </Menu.Button>
-            </div>
+          <div className="mt-4 sm:mt-0 flex items-center gap-3">
+            {/* Company Switcher (Super Owner Only) */}
+            {isSuperOwner && (
+              <Menu as="div" className="relative inline-block text-left">
+                <Menu.Button className="inline-flex items-center gap-x-2 rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                  {isViewingAllBusinesses ? (
+                    <>
+                      <GlobeAltIcon className="h-5 w-5 text-gray-400" />
+                      All Companies
+                    </>
+                  ) : (
+                    <>
+                      <BuildingOffice2Icon className="h-5 w-5 text-gray-400" />
+                      {currentBusiness?.shortName || 'Select Company'}
+                    </>
+                  )}
+                  <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+                </Menu.Button>
 
-            <Transition
-              as={Fragment}
-              enter="transition ease-out duration-100"
-              enterFrom="transform opacity-0 scale-95"
-              enterTo="transform opacity-100 scale-100"
-              leave="transition ease-in duration-75"
-              leaveFrom="transform opacity-100 scale-100"
-              leaveTo="transform opacity-0 scale-95"
-            >
-              <Menu.Items className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
-                <div className="py-1">
-                  <Menu.Item>{({ active }) => <button onClick={() => openModal('sale')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Sale Invoice</button>}</Menu.Item>
-                  <Menu.Item>{({ active }) => <button onClick={() => openModal('purchase')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Purchase Order</button>}</Menu.Item>
-                  <Menu.Item>{({ active }) => <button onClick={() => openModal('product')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Inventory Item</button>}</Menu.Item>
-                  <div className="border-t border-gray-100 my-1"></div>
-                  <Menu.Item>{({ active }) => <button onClick={() => openModal('debtor')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Customer</button>}</Menu.Item>
-                  <Menu.Item>{({ active }) => <button onClick={() => openModal('creditor')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Supplier</button>}</Menu.Item>
-                </div>
-              </Menu.Items>
-            </Transition>
-          </Menu>
+                <Transition
+                  as={Fragment}
+                  enter="transition ease-out duration-100"
+                  enterFrom="transform opacity-0 scale-95"
+                  enterTo="transform opacity-100 scale-100"
+                  leave="transition ease-in duration-75"
+                  leaveFrom="transform opacity-100 scale-100"
+                  leaveTo="transform opacity-0 scale-95"
+                >
+                  <Menu.Items className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                    <div className="py-1">
+                      <Menu.Item>
+                        {({ active }) => (
+                          <button
+                            onClick={() => switchBusiness('all')}
+                            className={`${active ? 'bg-gray-100' : ''} ${isViewingAllBusinesses ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'} flex w-full items-center px-4 py-2 text-sm`}
+                          >
+                            <GlobeAltIcon className="mr-3 h-5 w-5" />
+                            All Companies (Combined)
+                          </button>
+                        )}
+                      </Menu.Item>
+                      <div className="border-t border-gray-100 my-1"></div>
+                      {businesses.map((business) => (
+                        <Menu.Item key={business.id}>
+                          {({ active }) => (
+                            <button
+                              onClick={() => switchBusiness(business.id)}
+                              className={`${active ? 'bg-gray-100' : ''} ${currentBusiness?.id === business.id ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'} flex w-full items-center px-4 py-2 text-sm`}
+                            >
+                              <BuildingOffice2Icon className="mr-3 h-5 w-5" />
+                              <div className="text-left">
+                                <div>{business.name}</div>
+                                <div className="text-xs text-gray-400">{business.type === 'PETROL_PUMP' ? 'Fuel Station' : 'Lubricant Dist.'}</div>
+                              </div>
+                            </button>
+                          )}
+                        </Menu.Item>
+                      ))}
+                    </div>
+                  </Menu.Items>
+                </Transition>
+              </Menu>
+            )}
+
+            {/* Add New Dropdown */}
+            <Menu as="div" className="relative inline-block text-left">
+              <div>
+                <Menu.Button className="inline-flex w-full items-center justify-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                  <PlusCircleIcon className="h-5 w-5" aria-hidden="true" />
+                  Add New
+                  <ChevronDownIcon className="ml-2 h-5 w-5 text-indigo-200" aria-hidden="true" />
+                </Menu.Button>
+              </div>
+
+              <Transition
+                as={Fragment}
+                enter="transition ease-out duration-100"
+                enterFrom="transform opacity-0 scale-95"
+                enterTo="transform opacity-100 scale-100"
+                leave="transition ease-in duration-75"
+                leaveFrom="transform opacity-100 scale-100"
+                leaveTo="transform opacity-0 scale-95"
+              >
+                <Menu.Items className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+                  <div className="py-1">
+                    <Menu.Item>{({ active }) => <button onClick={() => openModal('sale')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Sale Invoice</button>}</Menu.Item>
+                    <Menu.Item>{({ active }) => <button onClick={() => openModal('purchase')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Purchase Order</button>}</Menu.Item>
+                    <Menu.Item>{({ active }) => <button onClick={() => openModal('product')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Inventory Item</button>}</Menu.Item>
+                    <div className="border-t border-gray-100 my-1"></div>
+                    <Menu.Item>{({ active }) => <button onClick={() => openModal('debtor')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Customer</button>}</Menu.Item>
+                    <Menu.Item>{({ active }) => <button onClick={() => openModal('creditor')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Supplier</button>}</Menu.Item>
+                  </div>
+                </Menu.Items>
+              </Transition>
+            </Menu>
+          </div>
         </div>
 
         {/* Stats Grid */}
@@ -263,7 +383,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-5">
-            <RevenueChart chartData={data.revenueChart} />
+          <RevenueChart chartData={data.revenueChart} />
         </div>
        
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
