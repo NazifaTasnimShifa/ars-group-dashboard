@@ -1,5 +1,4 @@
 // src/pages/accounts/chart-of-accounts.js
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -28,9 +27,11 @@ export default function ChartOfAccountsPage() {
     if (!selectedCompany) return;
     setIsLoading(true);
     try {
-        const res = await fetch(`/api/data?type=chart-of-accounts&companyId=${selectedCompany.id}`);
+        const res = await fetch(`/api/chart-of-accounts?company_id=${selectedCompany.id}`);
         const data = await res.json();
-        setAccounts(Array.isArray(data) ? data : []);
+        if (data.success) {
+            setAccounts(Array.isArray(data.data) ? data.data : []);
+        }
     } catch (error) {
         console.error("Failed to fetch accounts:", error);
     } finally {
@@ -41,29 +42,40 @@ export default function ChartOfAccountsPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleSave = async (formData) => {
-    const method = modalState.mode === 'edit' ? 'PUT' : 'POST';
+    const isAdd = modalState.mode === 'add';
+    const method = isAdd ? 'POST' : 'PUT';
+    
+    // For integer IDs, we append ID to URL for updates, but don't send it in body for adds
+    const url = isAdd 
+      ? '/api/chart-of-accounts' 
+      : `/api/chart-of-accounts/${modalState.account.id}`;
+    
+    const payload = { ...formData, company_id: selectedCompany.id };
+    
+    // API expects no ID in body for updates usually, but we must ensure we don't send it for creation if it's auto-increment
+    if (isAdd) delete payload.id;
+
     try {
-        const res = await fetch(`/api/data?type=chart-of-accounts&companyId=${selectedCompany.id}`, {
+        const res = await fetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
+            body: JSON.stringify(payload)
         });
         if(res.ok) {
             setModalState({ ...modalState, open: false });
             fetchData();
+        } else {
+            alert('Failed to save account');
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error(e); alert('Error saving account'); }
   };
 
   const handleRemove = async (account) => {
     if(!confirm(`Delete account ${account.name}?`)) return;
     try {
-        const res = await fetch(`/api/data?type=chart-of-accounts&companyId=${selectedCompany.id}`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: account.id })
-        });
+        const res = await fetch(`/api/chart-of-accounts/${account.id}`, { method: 'DELETE' });
         if(res.ok) fetchData();
+        else alert('Failed to delete');
     } catch (e) { console.error(e); }
   };
 

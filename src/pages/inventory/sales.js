@@ -1,5 +1,4 @@
 // src/pages/inventory/sales.js
-
 import { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -17,7 +16,7 @@ const StatusBadge = ({ status }) => {
         'Unpaid': 'bg-red-100 text-red-800',
     };
     return (
-        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${statusColors[status] || 'bg-gray-100 text-gray-800'}`}>
+        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${statusColors[status] || 'bg-gray-100'}`}>
             {status}
         </span>
     );
@@ -36,7 +35,6 @@ export default function SalesPage() {
       if(!selectedCompany) return;
       setIsLoading(true);
       try {
-          // Updated to use the dedicated API endpoint
           const res = await fetch(`/api/sales?company_id=${selectedCompany.id}`);
           const data = await res.json();
           if(data.success) setSales(data.data);
@@ -64,15 +62,16 @@ export default function SalesPage() {
   ];
 
   const handleSave = async (formData) => {
-      // Generate a temporary ID for new sales if one isn't provided
+      const isAdd = modalState.mode === 'add';
+      const id = isAdd ? `INV-${Date.now()}` : modalState.sale.id;
       const payload = { 
           ...formData, 
           company_id: selectedCompany.id,
-          id: modalState.mode === 'add' ? `INV-${Date.now()}` : modalState.sale.id 
+          id: id 
       };
       
-      const method = modalState.mode === 'add' ? 'POST' : 'PUT';
-      const url = modalState.mode === 'add' ? '/api/sales' : `/api/sales/${modalState.sale.id}`;
+      const method = isAdd ? 'POST' : 'PUT';
+      const url = isAdd ? '/api/sales' : `/api/sales/${id}`;
 
       try {
           const res = await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
@@ -81,7 +80,7 @@ export default function SalesPage() {
               fetchData();
           } else { 
               const errorData = await res.json();
-              alert(`Failed to save: ${errorData.error || 'Unknown error'}`); 
+              alert(`Failed: ${errorData.error}`); 
           }
       } catch(e) { console.error(e); alert('Error saving data'); }
   };
@@ -113,16 +112,11 @@ export default function SalesPage() {
 
       <div className="rounded-lg bg-white p-6 shadow">
         <div className="sm:flex sm:items-center sm:justify-between mb-4">
-            <div className="w-full max-w-xs">
-              <label htmlFor="search" className="sr-only">Search</label>
-              <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><MagnifyingGlassIcon className="h-5 w-5 text-gray-400" /></div>
-                  <input id="search" name="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full rounded-md border-0 bg-white py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="Filter by Invoice# or Customer..." type="search" />
-              </div>
+            <div className="w-full max-w-xs relative">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><MagnifyingGlassIcon className="h-5 w-5 text-gray-400" /></div>
+              <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full rounded-md border-0 bg-white py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm" placeholder="Filter..." type="search" />
             </div>
-            <div className="mt-4 sm:mt-0">
-                <FilterButtons periods={['1M', '3M', '6M', '1Y']} />
-            </div>
+            <div className="mt-4 sm:mt-0"><FilterButtons periods={['1M', '3M', '6M', '1Y']} /></div>
         </div>
 
         <div className="flow-root">
@@ -132,25 +126,25 @@ export default function SalesPage() {
               <table className="min-w-full divide-y divide-gray-300">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Invoice #</th>
+                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Invoice #</th>
                     <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Customer</th>
                     <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date</th>
                     <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Amount</th>
                     <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
-                    <th className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Actions</span></th>
+                    <th className="relative py-3.5 pl-3 pr-4 sm:pr-0">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {filteredSales.map((s) => (
                     <tr key={s.id}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-indigo-600 sm:pl-0 hover:underline cursor-pointer">{s.id}</td>
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-indigo-600 sm:pl-0">{s.id}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">{s.customer}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{new Date(s.date).toLocaleDateString()}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{formatCurrency(s.amount)}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500"><StatusBadge status={s.status} /></td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                        <button onClick={() => setModalState({ open: true, mode: 'edit', sale: s })} className="text-indigo-600 hover:text-indigo-900"><PencilIcon className="h-5 w-5" /></button>
-                        <button onClick={() => handleRemove(s)} className="ml-4 text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
+                        <button onClick={() => setModalState({ open: true, mode: 'edit', sale: s })} className="text-indigo-600 hover:text-indigo-900 mr-4"><PencilIcon className="h-5 w-5" /></button>
+                        <button onClick={() => handleRemove(s)} className="text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
                       </td>
                     </tr>
                   ))}

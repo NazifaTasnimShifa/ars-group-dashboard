@@ -1,4 +1,4 @@
-// src/pages/api/purchases/[id].js
+// src/pages/api/process-loss/[id].js
 import prisma from '@/lib/prisma';
 
 export default async function handler(req, res) {
@@ -8,20 +8,20 @@ export default async function handler(req, res) {
   try {
     switch (method) {
       case 'PUT':
-        const purchase = await prisma.purchases.update({
+        const updatedLoss = await prisma.process_loss.update({
           where: { id: id },
           data: {
-            supplier: req.body.supplier,
-            status: req.body.status,
-            date: req.body.date ? new Date(req.body.date) : undefined,
-            amount: req.body.amount ? parseFloat(req.body.amount) : undefined,
+            product: req.body.product,
+            type: req.body.type,
+            notes: req.body.notes,
+            quantity: req.body.quantity ? parseFloat(req.body.quantity) : undefined,
           },
         });
-        res.status(200).json({ success: true, data: purchase });
+        res.status(200).json({ success: true, data: updatedLoss });
         break;
 
       case 'DELETE':
-        await prisma.purchases.delete({ where: { id: id } });
+        await prisma.process_loss.delete({ where: { id: id } });
         res.status(200).json({ success: true, message: 'Deleted' });
         break;
 

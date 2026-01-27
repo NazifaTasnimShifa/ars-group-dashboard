@@ -1,4 +1,4 @@
-// src/pages/api/purchases/index.js
+// src/pages/api/process-loss/index.js
 import prisma from '@/lib/prisma';
 
 export default async function handler(req, res) {
@@ -9,22 +9,22 @@ export default async function handler(req, res) {
     switch (method) {
       case 'GET':
         if (!company_id) return res.status(400).json({ success: false, message: 'Company ID required' });
-        const purchases = await prisma.purchases.findMany({
+        const losses = await prisma.process_loss.findMany({
           where: { company_id: String(company_id) },
           orderBy: { date: 'desc' }
         });
-        res.status(200).json({ success: true, data: purchases });
+        res.status(200).json({ success: true, data: losses });
         break;
 
       case 'POST':
-        const purchase = await prisma.purchases.create({
+        const newLoss = await prisma.process_loss.create({
           data: {
             ...req.body,
             date: new Date(req.body.date),
-            amount: parseFloat(req.body.amount),
+            quantity: parseFloat(req.body.quantity),
           },
         });
-        res.status(201).json({ success: true, data: purchase });
+        res.status(201).json({ success: true, data: newLoss });
         break;
 
       default:

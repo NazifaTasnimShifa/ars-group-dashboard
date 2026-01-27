@@ -1,5 +1,4 @@
 // src/pages/inventory/purchases.js
-
 import { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -17,7 +16,7 @@ const StatusBadge = ({ status }) => {
         'Unpaid': 'bg-red-100 text-red-800',
     };
     return (
-        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${statusColors[status] || 'bg-gray-100 text-gray-800'}`}>
+        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${statusColors[status] || 'bg-gray-100'}`}>
             {status}
         </span>
     );
@@ -63,14 +62,17 @@ export default function PurchasesPage() {
   ];
 
   const handleSave = async (formData) => {
+      const isAdd = modalState.mode === 'add';
+      const id = isAdd ? `PO-${Date.now()}` : modalState.purchase.id;
+      
       const payload = { 
           ...formData, 
           company_id: selectedCompany.id,
-          id: modalState.mode === 'add' ? `PO-${Date.now()}` : modalState.purchase.id 
+          id: id
       };
       
-      const method = modalState.mode === 'add' ? 'POST' : 'PUT';
-      const url = modalState.mode === 'add' ? '/api/purchases' : `/api/purchases/${modalState.purchase.id}`;
+      const method = isAdd ? 'POST' : 'PUT';
+      const url = isAdd ? '/api/purchases' : `/api/purchases/${id}`;
 
       try {
           const res = await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
@@ -86,21 +88,14 @@ export default function PurchasesPage() {
       try {
           const res = await fetch(`/api/purchases/${purchase.id}`, { method: 'DELETE' });
           if(res.ok) fetchData();
+          else alert('Failed to delete');
       } catch(e) { console.error(e); }
   };
 
   return (
     <DashboardLayout>
-      <Modal 
-        open={modalState.open} 
-        setOpen={(val) => setModalState({...modalState, open: val})} 
-        title={`${modalState.mode === 'add' ? 'Add' : 'Edit'} Purchase Order`}
-      >
-        <PurchaseOrderForm 
-          purchase={modalState.purchase} 
-          onSave={handleSave} 
-          onCancel={() => setModalState({...modalState, open: false})} 
-        />
+      <Modal open={modalState.open} setOpen={(val) => setModalState({...modalState, open: val})} title={`${modalState.mode === 'add' ? 'Add' : 'Edit'} Purchase Order`}>
+        <PurchaseOrderForm purchase={modalState.purchase} onSave={handleSave} onCancel={() => setModalState({...modalState, open: false})} />
       </Modal>
 
       <PageHeader title="Purchase Orders" description="A list of all purchases made by the company.">
@@ -115,16 +110,11 @@ export default function PurchasesPage() {
 
       <div className="rounded-lg bg-white p-6 shadow">
         <div className="sm:flex sm:items-center sm:justify-between mb-4">
-            <div className="w-full max-w-xs">
-              <label htmlFor="search" className="sr-only">Search</label>
-              <div className="relative">
+            <div className="w-full max-w-xs relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><MagnifyingGlassIcon className="h-5 w-5 text-gray-400" /></div>
-                <input id="search" name="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full rounded-md border-0 bg-white py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="Filter by PO# or Supplier..." type="search" />
-              </div>
+                <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full rounded-md border-0 bg-white py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm" placeholder="Filter by PO# or Supplier..." type="search" />
             </div>
-            <div className="mt-4 sm:mt-0">
-                <FilterButtons periods={['1M', '3M', '6M', '1Y']} />
-            </div>
+            <div className="mt-4 sm:mt-0"><FilterButtons periods={['1M', '3M', '6M', '1Y']} /></div>
         </div>
 
         <div className="flow-root">
@@ -134,12 +124,12 @@ export default function PurchasesPage() {
               <table className="min-w-full divide-y divide-gray-300">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">PO Number</th>
+                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">PO Number</th>
                     <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Supplier</th>
                     <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date</th>
                     <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Amount</th>
                     <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
-                    <th className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Actions</span></th>
+                    <th className="relative py-3.5 pl-3 pr-4 sm:pr-0">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
@@ -151,8 +141,8 @@ export default function PurchasesPage() {
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{formatCurrency(p.amount)}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500"><StatusBadge status={p.status} /></td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                        <button onClick={() => setModalState({ open: true, mode: 'edit', purchase: p })} className="text-indigo-600 hover:text-indigo-900"><PencilIcon className="h-5 w-5" /></button>
-                        <button onClick={() => handleRemove(p)} className="ml-4 text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
+                        <button onClick={() => setModalState({ open: true, mode: 'edit', purchase: p })} className="text-indigo-600 hover:text-indigo-900 mr-4"><PencilIcon className="h-5 w-5" /></button>
+                        <button onClick={() => handleRemove(p)} className="text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
                       </td>
                     </tr>
                   ))}

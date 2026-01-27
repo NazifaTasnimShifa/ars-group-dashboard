@@ -1,4 +1,5 @@
 // src/components/forms/SaleForm.js
+
 import { useState, useEffect } from 'react';
 
 export default function SaleForm({ sale, onSave, onCancel }) {
@@ -34,30 +35,27 @@ export default function SaleForm({ sale, onSave, onCancel }) {
     <form onSubmit={handleSubmit}>
       <div className="space-y-4">
         <div>
-          <label htmlFor="customer" className="block text-sm font-medium leading-6 text-gray-900">Customer Name</label>
-          <input type="text" name="customer" id="customer" value={formData.customer} onChange={handleChange} required className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600" />
+          <label htmlFor="customer" className="block text-sm font-medium text-gray-700">Customer Name</label>
+          <input type="text" name="customer" value={formData.customer} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
         </div>
-        
         <div className="grid grid-cols-2 gap-4">
              <div>
-                <label htmlFor="date" className="block text-sm font-medium text-gray-900">Date</label>
-                <input type="date" name="date" id="date" value={formData.date} onChange={handleChange} required className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300" />
+                <label htmlFor="date" className="block text-sm font-medium text-gray-700">Date</label>
+                <input type="date" name="date" value={formData.date} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
              </div>
              <div>
-                <label htmlFor="amount" className="block text-sm font-medium text-gray-900">Amount</label>
-                <input type="number" name="amount" id="amount" value={formData.amount} onChange={handleChange} required className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300" />
+                <label htmlFor="amount" className="block text-sm font-medium text-gray-700">Amount</label>
+                <input type="number" name="amount" value={formData.amount} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
              </div>
         </div>
-
         <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-900">Status</label>
-            <select name="status" id="status" value={formData.status} onChange={handleChange} className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600">
+            <label htmlFor="status" className="block text-sm font-medium text-gray-700">Status</label>
+            <select name="status" value={formData.status} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                 <option value="Paid">Paid</option>
                 <option value="Unpaid">Unpaid</option>
                 <option value="Partial">Partial</option>
             </select>
         </div>
-
       </div>
       <div className="mt-6 flex justify-end gap-3">
         <button type="button" onClick={onCancel} className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Cancel</button>

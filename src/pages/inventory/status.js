@@ -14,7 +14,7 @@ const StatusBadge = ({ status }) => {
     'Low Stock': 'bg-yellow-100 text-yellow-800',
     'Out of Stock': 'bg-red-100 text-red-800',
   };
-  return <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${statusColors[status]}`}>{status}</span>;
+  return <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${statusColors[status] || 'bg-gray-100'}`}>{status}</span>;
 };
 
 export default function InventoryStatusPage() {
@@ -48,17 +48,19 @@ export default function InventoryStatusPage() {
   const stats = [{ name: 'Total Inventory Value', stat: formatCurrency(totalValue) }, { name: 'Total SKUs', stat: inventory.length }];
 
   const handleSave = async (formData) => {
-      // Generate ID for new items if one isn't provided by the form (usually form has inputs for name etc, we generate ID here or let backend handle)
-      // For this specific schema, ID is a string like 'L001'. We can auto-generate or ask user.
-      // Simplification: Generate ID on frontend or backend. Let's assume backend handles or we generate:
+      const isAdd = modalState.mode === 'add';
+      const method = isAdd ? 'POST' : 'PUT';
+      // For Add, we let backend or a utility generate ID if needed, or generate here.
+      // Schema uses String ID.
+      const id = isAdd ? `ITM-${Date.now()}` : modalState.item.id;
+      
       const payload = { 
           ...formData, 
           company_id: selectedCompany.id,
-          id: modalState.mode === 'add' ? `ITM-${Date.now()}` : modalState.item.id // Simple ID generation
+          id: id 
       };
       
-      const method = modalState.mode === 'add' ? 'POST' : 'PUT';
-      const url = modalState.mode === 'add' ? '/api/inventory' : `/api/inventory/${modalState.item.id}`;
+      const url = isAdd ? '/api/inventory' : `/api/inventory/${id}`;
 
       try {
           const res = await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
@@ -74,6 +76,7 @@ export default function InventoryStatusPage() {
       try {
           const res = await fetch(`/api/inventory/${item.id}`, { method: 'DELETE' });
           if(res.ok) fetchData();
+          else alert('Failed to delete');
       } catch(e) { console.error(e); }
   };
 

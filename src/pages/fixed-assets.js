@@ -1,5 +1,4 @@
 // src/pages/fixed-assets.js
-
 import { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -40,14 +39,17 @@ export default function FixedAssetsPage() {
   ];
 
   const handleSave = async (formData) => {
+      const isAdd = modalState.mode === 'add';
+      const id = isAdd ? `FA-${Date.now()}` : modalState.asset.id;
+      
       const payload = { 
           ...formData, 
           company_id: selectedCompany.id,
-          id: modalState.mode === 'add' ? `FA-${Date.now()}` : modalState.asset.id 
+          id: id 
       };
       
-      const method = modalState.mode === 'add' ? 'POST' : 'PUT';
-      const url = modalState.mode === 'add' ? '/api/assets' : `/api/assets/${modalState.asset.id}`;
+      const method = isAdd ? 'POST' : 'PUT';
+      const url = isAdd ? '/api/assets' : `/api/assets/${id}`;
 
       try {
           const res = await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
@@ -63,6 +65,7 @@ export default function FixedAssetsPage() {
       try {
           const res = await fetch(`/api/assets/${asset.id}`, { method: 'DELETE' });
           if(res.ok) fetchData();
+          else alert('Failed to delete');
       } catch(e) { console.error(e); }
   };
 
@@ -91,25 +94,25 @@ export default function FixedAssetsPage() {
               <table className="min-w-full divide-y divide-gray-300">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Asset Name</th>
+                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Asset Name</th>
                     <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Acquisition Date</th>
                     <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Cost</th>
                     <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Depreciation (Yearly)</th>
                     <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Current Book Value</th>
-                    <th className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Actions</span></th>
+                    <th className="relative py-3.5 pl-3 pr-4 sm:pr-0">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {assets.map((asset) => (
                     <tr key={asset.id}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">{asset.name}</td>
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">{asset.name}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{new Date(asset.acquisitionDate).toLocaleDateString()}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-right">{formatCurrency(asset.cost)}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-red-500 text-right">({formatCurrency(asset.depreciation)})</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm font-semibold text-gray-900 text-right">{formatCurrency(asset.bookValue)}</td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                        <button onClick={() => setModalState({ open: true, mode: 'edit', asset })} className="text-indigo-600 hover:text-indigo-900"><PencilIcon className="h-5 w-5" /></button>
-                        <button onClick={() => handleRemove(asset)} className="ml-4 text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
+                        <button onClick={() => setModalState({ open: true, mode: 'edit', asset })} className="text-indigo-600 hover:text-indigo-900 mr-4"><PencilIcon className="h-5 w-5" /></button>
+                        <button onClick={() => handleRemove(asset)} className="text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
                       </td>
                     </tr>
                   ))}

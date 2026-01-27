@@ -1,62 +1,47 @@
 // src/components/forms/CreditorForm.js
 
+import { useState, useEffect } from 'react';
+
 export default function CreditorForm({ creditor, onSave, onCancel }) {
-  
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
+  const [formData, setFormData] = useState({
+    name: '', contactPerson: '', amount: '', due: '', aging: 0
+  });
 
-    // Convert numeric strings to numbers
-    data.amount = parseFloat(data.amount);
-    data.aging = 0; // Default for new creditors
-
-    if (creditor?.id) {
-      data.id = creditor.id;
+  useEffect(() => {
+    if (creditor) {
+      setFormData({
+        name: creditor.name,
+        contactPerson: creditor.contactPerson || '',
+        amount: creditor.amount,
+        due: creditor.due ? new Date(creditor.due).toISOString().split('T')[0] : '',
+        aging: creditor.aging || 0
+      });
     }
+  }, [creditor]);
 
-    onSave(data);
-  };
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }}>
       <div className="space-y-4">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium leading-6 text-gray-900">Creditor Name</label>
-          <div className="mt-2">
-            <input type="text" name="name" id="name" defaultValue={creditor?.name || ''} required className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600" placeholder="e.g., Govt. Fuel Depot" />
-          </div>
+          <label className="block text-sm font-medium text-gray-700">Creditor Name</label>
+          <input type="text" name="name" value={formData.name} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
         </div>
-
-        <div>
-          <label htmlFor="contactPerson" className="block text-sm font-medium leading-6 text-gray-900">Contact Person</label>
-          <div className="mt-2">
-            <input type="text" name="contactPerson" id="contactPerson" defaultValue={creditor?.contactPerson || ''} className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600" placeholder="e.g., Accounts Officer" />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="amount" className="block text-sm font-medium leading-6 text-gray-900">Amount Due</label>
-            <div className="mt-2">
-              <input type="number" name="amount" id="amount" defaultValue={creditor?.amount || ''} required className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600" placeholder="e.g., 1500000" />
-            </div>
+            <label className="block text-sm font-medium text-gray-700">Amount Due</label>
+            <input type="number" name="amount" value={formData.amount} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
           </div>
           <div>
-            <label htmlFor="due" className="block text-sm font-medium leading-6 text-gray-900">Due Date</label>
-            <div className="mt-2">
-              <input type="date" name="due" id="due" defaultValue={creditor?.due ? new Date(creditor.due).toISOString().split('T')[0] : ''} required className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600" />
-            </div>
+            <label className="block text-sm font-medium text-gray-700">Due Date</label>
+            <input type="date" name="due" value={formData.due} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm" />
           </div>
         </div>
       </div>
-      <div className="mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
-        <button type="submit" className="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 sm:col-start-2">
-          {creditor ? 'Update Creditor' : 'Save Creditor'}
-        </button>
-        <button type="button" className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0" onClick={onCancel}>
-          Cancel
-        </button>
+      <div className="mt-6 flex justify-end gap-3">
+        <button type="button" onClick={onCancel} className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-50">Cancel</button>
+        <button type="submit" className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Save</button>
       </div>
     </form>
   );

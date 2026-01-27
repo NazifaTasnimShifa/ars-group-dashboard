@@ -49,9 +49,11 @@ export default function DashboardPage() {
     if (!selectedCompany) return;
     setLoading(true);
     try {
-        const res = await fetch(`/api/dashboard?companyId=${selectedCompany.id}`);
+        const res = await fetch(`/api/dashboard?company_id=${selectedCompany.id}`);
         const fetchedData = await res.json();
-        setData(fetchedData);
+        if (fetchedData.success) {
+            setData(fetchedData.data);
+        }
     } catch (err) {
         console.error("Failed to fetch dashboard data", err);
     } finally {
@@ -63,18 +65,52 @@ export default function DashboardPage() {
 
   // --- 2. Generic Save Handler for All Forms ---
   const handleSave = async (type, formData) => {
+    let url = '';
+    let payload = { ...formData, company_id: selectedCompany.id };
+
+    // Determine URL and ID logic based on type
+    switch (type) {
+        case 'sales':
+            url = '/api/sales';
+            payload.id = `INV-${Date.now()}`;
+            break;
+        case 'purchases':
+            url = '/api/purchases';
+            payload.id = `PO-${Date.now()}`;
+            break;
+        case 'inventory':
+            url = '/api/inventory';
+            payload.id = `ITM-${Date.now()}`;
+            break;
+        case 'debtors':
+            url = '/api/debtors';
+            // ID is auto-increment, do not send it
+            delete payload.id;
+            break;
+        case 'creditors':
+            url = '/api/creditors';
+            // ID is auto-increment, do not send it
+            delete payload.id;
+            break;
+        default:
+            alert('Unknown data type');
+            return;
+    }
+
     try {
-        const res = await fetch(`/api/data?type=${type}&companyId=${selectedCompany.id}`, {
+        const res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
+            body: JSON.stringify(payload)
         });
 
         if (res.ok) {
             setModalState((prev) => ({ ...prev, open: false }));
-            fetchDashboardData(); // Refresh dashboard stats immediately
+            alert('Saved successfully!');
+            fetchDashboardData(); 
         } else {
-            alert('Failed to save data. Please try again.');
+            const err = await res.json();
+            alert(`Failed to save: ${err.error || err.message || 'Unknown error'}`);
         }
     } catch (error) {
         console.error(error);
@@ -134,6 +170,7 @@ export default function DashboardPage() {
   if (!selectedCompany) return <DashboardLayout><div>Loading...</div></DashboardLayout>;
   if (loading && !data) return <DashboardLayout><div>Loading Dashboard...</div></DashboardLayout>;
 
+  // Fallback if data is missing or empty
   if (!data || Object.keys(data).length === 0) {
     return (
       <DashboardLayout>

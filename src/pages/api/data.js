@@ -86,10 +86,9 @@
 
 // src/pages/api/data.js
 
+// src/pages/api/data.js
 export default function handler(req, res) {
-  // This API route is deprecated.
-  // Use specific routes: /api/sales, /api/purchases, /api/inventory, etc.
   res.status(410).json({ 
-    error: 'This endpoint is deprecated. Use specialized endpoints (e.g., /api/sales) instead.' 
+    error: 'Gone. This endpoint has been removed. Please use specific API routes (e.g., /api/sales, /api/inventory).' 
   });
 }

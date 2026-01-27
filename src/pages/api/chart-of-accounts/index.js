@@ -1,4 +1,4 @@
-// src/pages/api/purchases/index.js
+// src/pages/api/chart-of-accounts/index.js
 import prisma from '@/lib/prisma';
 
 export default async function handler(req, res) {
@@ -9,22 +9,24 @@ export default async function handler(req, res) {
     switch (method) {
       case 'GET':
         if (!company_id) return res.status(400).json({ success: false, message: 'Company ID required' });
-        const purchases = await prisma.purchases.findMany({
+        const accounts = await prisma.chart_of_accounts.findMany({
           where: { company_id: String(company_id) },
-          orderBy: { date: 'desc' }
+          orderBy: { code: 'asc' }
         });
-        res.status(200).json({ success: true, data: purchases });
+        res.status(200).json({ success: true, data: accounts });
         break;
 
       case 'POST':
-        const purchase = await prisma.purchases.create({
+        // id is auto-increment, do not include it
+        const { id, ...dataToSave } = req.body;
+        const newAccount = await prisma.chart_of_accounts.create({
           data: {
-            ...req.body,
-            date: new Date(req.body.date),
-            amount: parseFloat(req.body.amount),
+            ...dataToSave,
+            code: parseInt(req.body.code),
+            balance: parseFloat(req.body.balance),
           },
         });
-        res.status(201).json({ success: true, data: purchase });
+        res.status(201).json({ success: true, data: newAccount });
         break;
 
       default:

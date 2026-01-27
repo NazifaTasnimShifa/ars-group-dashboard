@@ -1,30 +1,16 @@
-// prisma/seed.mjs
+// prisma/schema.prisma must exist and be valid before running this.
+// Run: npx prisma db push --force
+// Then: node prisma/seed.mjs
 
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { 
-  companies, 
-  sundryDebtors, 
-  sundryCreditors, 
-  inventoryData, 
-  salesData, 
-  purchasesData, 
-  fixedAssetsData, 
-  processLossData, 
-  chartOfAccountsData,
-  dashboardData,
-  balanceSheetData,
-  incomeStatementData,
-  cashFlowStatementData,
-  trialBalanceData
-} from '../src/data/mockData.js';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('Start seeding ...');
 
-  // 1. Clean up
+  // 1. Clean up existing data to prevent duplicates
   await prisma.process_loss.deleteMany();
   await prisma.chart_of_accounts.deleteMany();
   await prisma.fixed_assets.deleteMany();
@@ -36,41 +22,41 @@ async function main() {
   await prisma.users.deleteMany();
   await prisma.companies.deleteMany();
 
-  // 2. Seed Companies & Reports
-  for (const company of companies) {
-    const stats = dashboardData[company.id] || {};
-    const bs = balanceSheetData[company.id] || {};
-    const is = incomeStatementData[company.id] || {};
-    const cf = cashFlowStatementData[company.id] || {};
-    const tb = trialBalanceData[company.id] || {};
+  // 2. Create Companies
+  const arsLube = await prisma.companies.create({
+    data: {
+      id: 'ars_lube',
+      name: 'ARS Lube LTD BD',
+      shortName: 'ARS Lube',
+      // We leave JSON blobs null or empty as we now use dynamic APIs
+      dashboard_stats: {}, 
+    },
+  });
 
-    await prisma.companies.create({
-      data: {
-        id: company.id,
-        name: company.name,
-        shortName: company.shortName,
-        dashboard_stats: stats,
-        balance_sheet: bs,
-        income_statement: is,
-        cash_flow: cf,
-        trial_balance: tb
-      },
-    });
-    console.log(`Created company: ${company.name}`);
-  }
+  const arsCorp = await prisma.companies.create({
+    data: {
+      id: 'ars_corp',
+      name: 'ARS Corporation',
+      shortName: 'ARS Corp',
+      dashboard_stats: {},
+    },
+  });
 
-  // 3. Seed Users
+  console.log('Created companies.');
+
+  // 3. Create Users
   const adminPassword = await bcrypt.hash('admin123', 10);
+  const userPassword = await bcrypt.hash('user123', 10);
+
   await prisma.users.create({
     data: {
       email: 'admin@arsgroup.com',
       password: adminPassword,
-      name: 'ARS Group Admin',
+      name: 'Super Admin',
       role: 'admin',
     },
   });
 
-  const userPassword = await bcrypt.hash('user123', 10);
   await prisma.users.create({
     data: {
       email: 'lube@arsgroup.com',
@@ -91,134 +77,31 @@ async function main() {
     },
   });
 
-  // 4. Seed Related Data
-  const companyIds = ['ars_lube', 'ars_corp'];
+  console.log('Created users.');
 
-  for (const cid of companyIds) {
-    // Debtors
-    const debtors = sundryDebtors[cid] || [];
-    if (debtors.length > 0) {
-        await prisma.debtors.createMany({
-            data: debtors.map(d => ({
-                company_id: cid,
-                name: d.name,
-                amount: d.amount,
-                due: new Date(d.due),
-                aging: d.aging
-            }))
-        });
-    }
+  // 4. Seed Dummy Data for ARS Lube
+  // Inventory
+  await prisma.inventory_items.createMany({
+    data: [
+      { id: 'L001', company_id: 'ars_lube', name: 'Petrol', sku: 'FUL-001', category: 'Fuel', stock: 5000, unit: 'Litre', costPrice: 125, salePrice: 130, status: 'In Stock' },
+      { id: 'L002', company_id: 'ars_lube', name: 'Diesel', sku: 'FUL-002', category: 'Fuel', stock: 8000, unit: 'Litre', costPrice: 108, salePrice: 110, status: 'In Stock' },
+    ]
+  });
 
-    // Creditors
-    const creditors = sundryCreditors[cid] || [];
-    if (creditors.length > 0) {
-        await prisma.creditors.createMany({
-            data: creditors.map(c => ({
-                company_id: cid,
-                name: c.name,
-                amount: c.amount,
-                due: new Date(c.due),
-                aging: c.aging
-            }))
-        });
-    }
+  // Sales
+  await prisma.sales.createMany({
+    data: [
+      { id: 'INV-1001', company_id: 'ars_lube', customer: 'Rahim Transport', date: new Date('2024-06-01'), amount: 50000, status: 'Paid' },
+      { id: 'INV-1002', company_id: 'ars_lube', customer: 'Karim Motors', date: new Date('2024-06-05'), amount: 12000, status: 'Unpaid' },
+    ]
+  });
 
-    // Inventory
-    const inventory = inventoryData[cid] || [];
-    for (const item of inventory) {
-        await prisma.inventory_items.create({
-            data: {
-                id: item.id,
-                company_id: cid,
-                name: item.name,
-                sku: item.sku,
-                category: item.category,
-                stock: item.stock,
-                unit: item.unit,
-                costPrice: item.costPrice,
-                salePrice: item.salePrice,
-                status: item.status
-            }
-        });
-    }
-
-    // Sales
-    const sales = salesData[cid] || [];
-    for (const sale of sales) {
-        await prisma.sales.create({
-            data: {
-                id: sale.id,
-                company_id: cid,
-                customer: sale.customer,
-                date: new Date(sale.date),
-                amount: sale.amount,
-                status: sale.status
-            }
-        });
-    }
-
-    // Purchases
-    const purchases = purchasesData[cid] || [];
-    for (const po of purchases) {
-        await prisma.purchases.create({
-            data: {
-                id: po.id,
-                company_id: cid,
-                supplier: po.supplier,
-                date: new Date(po.date),
-                amount: po.amount,
-                status: po.status
-            }
-        });
-    }
-
-    // Fixed Assets
-    const assets = fixedAssetsData[cid] || [];
-    for (const fa of assets) {
-        await prisma.fixed_assets.create({
-            data: {
-                id: fa.id,
-                company_id: cid,
-                name: fa.name,
-                acquisitionDate: new Date(fa.acquisitionDate),
-                cost: fa.cost,
-                depreciation: fa.depreciation,
-                bookValue: fa.bookValue
-            }
-        });
-    }
-
-    // Process Loss
-    const losses = processLossData[cid] || [];
-    for (const pl of losses) {
-        await prisma.process_loss.create({
-            data: {
-                id: pl.id,
-                company_id: cid,
-                date: new Date(pl.date),
-                product: pl.product,
-                type: pl.type,
-                quantity: pl.quantity,
-                unit: pl.unit,
-                notes: pl.notes
-            }
-        });
-    }
-
-    // Chart of Accounts
-    const accounts = chartOfAccountsData[cid] || [];
-    if (accounts.length > 0) {
-        await prisma.chart_of_accounts.createMany({
-            data: accounts.map(acc => ({
-                company_id: cid,
-                code: acc.code,
-                name: acc.name,
-                type: acc.type,
-                balance: acc.balance
-            }))
-        });
-    }
-  }
+  // Purchases
+  await prisma.purchases.createMany({
+    data: [
+      { id: 'PO-2001', company_id: 'ars_lube', supplier: 'Padma Oil', date: new Date('2024-05-20'), amount: 450000, status: 'Paid' },
+    ]
+  });
 
   console.log('Seeding finished.');
 }

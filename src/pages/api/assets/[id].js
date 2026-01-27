@@ -3,15 +3,15 @@ import prisma from '@/lib/prisma';
 
 export default async function handler(req, res) {
   const { method } = req;
-  const { id } = req.query; 
+  const { id } = req.query;
 
-  switch (method) {
-    case 'PUT':
-      try {
+  try {
+    switch (method) {
+      case 'PUT':
         const asset = await prisma.fixed_assets.update({
           where: { id: id },
           data: {
-            ...req.body,
+            name: req.body.name,
             acquisitionDate: req.body.acquisitionDate ? new Date(req.body.acquisitionDate) : undefined,
             cost: req.body.cost ? parseFloat(req.body.cost) : undefined,
             depreciation: req.body.depreciation ? parseFloat(req.body.depreciation) : undefined,
@@ -19,21 +19,18 @@ export default async function handler(req, res) {
           },
         });
         res.status(200).json({ success: true, data: asset });
-      } catch (error) {
-        res.status(400).json({ success: false, error: error.message });
-      }
-      break;
+        break;
 
-    case 'DELETE':
-      try {
+      case 'DELETE':
         await prisma.fixed_assets.delete({ where: { id: id } });
         res.status(200).json({ success: true, message: 'Deleted' });
-      } catch (error) {
-        res.status(400).json({ success: false, error: error.message });
-      }
-      break;
+        break;
 
-    default:
-      res.status(405).json({ success: false, message: 'Method not allowed' });
+      default:
+        res.status(405).json({ success: false, message: 'Method not allowed' });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: error.message });
   }
 }

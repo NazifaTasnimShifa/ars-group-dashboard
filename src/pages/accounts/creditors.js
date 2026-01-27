@@ -39,9 +39,14 @@ export default function CreditorsPage() {
   const stats = [{ name: 'Total Payables', stat: formatCurrency(totalPayables) }];
 
   const handleSave = async (formData) => {
-    const method = modalState.mode === 'add' ? 'POST' : 'PUT';
-    const url = modalState.mode === 'add' ? '/api/creditors' : `/api/creditors/${modalState.creditor.id}`;
+    const isAdd = modalState.mode === 'add';
+    const method = isAdd ? 'POST' : 'PUT';
+    
+    // Numeric ID handling: Create URL does not need ID, Update URL needs appended ID
+    const url = isAdd ? '/api/creditors' : `/api/creditors/${modalState.creditor.id}`;
+    
     const payload = { ...formData, company_id: selectedCompany.id };
+    if (isAdd) delete payload.id; // Ensure ID is not sent for creation
 
     try {
         const res = await fetch(url, {
@@ -53,7 +58,7 @@ export default function CreditorsPage() {
             setModalState({ open: false, mode: 'add', creditor: null });
             fetchData();
         } else { alert('Failed to save'); }
-    } catch (error) { alert('Error saving data'); }
+    } catch (error) { console.error(error); alert('Error saving data'); }
   };
 
   const handleRemove = async (creditor) => {
@@ -61,6 +66,7 @@ export default function CreditorsPage() {
       try {
           const res = await fetch(`/api/creditors/${creditor.id}`, { method: 'DELETE' });
           if (res.ok) fetchData();
+          else alert('Failed to delete');
       } catch(err) { console.error(err); }
   };
 
@@ -83,7 +89,7 @@ export default function CreditorsPage() {
       <div className="rounded-lg bg-white p-6 shadow">
         <div className="mb-4 w-full max-w-xs relative">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><MagnifyingGlassIcon className="h-5 w-5 text-gray-400" /></div>
-            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full rounded-md border-0 bg-white py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="Search..." type="search" />
+            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full rounded-md border-0 bg-white py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm" placeholder="Search..." type="search" />
         </div>
 
         <div className="flow-root">
@@ -106,8 +112,8 @@ export default function CreditorsPage() {
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{formatCurrency(c.amount)}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{new Date(c.due).toLocaleDateString()}</td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                        <button onClick={() => setModalState({ open: true, mode: 'edit', creditor: c })} className="text-indigo-600 hover:text-indigo-900"><PencilIcon className="h-5 w-5" /></button>
-                        <button onClick={() => handleRemove(c)} className="ml-4 text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
+                        <button onClick={() => setModalState({ open: true, mode: 'edit', creditor: c })} className="text-indigo-600 hover:text-indigo-900 mr-4"><PencilIcon className="h-5 w-5" /></button>
+                        <button onClick={() => handleRemove(c)} className="text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
                       </td>
                     </tr>
                   ))}
