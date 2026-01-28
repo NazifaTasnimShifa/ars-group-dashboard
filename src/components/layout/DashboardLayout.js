@@ -1,4 +1,5 @@
 // src/components/layout/DashboardLayout.js
+// ARS ERP - Main Dashboard Layout with Multi-Entity Navigation
 
 import { Fragment, useState } from 'react';
 import Link from 'next/link';
@@ -16,45 +17,97 @@ import {
   ArrowRightStartOnRectangleIcon,
   ArrowPathIcon,
   ChevronRightIcon,
+  BeakerIcon,
+  CubeIcon,
+  BanknotesIcon,
+  ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
 import { useAppContext } from '@/contexts/AppContext';
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-  {
-    name: 'Financial Reports',
-    href: '/reports',
-    icon: FolderIcon,
+// Navigation structure - conditionally show items based on business type
+const getNavigation = (currentBusiness, isSuperOwner) => {
+  const baseNav = [
+    { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+  ];
+
+  // ARS Corp / Pump specific navigation
+  const pumpNav = {
+    name: 'Pump Operations',
+    href: '/pump',
+    icon: BeakerIcon,
     children: [
-      { name: 'Balance Sheet', href: '/reports/balance-sheet' },
-      { name: 'Income Statement', href: '/reports/income-statement' },
-      { name: 'Cash Flow', href: '/reports/cash-flow' },
-      { name: 'Trial Balance', href: '/reports/trial-balance' },
+      { name: 'Daily Operations', href: '/pump/daily-operations' },
+      { name: 'Dip Stock', href: '/pump/dip-stock' },
+      { name: 'Gas Cylinders', href: '/pump/cylinder-operations' },
+      { name: 'Credit Sales', href: '/pump/credit-sales' },
     ],
-  },
-  {
-    name: 'Inventory',
-    href: '/inventory',
-    icon: InboxIcon,
+  };
+
+  // ARS Lube specific navigation
+  const lubeNav = {
+    name: 'Lube Operations',
+    href: '/lube',
+    icon: CubeIcon,
     children: [
-      { name: 'Inventory Status', href: '/inventory/status' },
-      { name: 'Purchases', href: '/inventory/purchases' },
-      { name: 'Sales', href: '/inventory/sales' },
-      { name: 'Process Loss', href: '/inventory/process-loss' },
+      { name: 'Sales Orders', href: '/lube/sales-orders' },
+      { name: 'Dealers', href: '/lube/dealers' },
+      { name: 'Inventory', href: '/lube/inventory' },
     ],
-  },
-  {
-    name: 'Accounts',
-    href: '/accounts',
-    icon: UsersIcon,
-    children: [
-      { name: 'Sundry Debtors', href: '/accounts/debtors' },
-      { name: 'Sundry Creditors', href: '/accounts/creditors' },
-      { name: 'Chart of Accounts', href: '/accounts/chart-of-accounts' },
-    ],
-  },
-  { name: 'Fixed Assets', href: '/fixed-assets', icon: TruckIcon },
-];
+  };
+
+  const commonNav = [
+    {
+      name: 'Financial Reports',
+      href: '/reports',
+      icon: FolderIcon,
+      children: [
+        { name: 'Balance Sheet', href: '/reports/balance-sheet' },
+        { name: 'Income Statement', href: '/reports/income-statement' },
+        { name: 'Cash Flow', href: '/reports/cash-flow' },
+        { name: 'Trial Balance', href: '/reports/trial-balance' },
+      ],
+    },
+    {
+      name: 'Inventory',
+      href: '/inventory',
+      icon: InboxIcon,
+      children: [
+        { name: 'Inventory Status', href: '/inventory/status' },
+        { name: 'Purchases', href: '/inventory/purchases' },
+        { name: 'Sales', href: '/inventory/sales' },
+        { name: 'Process Loss', href: '/inventory/process-loss' },
+      ],
+    },
+    {
+      name: 'Accounts',
+      href: '/accounts',
+      icon: UsersIcon,
+      children: [
+        { name: 'Sundry Debtors', href: '/accounts/debtors' },
+        { name: 'Sundry Creditors', href: '/accounts/creditors' },
+        { name: 'Chart of Accounts', href: '/accounts/chart-of-accounts' },
+      ],
+    },
+    { name: 'Fixed Assets', href: '/fixed-assets', icon: TruckIcon },
+  ];
+
+  // Build navigation based on context
+  let nav = [...baseNav];
+  
+  if (isSuperOwner) {
+    // Super Owner sees all navigations
+    nav.push(pumpNav);
+    nav.push(lubeNav);
+  } else if (currentBusiness?.type === 'PETROL_PUMP') {
+    nav.push(pumpNav);
+  } else if (currentBusiness?.type === 'LUBRICANT') {
+    nav.push(lubeNav);
+  }
+  
+  nav = [...nav, ...commonNav];
+  
+  return nav;
+};
 
 function classNames(...classes) {
   return classes.filter(Boolean).join(' ');
@@ -63,13 +116,19 @@ function classNames(...classes) {
 export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { selectedCompany, switchCompany, logout, user } = useAppContext();
+  const { currentBusiness, logout, user, isSuperOwner, isViewingAllBusinesses } = useAppContext();
   const router = useRouter();
 
-  // If no company selected yet, don't show layout (ProtectedRoute usually handles this)
-  if (!selectedCompany) {
-    return null; 
-  }
+  // Get navigation based on current context
+  const navigation = getNavigation(currentBusiness, isSuperOwner);
+
+  // Get display name for header
+  const getDisplayName = () => {
+    if (isViewingAllBusinesses) {
+      return 'ARS Group';
+    }
+    return currentBusiness?.name || 'ARS Dashboard';
+  };
 
   const sidebarContent = (
     <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-gray-900 px-6 pb-4">
@@ -80,7 +139,7 @@ export default function DashboardLayout({ children }) {
             'text-xl font-bold text-white transition-opacity duration-200'
           )}
         >
-          {selectedCompany.shortName}
+          {isViewingAllBusinesses ? 'ARS Group' : (currentBusiness?.shortName || 'ARS')}
         </h1>
       </div>
       <nav className="flex flex-1 flex-col">
@@ -171,19 +230,6 @@ export default function DashboardLayout({ children }) {
                 Collapse
               </span>
             </div>
-            
-            {/* Only Show Switch Company for Admins */}
-            {user?.role === 'admin' && (
-              <button
-                onClick={switchCompany}
-                className="w-full flex items-center gap-x-4 px-6 py-3 text-sm font-semibold leading-6 text-gray-400 hover:bg-gray-800 hover:text-white"
-              >
-                <ArrowPathIcon className="h-6 w-6 shrink-0" />
-                <span className={classNames(isCollapsed && 'lg:hidden')}>
-                  Switch Company
-                </span>
-              </button>
-            )}
 
             <button
               onClick={logout}
@@ -253,12 +299,17 @@ export default function DashboardLayout({ children }) {
               <Bars3Icon className="h-6 w-6" />
             </button>
             <div className="flex-1 text-lg font-semibold leading-6 text-gray-900">
-              {selectedCompany.name}
+              {getDisplayName()}
             </div>
             <div className="flex items-center gap-x-4 lg:gap-x-6">
-                <span className="text-sm font-semibold leading-6 text-gray-900">
-                    {user?.name} ({user?.role})
-                </span>
+              <span className="text-sm text-gray-500">
+                {user?.name}
+              </span>
+              <span className={`text-xs px-2 py-1 rounded-full ${
+                isSuperOwner ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-700'
+              }`}>
+                {user?.role?.displayName || 'User'}
+              </span>
             </div>
           </div>
           <main className="py-10">
