@@ -1,8 +1,7 @@
 // src/pages/api/assets/index.js
 import prisma from '@/lib/prisma';
-import { withAuth } from '@/lib/middleware';
 
-async function handler(req, res) {
+export default async function handler(req, res) {
   const { method } = req;
   const { company_id } = req.query;
 
@@ -38,6 +37,3 @@ async function handler(req, res) {
     res.status(500).json({ success: false, error: error.message });
   }
 }
-
-// Wrap with Auth Middleware - only ADMIN and MANAGER can manage assets
-export default withAuth(handler, ['ADMIN', 'MANAGER']);
