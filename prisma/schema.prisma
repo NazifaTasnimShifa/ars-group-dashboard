@@ -1426,3 +1426,142 @@ enum PayslipStatus {
   PAID
   CANCELLED
 }
+
+// ============================================
+// SIMPLE SALES & PURCHASES (Dashboard Flow)
+// ============================================
+
+model sales {
+  id            Int       @id @default(autoincrement())
+  company_id    String    @db.VarChar(50)
+  customer      String    @db.VarChar(255)
+  date          DateTime  @db.Date
+  totalAmount   Decimal   @db.Decimal(15, 2)
+  paidAmount    Decimal   @default(0) @db.Decimal(15, 2)
+  dueAmount     Decimal   @default(0) @db.Decimal(15, 2)
+  status        String    @default("Paid") @db.VarChar(20)
+  paymentMethod String?   @db.VarChar(50)
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  items         sale_items[]
+  debtors       sundry_debtors[]
+}
+
+model sale_items {
+  id          Int      @id @default(autoincrement())
+  sale_id     Int
+  product_id  String   @db.VarChar(50)
+  quantity    Decimal  @db.Decimal(12, 2)
+  price       Decimal  @db.Decimal(12, 2)
+
+  sale        sales    @relation(fields: [sale_id], references: [id], onDelete: Cascade)
+  product     inventory_items? @relation(fields: [product_id], references: [id])
+}
+
+model purchases {
+  id            Int       @id @default(autoincrement())
+  company_id    String    @db.VarChar(50)
+  supplier      String    @db.VarChar(255)
+  date          DateTime  @db.Date
+  amount        Decimal   @db.Decimal(15, 2)
+  paidAmount    Decimal   @default(0) @db.Decimal(15, 2)
+  dueAmount     Decimal   @default(0) @db.Decimal(15, 2)
+  status        String    @default("Unpaid") @db.VarChar(20)
+  paymentMethod String?   @db.VarChar(50)
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  items         purchase_items[]
+  creditors     sundry_creditors[]
+}
+
+model purchase_items {
+  id          Int       @id @default(autoincrement())
+  purchase_id Int
+  product_id  String    @db.VarChar(50)
+  quantity    Decimal   @db.Decimal(12, 2)
+  price       Decimal   @db.Decimal(12, 2)
+
+  purchase    purchases @relation(fields: [purchase_id], references: [id], onDelete: Cascade)
+  product     inventory_items? @relation(fields: [product_id], references: [id])
+}
+
+model inventory_items {
+  id          String    @id @db.VarChar(50)
+  company_id  String    @db.VarChar(50)
+  name        String    @db.VarChar(255)
+  sku         String?   @db.VarChar(50)
+  category    String?   @db.VarChar(100)
+  stock       Decimal   @default(0) @db.Decimal(12, 2)
+  unit        String?   @db.VarChar(20)
+  costPrice   Decimal   @default(0) @db.Decimal(12, 2)
+  salePrice   Decimal   @default(0) @db.Decimal(12, 2)
+  status      String?   @db.VarChar(20)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  saleItems     sale_items[]
+  purchaseItems purchase_items[]
+}
+
+model expenses {
+  id            Int       @id @default(autoincrement())
+  company_id    String    @db.VarChar(50)
+  category      String    @db.VarChar(100)
+  description   String?   @db.VarChar(500)
+  amount        Decimal   @db.Decimal(15, 2)
+  date          DateTime  @db.Date
+  status        String    @default("Paid") @db.VarChar(20)
+  payeeName     String?   @db.VarChar(255)
+  paymentMethod String?   @db.VarChar(50)
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  creditors     sundry_creditors[]
+}
+
+// ============================================
+// SUNDRY DEBTORS & CREDITORS (Receivables/Payables)
+// ============================================
+
+model sundry_debtors {
+  id              Int       @id @default(autoincrement())
+  company_id      String    @db.VarChar(50)
+  customer_id     String?   @db.VarChar(50)
+  name            String    @db.VarChar(255)
+  sale_id         Int?
+  amount          Decimal   @db.Decimal(15, 2)
+  originalAmount  Decimal   @db.Decimal(15, 2)
+  paidAmount      Decimal   @default(0) @db.Decimal(15, 2)
+  due             DateTime  @db.Date
+  status          String    @default("Pending") @db.VarChar(20)
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  sale            sales?    @relation(fields: [sale_id], references: [id])
+}
+
+model sundry_creditors {
+  id              Int       @id @default(autoincrement())
+  company_id      String    @db.VarChar(50)
+  supplier_id     String?   @db.VarChar(50)
+  name            String    @db.VarChar(255)
+  purchase_id     Int?
+  expense_id      Int?
+  amount          Decimal   @db.Decimal(15, 2)
+  originalAmount  Decimal   @db.Decimal(15, 2)
+  paidAmount      Decimal   @default(0) @db.Decimal(15, 2)
+  due             DateTime  @db.Date
+  status          String    @default("Pending") @db.VarChar(20)
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  purchase        purchases? @relation(fields: [purchase_id], references: [id])
+  expense         expenses?  @relation(fields: [expense_id], references: [id])
+}
