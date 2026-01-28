@@ -71,7 +71,7 @@ export default function CreditSalesPage() {
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white">
-            <p className="text-blue-100 text-sm">Today's Credit Sales</p>
+            <p className="text-blue-100 text-sm">Today&apos;s Credit Sales</p>
             <p className="text-2xl font-bold mt-1">{formatCurrency(todayTotal)}</p>
             <p className="text-blue-200 text-xs">{TODAY_SALES.length} transactions</p>
           </div>
@@ -103,7 +103,7 @@ export default function CreditSalesPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Today's Sales
+              Today&apos;s Sales
             </button>
             <button
               onClick={() => setActiveTab('customers')}

@@ -111,14 +111,14 @@ export default function CylinderOperationsPage() {
             <p className="text-gray-200 text-xs">Awaiting refill</p>
           </div>
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white">
-            <p className="text-blue-100 text-sm">Today's Issues</p>
+            <p className="text-blue-100 text-sm">Today&apos;s Issues</p>
             <p className="text-3xl font-bold mt-1">
               {transactions.filter(t => t.type === 'issue').reduce((sum, t) => sum + t.qty, 0)}
             </p>
             <p className="text-blue-200 text-xs">Cylinders sold</p>
           </div>
           <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl p-5 text-white">
-            <p className="text-amber-100 text-sm">Today's Receipts</p>
+            <p className="text-amber-100 text-sm">Today&apos;s Receipts</p>
             <p className="text-3xl font-bold mt-1">
               {transactions.filter(t => t.type === 'receive').reduce((sum, t) => sum + t.qty, 0)}
             </p>
@@ -252,7 +252,7 @@ export default function CylinderOperationsPage() {
         {/* Today's Transactions */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Today's Transactions</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Today&apos;s Transactions</h3>
           </div>
           <div className="p-4">
             {transactions.length === 0 ? (

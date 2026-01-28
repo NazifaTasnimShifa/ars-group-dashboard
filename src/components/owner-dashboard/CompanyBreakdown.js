@@ -64,7 +64,7 @@ export default function CompanyBreakdown({ companies, formatCurrency }) {
 
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Today's Sales</p>
+                    <p className="text-xs text-gray-500 mb-1">Today&apos;s Sales</p>
                     <p className={`text-lg font-bold ${colors.accent}`}>
                       {formatCurrency(company.todaySales || 0)}
                     </p>
