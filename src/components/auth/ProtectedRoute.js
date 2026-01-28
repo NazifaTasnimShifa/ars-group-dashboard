@@ -1,36 +1,36 @@
 // src/components/auth/ProtectedRoute.js
+// ARS ERP - Route Protection with Multi-Entity Support
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAppContext } from '@/contexts/AppContext';
 
-const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const { isAuthenticated, user, selectedCompany, loading } = useAppContext();
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, currentBusiness, loading, isSuperOwner } = useAppContext();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
 
+    // Not authenticated - redirect to login
     if (!isAuthenticated) {
       router.replace('/login');
       return;
     }
 
-    // Role check
-    if (allowedRoles.length > 0 && user && !allowedRoles.includes(user.role)) {
-      // If user doesn't have required role, redirect to dashboard or login
-      // Use replace to avoid history stack issues
-      console.warn(`Access denied. User role ${user.role} is not in [${allowedRoles.join(', ')}]`);
-      router.replace('/dashboard'); // or /unauthorized
-      return;
+    // Super Owner has access to everything (even with no business selected = combined view)
+    if (isSuperOwner) {
+      return; // Super Owner always has access
     }
 
-    // If logged in but no company selected (and not on the selection page)
-    if (isAuthenticated && !selectedCompany && router.pathname !== '/select-company') {
-      router.replace('/select-company');
+    // Regular user without a business assigned - redirect to login
+    if (isAuthenticated && !currentBusiness && router.pathname !== '/select-company') {
+      // For regular users, they need a business to be set
+      router.replace('/login');
     }
-  }, [isAuthenticated, selectedCompany, router, loading, user, allowedRoles]);
+  }, [isAuthenticated, currentBusiness, router, loading, isSuperOwner]);
 
+  // Show loading spinner while checking auth
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -39,12 +39,11 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     );
   }
 
-  // Render children if conditions are met
-  if ((isAuthenticated && selectedCompany) || (isAuthenticated && router.pathname === '/select-company')) {
-    // Second check for rendering safety
-    if (allowedRoles.length > 0 && user && !allowedRoles.includes(user.role)) {
-      return null;
-    }
+  // Render conditions:
+  // 1. Super Owner - always render (even without specific business)
+  // 2. Regular user with business assigned
+  // 3. Anyone on the select-company page
+  if (isSuperOwner || (isAuthenticated && currentBusiness) || (isAuthenticated && router.pathname === '/select-company')) {
     return children;
   }
 

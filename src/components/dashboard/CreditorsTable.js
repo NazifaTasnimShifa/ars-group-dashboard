@@ -2,11 +2,19 @@
 
 import { sundryCreditors } from '@/data/mockData';
 import { useAppContext } from '@/contexts/AppContext';
-import FilterButtons from '@/components/ui/FilterButtons'; // CORRECTED PATH
+import FilterButtons from '@/components/ui/FilterButtons';
 
 export default function CreditorsTable() {
-    const { selectedCompany } = useAppContext();
-    const data = sundryCreditors[selectedCompany.id] || [];
+    const { currentBusiness, isSuperOwner, isViewingAllBusinesses, formatCurrency } = useAppContext();
+    
+    // Get data based on context
+    let data = [];
+    if (isViewingAllBusinesses || isSuperOwner && !currentBusiness) {
+        // Combined view - show all creditors
+        data = Object.values(sundryCreditors || {}).flat();
+    } else if (currentBusiness?.id) {
+        data = sundryCreditors[currentBusiness.id] || [];
+    }
 
     return (
         <div className="rounded-lg bg-white p-4 shadow">
@@ -26,13 +34,19 @@ export default function CreditorsTable() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
-                            {data.map((person) => (
-                                <tr key={person.id}>
-                                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">{person.name}</td>
-                                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">৳{person.amount.toLocaleString('en-IN')}</td>
-                                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{person.due}</td>
+                            {data.length > 0 ? (
+                                data.map((person) => (
+                                    <tr key={person.id}>
+                                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">{person.name}</td>
+                                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{formatCurrency(person.amount)}</td>
+                                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{person.due}</td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="3" className="py-4 text-center text-sm text-gray-500">No creditor data available</td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
                         </table>
                     </div>

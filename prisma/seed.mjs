@@ -1,244 +1,307 @@
 // prisma/seed.mjs
+// ARS ERP Dashboard - Database Seeding Script
 
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-// --- Helpers ---
-const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-const getRandomFloat = (min, max) => parseFloat((Math.random() * (max - min) + min).toFixed(2));
-const getRandomItem = (arr) => arr[Math.floor(Math.random() * arr.length)];
-
-const randomDate = (start, end) => {
-  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
-};
-
-// --- Data Definitions ---
-
-const COMPANIES = [
-  { id: 'ars_lube', name: 'ARS Lube LTD BD', shortName: 'ARS Lube' },
-  { id: 'ars_corp', name: 'ARS Corporation', shortName: 'ARS Corp' }
-];
-
-const CUSTOMERS = {
-  ars_lube: ['Rahim Transport', 'Karim Motors', 'Dhaka Bus Svc', 'Chittagong Lines', 'Padma Logistics'],
-  ars_corp: ['Beximco Dealer A', 'SENA Distributor', 'Jamuna Gas Point', 'Bashundhara Agent']
-};
-
-const SUPPLIERS = {
-  ars_lube: ['Govt. Fuel Depot', 'Meghna Petroleum', 'Jamuna Oil Co'],
-  ars_corp: ['Beximco LPG Plant', 'SENA Kalyan Sangstha', 'Omera LPG HQ']
-};
-
-const INVENTORY = {
-  ars_lube: [
-    { name: 'Petrol (Octane)', sku: 'FUL-OCT', category: 'Fuel', unit: 'Litre', cost: 125, sale: 135 },
-    { name: 'Diesel', sku: 'FUL-DSL', category: 'Fuel', unit: 'Litre', cost: 108, sale: 115 },
-    { name: 'Mobil 1 5W-30', sku: 'LUB-M5W', category: 'Lubricant', unit: 'Can', cost: 4200, sale: 4800 },
-  ],
-  ars_corp: [
-    { name: 'LPG 12KG Cylinder', sku: 'LPG-12KG', category: 'LPG', unit: 'Cylinder', cost: 1150, sale: 1450 },
-    { name: 'LPG 35KG Commercial', sku: 'LPG-35KG', category: 'LPG', unit: 'Cylinder', cost: 3200, sale: 3800 },
-  ]
-};
-
-const ACCOUNTS = {
-  ars_lube: [
-    { code: 1001, name: 'Cash in Hand', type: 'Asset', balance: 500000 },
-    { code: 4002, name: 'Office Rent', type: 'Expense', balance: 120000 },
-    { code: 4003, name: 'Staff Salaries', type: 'Expense', balance: 350000 },
-  ],
-  ars_corp: [
-    { code: 1001, name: 'Cash @ Bank', type: 'Asset', balance: 1200000 },
-    { code: 4001, name: 'Logistics Expense', type: 'Expense', balance: 450000 },
-  ]
-};
-
 async function main() {
-  console.log('🗑️  Cleaning database...');
-  try {
-    await prisma.process_loss.deleteMany();
-    await prisma.chart_of_accounts.deleteMany();
-    await prisma.fixed_assets.deleteMany();
-    await prisma.purchases.deleteMany();
-    await prisma.sales.deleteMany();
-    await prisma.inventory_items.deleteMany();
-    await prisma.creditors.deleteMany();
-    await prisma.debtors.deleteMany();
-    await prisma.users.deleteMany();
-    await prisma.companies.deleteMany();
-  } catch(e) {
-    console.log("Cleanup failed (tables might not exist), continuing...");
-  }
+  console.log('🌱 Starting ARS ERP Database Seeding...\n');
 
-  console.log('🏢 Seeding Companies & Users...');
+  // --- 1. Create Roles ---
+  console.log('📋 Creating Roles...');
   
-  // 1. Create Companies
-  for (const company of COMPANIES) {
-    await prisma.companies.create({
-      data: {
-        id: company.id,
-        name: company.name,
-        shortName: company.shortName,
-        dashboard_stats: {}, // Important: Created empty, populated by API
+  const superOwnerRole = await prisma.role.upsert({
+    where: { name: 'super_owner' },
+    update: {},
+    create: {
+      name: 'super_owner',
+      displayName: 'Super Owner',
+      description: 'Full access to all companies and modules',
+      permissions: {
+        all: true,
+        companies: ['read', 'write', 'delete', 'switch'],
+        dashboard: ['owner_view', 'company_view'],
+        reports: ['all'],
+        settings: ['all']
       },
-    });
-  }
-
-  // 2. Create Users (Exact credentials requested)
-  const passwordHash = await bcrypt.hash('123456', 10);
-
-  // Admin
-  await prisma.users.create({
-    data: { email: 'admin@arsgroup.com', password: passwordHash, name: 'Super Admin', role: 'admin' },
+      isSystem: true
+    }
   });
 
-  // Managers
-  await prisma.users.create({
-    data: { email: 'manager.lube@arsgroup.com', password: passwordHash, name: 'Lube Manager', role: 'user', company_id: 'ars_lube' },
+  const managerRole = await prisma.role.upsert({
+    where: { name: 'manager' },
+    update: {},
+    create: {
+      name: 'manager',
+      displayName: 'Manager',
+      description: 'Company-level management access',
+      permissions: {
+        dashboard: ['company_view'],
+        daily_ops: ['read', 'write', 'close_day'],
+        inventory: ['read', 'write'],
+        sales: ['read', 'write'],
+        reports: ['company_reports'],
+        expenses: ['read', 'write', 'approve']
+      },
+      isSystem: true
+    }
   });
-  await prisma.users.create({
-    data: { email: 'manager.corp@arsgroup.com', password: passwordHash, name: 'Corp Manager', role: 'user', company_id: 'ars_corp' },
+
+  const cashierRole = await prisma.role.upsert({
+    where: { name: 'cashier' },
+    update: {},
+    create: {
+      name: 'cashier',
+      displayName: 'Cashier / Operator',
+      description: 'Daily sales entry only',
+      permissions: {
+        daily_ops: ['read', 'write'],
+        sales: ['create'],
+        expenses: ['create']
+      },
+      isSystem: true
+    }
   });
 
-  // Users
-  await prisma.users.create({
-    data: { email: 'user.lube@arsgroup.com', password: passwordHash, name: 'Lube User', role: 'user', company_id: 'ars_lube' },
+  console.log('  ✅ Roles created: Super Owner, Manager, Cashier\n');
+
+  // --- 2. Create Businesses (Companies) ---
+  console.log('🏢 Creating Businesses...');
+
+  const arsCorp = await prisma.business.upsert({
+    where: { code: 'ARS-CORP' },
+    update: {},
+    create: {
+      code: 'ARS-CORP',
+      name: 'ARS Corporation',
+      shortName: 'ARS Corp',
+      type: 'PETROL_PUMP',
+      address: 'Dhaka, Bangladesh',
+      phone: '+880-XXX-XXXXXX',
+      settings: {
+        currency: 'BDT',
+        currencySymbol: '৳',
+        timezone: 'Asia/Dhaka',
+        dateFormat: 'DD/MM/YYYY',
+        lossThreshold: 0.4, // 0.4% permissible loss
+        dayCloseTolerance: 100 // ±100 BDT variance allowed
+      }
+    }
   });
-  await prisma.users.create({
-    data: { email: 'user.corp@arsgroup.com', password: passwordHash, name: 'Corp User', role: 'user', company_id: 'ars_corp' },
+
+  const arsLube = await prisma.business.upsert({
+    where: { code: 'ARS-LUBE' },
+    update: {},
+    create: {
+      code: 'ARS-LUBE',
+      name: 'ARS Lube',
+      shortName: 'ARS Lube',
+      type: 'LUBRICANT',
+      address: 'Dhaka, Bangladesh',
+      phone: '+880-XXX-XXXXXX',
+      settings: {
+        currency: 'BDT',
+        currencySymbol: '৳',
+        timezone: 'Asia/Dhaka',
+        dateFormat: 'DD/MM/YYYY',
+        fifoEnabled: true,
+        defaultCreditDays: 30
+      }
+    }
   });
 
+  console.log('  ✅ Businesses created: ARS Corporation, ARS Lube\n');
 
-  const startDate = new Date('2024-07-01');
-  const endDate = new Date('2025-06-30');
+  // --- 3. Create Branches ---
+  console.log('🏭 Creating Branches...');
 
-  for (const company of COMPANIES) {
-    console.log(`\n🚀 Processing ${company.name}...`);
-    
-    // 3. Inventory
-    const invItems = [];
-    for (const item of INVENTORY[company.id]) {
-      const created = await prisma.inventory_items.create({
-        data: {
-          id: `${company.id.split('_')[1].toUpperCase()}-${item.sku}`,
-          company_id: company.id,
-          name: item.name,
-          sku: item.sku,
-          category: item.category,
-          unit: item.unit,
-          costPrice: item.cost,
-          salePrice: item.sale,
-          stock: getRandomInt(50, 500),
-          status: 'In Stock'
-        }
-      });
-      invItems.push(created);
+  const mainBranch = await prisma.branch.upsert({
+    where: { businessId_code: { businessId: arsCorp.id, code: 'MAIN' } },
+    update: {},
+    create: {
+      businessId: arsCorp.id,
+      code: 'MAIN',
+      name: 'Main Fuel Station',
+      address: 'Main Road, Dhaka',
+      settings: {
+        hasGasCylinders: true,
+        hasFuel: true,
+        hasLubricants: true
+      }
     }
+  });
 
-    // 4. Transactions (Sales & Purchases)
-    // Generate ~150 sales spread over the year
-    for (let i = 0; i < 150; i++) {
-      const date = randomDate(startDate, endDate);
-      const item = getRandomItem(invItems);
-      const qty = getRandomInt(1, 20);
-      const amount = parseFloat((qty * Number(item.salePrice)).toFixed(2));
-      
-      const uniqueId = `INV-${company.id.substring(4,7).toUpperCase()}-${1000 + i}`;
-
-      await prisma.sales.create({
-        data: {
-          id: uniqueId,
-          company_id: company.id,
-          customer: getRandomItem(CUSTOMERS[company.id]),
-          date: date,
-          amount: amount,
-          status: Math.random() > 0.3 ? 'Paid' : 'Unpaid'
-        }
-      });
+  const lubeBranch = await prisma.branch.upsert({
+    where: { businessId_code: { businessId: arsLube.id, code: 'HQ' } },
+    update: {},
+    create: {
+      businessId: arsLube.id,
+      code: 'HQ',
+      name: 'Lube Distribution Center',
+      address: 'Industrial Area, Dhaka'
     }
+  });
 
-    // Generate ~50 purchases
-    for (let i = 0; i < 50; i++) {
-      const date = randomDate(startDate, endDate);
-      const item = getRandomItem(invItems);
-      const qty = getRandomInt(50, 200);
-      const amount = parseFloat((qty * Number(item.costPrice)).toFixed(2));
-      
-      const uniqueId = `PO-${company.id.substring(4,7).toUpperCase()}-${2000 + i}`;
+  console.log('  ✅ Branches created: Main Fuel Station, Lube Distribution Center\n');
 
-      await prisma.purchases.create({
-        data: {
-          id: uniqueId,
-          company_id: company.id,
-          supplier: getRandomItem(SUPPLIERS[company.id]),
-          date: date,
-          amount: amount,
-          status: Math.random() > 0.2 ? 'Paid' : 'Unpaid'
-        }
-      });
+  // --- 4. Create Users ---
+  console.log('👥 Creating Users...');
+
+  const hashedPassword = await bcrypt.hash('admin123', 10);
+
+  // Super Owner - access to all companies
+  const superOwner = await prisma.user.upsert({
+    where: { email: 'owner@arsgroup.com' },
+    update: { password: hashedPassword },
+    create: {
+      email: 'owner@arsgroup.com',
+      password: hashedPassword,
+      name: 'Md Iqbal Haider Khan',
+      phone: '+880-XXX-XXXXXX',
+      roleId: superOwnerRole.id,
+      businessId: null // null = access to all
     }
+  });
 
-    // 5. Debtors & Creditors
-    for (let i = 0; i < 5; i++) {
-      await prisma.debtors.create({
-        data: {
-          company_id: company.id,
-          name: getRandomItem(CUSTOMERS[company.id]),
-          amount: getRandomFloat(10000, 150000),
-          due: randomDate(new Date('2025-05-01'), new Date('2025-08-01')),
-          aging: getRandomInt(10, 90)
-        }
-      });
+  // ARS Corp Manager
+  const corpManager = await prisma.user.upsert({
+    where: { email: 'manager@arscorp.com' },
+    update: { password: hashedPassword },
+    create: {
+      email: 'manager@arscorp.com',
+      password: hashedPassword,
+      name: 'ARS Corp Manager',
+      roleId: managerRole.id,
+      businessId: arsCorp.id
     }
+  });
 
-    for (let i = 0; i < 4; i++) {
-      await prisma.creditors.create({
-        data: {
-          company_id: company.id,
-          name: getRandomItem(SUPPLIERS[company.id]),
-          amount: getRandomFloat(50000, 500000),
-          due: randomDate(new Date('2025-06-01'), new Date('2025-09-01')),
-          aging: getRandomInt(0, 45)
-        }
-      });
+  // ARS Lube Manager
+  const lubeManager = await prisma.user.upsert({
+    where: { email: 'manager@arslube.com' },
+    update: { password: hashedPassword },
+    create: {
+      email: 'manager@arslube.com',
+      password: hashedPassword,
+      name: 'ARS Lube Manager',
+      roleId: managerRole.id,
+      businessId: arsLube.id
     }
+  });
 
-    // 6. Fixed Assets
-    await prisma.fixed_assets.create({
-      data: {
-        id: `FA-${company.id}-001`,
-        company_id: company.id,
-        name: 'Delivery Vehicle',
-        acquisitionDate: new Date('2022-01-15'),
-        cost: 3500000,
-        depreciation: 350000,
-        bookValue: 2800000
+  // Cashier
+  const cashier = await prisma.user.upsert({
+    where: { email: 'cashier@arscorp.com' },
+    update: { password: hashedPassword },
+    create: {
+      email: 'cashier@arscorp.com',
+      password: hashedPassword,
+      name: 'Pump Cashier',
+      roleId: cashierRole.id,
+      businessId: arsCorp.id
+    }
+  });
+
+  console.log('  ✅ Users created:');
+  console.log('     - Super Owner: owner@arsgroup.com (password: admin123)');
+  console.log('     - ARS Corp Manager: manager@arscorp.com');
+  console.log('     - ARS Lube Manager: manager@arslube.com');
+  console.log('     - Cashier: cashier@arscorp.com\n');
+
+  // --- 5. Create Fuel Types (ARS Corp) ---
+  console.log('⛽ Creating Fuel Types...');
+
+  const fuelTypes = [
+    { code: 'PETROL', name: 'Petrol (Octane)', price: 130.00, density: 0.7429 },
+    { code: 'DIESEL', name: 'Diesel', price: 115.00, density: 0.8320 },
+    { code: 'OCTANE', name: 'High Octane', price: 135.00, density: 0.7550 }
+  ];
+
+  for (const fuel of fuelTypes) {
+    await prisma.fuelType.upsert({
+      where: { businessId_code: { businessId: arsCorp.id, code: fuel.code } },
+      update: { currentPrice: fuel.price },
+      create: {
+        businessId: arsCorp.id,
+        code: fuel.code,
+        name: fuel.name,
+        currentPrice: fuel.price,
+        density: fuel.density,
+        permissibleLoss: 0.25
       }
     });
-
-    // 7. Chart of Accounts (Balances)
-    for (const acc of ACCOUNTS[company.id]) {
-      await prisma.chart_of_accounts.create({
-        data: {
-          company_id: company.id,
-          code: acc.code,
-          name: acc.name,
-          type: acc.type,
-          balance: parseFloat(acc.balance)
-        }
-      });
-    }
   }
 
-  console.log('✅ Seeding completed successfully!');
+  console.log('  ✅ Fuel Types created: Petrol, Diesel, High Octane\n');
+
+  // --- 6. Create Cylinder Types ---
+  console.log('🔵 Creating Cylinder Types...');
+
+  const cylinderTypes = [
+    { name: '12 KG Domestic', weight: 12.00, deposit: 1500, price: 1250 },
+    { name: '35 KG Commercial', weight: 35.00, deposit: 3500, price: 3100 },
+    { name: '45 KG Industrial', weight: 45.00, deposit: 5000, price: 3900 }
+  ];
+
+  for (const cyl of cylinderTypes) {
+    await prisma.cylinderType.upsert({
+      where: { id: `CYL-${cyl.weight}` },
+      update: { currentPrice: cyl.price },
+      create: {
+        id: `CYL-${cyl.weight}`,
+        name: cyl.name,
+        weight: cyl.weight,
+        depositAmount: cyl.deposit,
+        currentPrice: cyl.price
+      }
+    });
+  }
+
+  console.log('  ✅ Cylinder Types created: 12KG, 35KG, 45KG\n');
+
+  // --- 7. Create Expense Categories ---
+  console.log('💰 Creating Expense Categories...');
+
+  const expenseCategories = [
+    { code: 'SALARY', name: 'Staff Salaries', icon: 'banknotes' },
+    { code: 'ELEC', name: 'Electricity Bill', icon: 'bolt' },
+    { code: 'TEA', name: 'Tea/Snacks', icon: 'cup-soda' },
+    { code: 'MAINT', name: 'Maintenance', icon: 'wrench' },
+    { code: 'GOVT', name: 'Government Fees', icon: 'building-library' },
+    { code: 'TRANSPORT', name: 'Transport/Fuel', icon: 'truck' },
+    { code: 'MISC', name: 'Miscellaneous', icon: 'ellipsis-horizontal' }
+  ];
+
+  // Note: ExpenseCategory model needs to be added to schema
+  // For now, we'll skip this if the model doesn't exist
+
+  console.log('  ✅ Expense Categories defined (will be created when model is added)\n');
+
+  // --- Summary ---
+  console.log('═══════════════════════════════════════════════════════════');
+  console.log('✅ ARS ERP Database Seeding Completed!');
+  console.log('═══════════════════════════════════════════════════════════');
+  console.log('');
+  console.log('📌 Login Credentials:');
+  console.log('   Super Owner: owner@arsgroup.com / admin123');
+  console.log('   ARS Corp Manager: manager@arscorp.com / admin123');
+  console.log('   ARS Lube Manager: manager@arslube.com / admin123');
+  console.log('   Cashier: cashier@arscorp.com / admin123');
+  console.log('');
+  console.log('🏢 Companies:');
+  console.log('   - ARS Corporation (Fuel Station + Gas Cylinders)');
+  console.log('   - ARS Lube (Lubricant Distribution)');
+  console.log('');
 }
 
 main()
-  .then(async () => { await prisma.$disconnect(); })
+  .then(async () => {
+    await prisma.$disconnect();
+  })
   .catch(async (e) => {
-    console.error(e);
+    console.error('❌ Seeding failed:', e);
     await prisma.$disconnect();
     process.exit(1);
   });

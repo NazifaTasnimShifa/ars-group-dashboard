@@ -1,9 +1,15 @@
 // src/pages/dashboard.js
+// ARS ERP - Main Dashboard with Owner View Support
 
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import { Menu, Transition } from '@headlessui/react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+
+// Owner Dashboard Components
+import { CashPulseCard, OperationalSnapshot, LiabilityWatch, CompanyBreakdown } from '@/components/owner-dashboard';
+
+// Existing Dashboard Components
 import StatCard from '@/components/dashboard/StatCard';
 import ProfitabilityRatios from '@/components/dashboard/ProfitabilityRatios';
 import CurrentRatio from '@/components/dashboard/CurrentRatio';
@@ -27,6 +33,9 @@ import {
   ArrowDownIcon,
   ChevronDownIcon,
   PlusCircleIcon,
+  BuildingOffice2Icon,
+  GlobeAltIcon,
+  CalendarDaysIcon,
 } from '@heroicons/react/24/outline';
 
 const iconMap = {
@@ -37,20 +46,37 @@ const iconMap = {
 
 export default function DashboardPage() {
   const [modalState, setModalState] = useState({ open: false, title: '', content: null });
-  const { selectedCompany, token } = useAppContext();
-
+  const { 
+    user, 
+    currentBusiness, 
+    businesses, 
+    switchBusiness, 
+    isSuperOwner, 
+    isViewingAllBusinesses,
+    formatCurrency,
+    formatDate,
+    loading: authLoading 
+  } = useAppContext();
+  
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const formatCurrency = (value) => `৳${(value ?? 0).toLocaleString('en-IN')}`;
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   // --- 1. Fetch Dashboard Data ---
   const fetchDashboardData = useCallback(async () => {
-    if (!selectedCompany) return;
+    if (authLoading) return;
     setLoading(true);
     try {
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/dashboard?company_id=${selectedCompany.id}`, { headers });
+      // Build query params based on current view
+      let url = '/api/dashboard';
+      if (currentBusiness) {
+        url += `?businessId=${currentBusiness.id}`;
+      } else if (isSuperOwner) {
+        // Super Owner viewing all - no filter
+        url += '?viewAll=true';
+      }
+      
+      const res = await fetch(url);
       const fetchedData = await res.json();
       if (fetchedData.success) {
         setData(fetchedData.data);
@@ -60,20 +86,28 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedCompany, token]);
+  }, [currentBusiness, isSuperOwner, authLoading]);
 
   useEffect(() => { fetchDashboardData(); }, [fetchDashboardData]);
 
   // --- 2. Generic Save Handler for All Forms ---
   const handleSave = async (type, formData) => {
+    if (!currentBusiness && !isSuperOwner) {
+      alert('Please select a company first');
+      return;
+    }
+    
     let url = '';
-    let payload = { ...formData, company_id: selectedCompany.id };
+    let payload = { ...formData };
+    
+    if (currentBusiness) {
+      payload.businessId = currentBusiness.id;
+    }
 
-    // Determine URL and ID logic based on type
     switch (type) {
       case 'sales':
         url = '/api/sales';
-        // payload.id is handled by backend (autoincrement Int)
+        payload.id = `INV-${Date.now()}`;
         break;
       case 'purchases':
         url = '/api/purchases';
@@ -85,12 +119,10 @@ export default function DashboardPage() {
         break;
       case 'debtors':
         url = '/api/debtors';
-        // ID is auto-increment, do not send it
         delete payload.id;
         break;
       case 'creditors':
         url = '/api/creditors';
-        // ID is auto-increment, do not send it
         delete payload.id;
         break;
       default:
@@ -99,21 +131,16 @@ export default function DashboardPage() {
     }
 
     try {
-      const headers = {
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      };
-
       const res = await fetch(url, {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
       if (res.ok) {
         setModalState((prev) => ({ ...prev, open: false }));
         alert('Saved successfully!');
-        fetchDashboardData();
+        fetchDashboardData(); 
       } else {
         const err = await res.json();
         alert(`Failed to save: ${err.error || err.message || 'Unknown error'}`);
@@ -165,28 +192,40 @@ export default function DashboardPage() {
       open: true,
       title,
       content: (
-        <FormComponent
-          onSave={(data) => handleSave(dataType, data)}
-          onCancel={handleCloseModal}
+        <FormComponent 
+          onSave={(data) => handleSave(dataType, data)} 
+          onCancel={handleCloseModal} 
         />
       )
     });
   };
 
-  if (!selectedCompany) return <DashboardLayout><div>Loading...</div></DashboardLayout>;
-  if (loading && !data) return <DashboardLayout><div>Loading Dashboard...</div></DashboardLayout>;
+  // Loading state
+  if (authLoading || (loading && !data)) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
-  // Fallback if data is missing or empty
+  // Welcome message for empty dashboard
   if (!data || Object.keys(data).length === 0) {
     return (
       <DashboardLayout>
         <div className="p-12 text-center">
-          <h3 className="text-xl font-bold text-gray-900">Welcome to {selectedCompany.name}</h3>
-          <p className="text-gray-500 mt-2">Your dashboard is ready. Start by adding some data!</p>
-          <div className="mt-6 flex justify-center gap-4">
-            <button onClick={() => openModal('sale')} className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500">Add Sale</button>
-            <button onClick={() => openModal('product')} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">Add Product</button>
-          </div>
+          <h3 className="text-xl font-bold text-gray-900">
+            Welcome, {user?.name || 'User'}!
+          </h3>
+          <p className="text-gray-500 mt-2">
+            {isSuperOwner 
+              ? 'Your Owner Dashboard is ready. Select a company or view combined data.'
+              : currentBusiness 
+                ? `Your ${currentBusiness.name} dashboard is ready. Start by adding some data!`
+                : 'Please wait while we load your dashboard...'}
+          </p>
         </div>
       </DashboardLayout>
     );
@@ -202,59 +241,163 @@ export default function DashboardPage() {
         {modalState.content}
       </Modal>
 
-      <div className="space-y-8">
+      <div className="space-y-6">
+        {/* Header with Company Switcher and Date Picker */}
         <div className="sm:flex sm:items-center sm:justify-between">
-          <h3 className="text-base font-semibold leading-6 text-gray-900">Dashboard Overview</h3>
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">
+              {isSuperOwner ? 'Owner Dashboard' : 'Dashboard'}
+            </h3>
+            {isSuperOwner && (
+              <p className="mt-1 text-sm text-gray-500">
+                {isViewingAllBusinesses 
+                  ? 'Combined view of all companies' 
+                  : `Viewing: ${currentBusiness?.name}`}
+              </p>
+            )}
+          </div>
 
-          {/* --- Add New Dropdown --- */}
-          <Menu as="div" className="relative inline-block text-left">
-            <div>
-              <Menu.Button className="inline-flex w-full items-center justify-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
-                <PlusCircleIcon className="h-5 w-5" aria-hidden="true" />
-                Add New
-                <ChevronDownIcon className="ml-2 h-5 w-5 text-indigo-200" aria-hidden="true" />
-              </Menu.Button>
+          <div className="mt-4 sm:mt-0 flex items-center gap-3">
+            {/* Date Picker */}
+            <div className="flex items-center bg-white rounded-md border border-gray-300 px-3 py-2">
+              <CalendarDaysIcon className="h-5 w-5 text-gray-400 mr-2" />
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="text-sm text-gray-700 border-0 focus:ring-0 p-0"
+              />
             </div>
 
-            <Transition
-              as={Fragment}
-              enter="transition ease-out duration-100"
-              enterFrom="transform opacity-0 scale-95"
-              enterTo="transform opacity-100 scale-100"
-              leave="transition ease-in duration-75"
-              leaveFrom="transform opacity-100 scale-100"
-              leaveTo="transform opacity-0 scale-95"
-            >
-              <Menu.Items className="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
-                <div className="py-1">
-                  <Menu.Item>{({ active }) => <button onClick={() => openModal('sale')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Sale Invoice</button>}</Menu.Item>
-                  <Menu.Item>{({ active }) => <button onClick={() => openModal('purchase')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Purchase Order</button>}</Menu.Item>
-                  <Menu.Item>{({ active }) => <button onClick={() => openModal('product')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Inventory Item</button>}</Menu.Item>
-                  <div className="border-t border-gray-100 my-1"></div>
-                  <Menu.Item>{({ active }) => <button onClick={() => openModal('debtor')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Customer</button>}</Menu.Item>
-                  <Menu.Item>{({ active }) => <button onClick={() => openModal('creditor')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Supplier</button>}</Menu.Item>
-                </div>
-              </Menu.Items>
-            </Transition>
-          </Menu>
+            {/* Company Switcher (Super Owner Only) */}
+            {isSuperOwner && (
+              <Menu as="div" className="relative inline-block text-left">
+                <Menu.Button className="inline-flex items-center gap-x-2 rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                  {isViewingAllBusinesses ? (
+                    <>
+                      <GlobeAltIcon className="h-5 w-5 text-indigo-500" />
+                      All Companies
+                    </>
+                  ) : (
+                    <>
+                      <BuildingOffice2Icon className="h-5 w-5 text-gray-400" />
+                      {currentBusiness?.shortName || 'Select'}
+                    </>
+                  )}
+                  <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+                </Menu.Button>
+
+                <Transition
+                  as={Fragment}
+                  enter="transition ease-out duration-100"
+                  enterFrom="transform opacity-0 scale-95"
+                  enterTo="transform opacity-100 scale-100"
+                  leave="transition ease-in duration-75"
+                  leaveFrom="transform opacity-100 scale-100"
+                  leaveTo="transform opacity-0 scale-95"
+                >
+                  <Menu.Items className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                    <div className="py-1">
+                      <Menu.Item>
+                        {({ active }) => (
+                          <button
+                            onClick={() => switchBusiness('all')}
+                            className={`${active ? 'bg-gray-100' : ''} ${isViewingAllBusinesses ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'} flex w-full items-center px-4 py-2 text-sm`}
+                          >
+                            <GlobeAltIcon className="mr-3 h-5 w-5" />
+                            All Companies
+                          </button>
+                        )}
+                      </Menu.Item>
+                      <div className="border-t border-gray-100 my-1"></div>
+                      {businesses.map((business) => (
+                        <Menu.Item key={business.id}>
+                          {({ active }) => (
+                            <button
+                              onClick={() => switchBusiness(business.id)}
+                              className={`${active ? 'bg-gray-100' : ''} ${currentBusiness?.id === business.id ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'} flex w-full items-center px-4 py-2 text-sm`}
+                            >
+                              <BuildingOffice2Icon className="mr-3 h-5 w-5" />
+                              {business.name}
+                            </button>
+                          )}
+                        </Menu.Item>
+                      ))}
+                    </div>
+                  </Menu.Items>
+                </Transition>
+              </Menu>
+            )}
+
+            {/* Add New Dropdown */}
+            <Menu as="div" className="relative inline-block text-left">
+              <Menu.Button className="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                <PlusCircleIcon className="h-5 w-5" />
+                Add New
+                <ChevronDownIcon className="h-5 w-5 text-indigo-200" />
+              </Menu.Button>
+
+              <Transition
+                as={Fragment}
+                enter="transition ease-out duration-100"
+                enterFrom="transform opacity-0 scale-95"
+                enterTo="transform opacity-100 scale-100"
+                leave="transition ease-in duration-75"
+                leaveFrom="transform opacity-100 scale-100"
+                leaveTo="transform opacity-0 scale-95"
+              >
+                <Menu.Items className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                  <div className="py-1">
+                    <Menu.Item>{({ active }) => <button onClick={() => openModal('sale')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Sale Invoice</button>}</Menu.Item>
+                    <Menu.Item>{({ active }) => <button onClick={() => openModal('purchase')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Purchase Order</button>}</Menu.Item>
+                    <Menu.Item>{({ active }) => <button onClick={() => openModal('product')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Inventory Item</button>}</Menu.Item>
+                    <div className="border-t border-gray-100 my-1"></div>
+                    <Menu.Item>{({ active }) => <button onClick={() => openModal('debtor')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Customer</button>}</Menu.Item>
+                    <Menu.Item>{({ active }) => <button onClick={() => openModal('creditor')} className={`${active ? 'bg-gray-100' : ''} block w-full text-left px-4 py-2 text-sm text-gray-700`}>Add Supplier</button>}</Menu.Item>
+                  </div>
+                </Menu.Items>
+              </Transition>
+            </Menu>
+          </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {data.stats?.map((item) => {
-            const Icon = iconMap[item.icon] || BanknotesIcon;
-            return (
-              <StatCard
-                key={item.name}
-                title={item.name}
-                value={formatCurrency(item.value)}
-                icon={Icon}
-              />
-            );
-          })}
-        </div>
+        {/* Owner Dashboard Sections */}
+        {isSuperOwner && (
+          <>
+            {/* Cash & Bank Pulse */}
+            <CashPulseCard data={data.cashPulse} formatCurrency={formatCurrency} />
+            
+            {/* Operational Snapshot */}
+            <OperationalSnapshot data={data.operationalSnapshot} formatCurrency={formatCurrency} />
+            
+            {/* Liability Watch */}
+            <LiabilityWatch data={data.liabilityWatch} formatCurrency={formatCurrency} />
+            
+            {/* Company Breakdown */}
+            {isViewingAllBusinesses && (
+              <CompanyBreakdown companies={data.companies} formatCurrency={formatCurrency} />
+            )}
+          </>
+        )}
 
-        {/* Rest of Dashboard */}
+        {/* Stats Grid (for non-owner or single company view) */}
+        {(!isSuperOwner || currentBusiness) && data.stats && (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {data.stats.map((item) => {
+              const Icon = iconMap[item.icon] || BanknotesIcon;
+              return (
+                <StatCard
+                  key={item.name}
+                  title={item.name}
+                  value={formatCurrency(item.value)}
+                  icon={Icon}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {/* Financial Health Overview */}
         <div>
           <h3 className="text-base font-semibold leading-6 text-gray-900 mb-4">Financial Health Overview</h3>
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
@@ -271,7 +414,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 gap-5">
           <RevenueChart chartData={data.revenueChart} />
         </div>
-
+       
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <DebtorsTable />
           <CreditorsTable />
