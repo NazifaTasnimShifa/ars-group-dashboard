@@ -20,24 +20,25 @@ const StatusBadge = ({ status }) => {
 export default function InventoryStatusPage() {
   const [modalState, setModalState] = useState({ open: false, mode: 'add', item: null });
   const [searchQuery, setSearchQuery] = useState('');
-  const { selectedCompany } = useAppContext();
+  const { selectedCompany, token } = useAppContext();
   const [inventory, setInventory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
   const fetchData = async () => {
-      if(!selectedCompany) return;
-      setIsLoading(true);
-      try {
-          const res = await fetch(`/api/inventory?company_id=${selectedCompany.id}`);
-          const data = await res.json();
-          if(data.success) setInventory(data.data);
-      } catch(e) { console.error(e); }
-      finally { setIsLoading(false); }
+    if (!selectedCompany) return;
+    setIsLoading(true);
+    try {
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch(`/api/inventory?company_id=${selectedCompany.id}`, { headers });
+      const data = await res.json();
+      if (data.success) setInventory(data.data);
+    } catch (e) { console.error(e); }
+    finally { setIsLoading(false); }
   };
 
-  useEffect(() => { fetchData(); }, [selectedCompany]);
+  useEffect(() => { fetchData(); }, [selectedCompany, token]);
 
   const filteredInventory = useMemo(() => {
     if (!searchQuery) return inventory;
@@ -48,42 +49,47 @@ export default function InventoryStatusPage() {
   const stats = [{ name: 'Total Inventory Value', stat: formatCurrency(totalValue) }, { name: 'Total SKUs', stat: inventory.length }];
 
   const handleSave = async (formData) => {
-      const isAdd = modalState.mode === 'add';
-      const method = isAdd ? 'POST' : 'PUT';
-      // For Add, we let backend or a utility generate ID if needed, or generate here.
-      // Schema uses String ID.
-      const id = isAdd ? `ITM-${Date.now()}` : modalState.item.id;
-      
-      const payload = { 
-          ...formData, 
-          company_id: selectedCompany.id,
-          id: id 
-      };
-      
-      const url = isAdd ? '/api/inventory' : `/api/inventory/${id}`;
+    const isAdd = modalState.mode === 'add';
+    const method = isAdd ? 'POST' : 'PUT';
+    // For Add, we let backend or a utility generate ID if needed, or generate here.
+    // Schema uses String ID.
+    const id = isAdd ? `ITM-${Date.now()}` : modalState.item.id;
 
-      try {
-          const res = await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-          if(res.ok) {
-              setModalState({ open: false, mode: 'add', item: null });
-              fetchData();
-          } else { alert('Failed to save'); }
-      } catch(e) { console.error(e); alert('Error saving'); }
+    const payload = {
+      ...formData,
+      company_id: selectedCompany.id,
+      id: id
+    };
+
+    const url = isAdd ? '/api/inventory' : `/api/inventory/${id}`;
+
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
+      const res = await fetch(url, { method, headers, body: JSON.stringify(payload) });
+      if (res.ok) {
+        setModalState({ open: false, mode: 'add', item: null });
+        fetchData();
+      } else { alert('Failed to save'); }
+    } catch (e) { console.error(e); alert('Error saving'); }
   };
 
   const handleRemove = async (item) => {
-      if(!confirm(`Delete ${item.name}?`)) return;
-      try {
-          const res = await fetch(`/api/inventory/${item.id}`, { method: 'DELETE' });
-          if(res.ok) fetchData();
-          else alert('Failed to delete');
-      } catch(e) { console.error(e); }
+    if (!confirm(`Delete ${item.name}?`)) return;
+    try {
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch(`/api/inventory/${item.id}`, { method: 'DELETE', headers });
+      if (res.ok) fetchData();
+      else alert('Failed to delete');
+    } catch (e) { console.error(e); }
   };
 
   return (
     <DashboardLayout>
-      <Modal open={modalState.open} setOpen={(val) => setModalState({...modalState, open: val})} title={`${modalState.mode === 'add' ? 'Add' : 'Edit'} Item`}>
-        <InventoryItemForm item={modalState.item} onSave={handleSave} onCancel={() => setModalState({...modalState, open: false})} />
+      <Modal open={modalState.open} setOpen={(val) => setModalState({ ...modalState, open: val })} title={`${modalState.mode === 'add' ? 'Add' : 'Edit'} Item`}>
+        <InventoryItemForm item={modalState.item} onSave={handleSave} onCancel={() => setModalState({ ...modalState, open: false })} />
       </Modal>
 
       <PageHeader title="Inventory Status" description="Track stock levels.">
@@ -93,45 +99,45 @@ export default function InventoryStatusPage() {
       </PageHeader>
 
       <dl className="mb-8 grid grid-cols-1 gap-5 sm:grid-cols-3">
-        {stats.map((item) => ( <PageStat key={item.name} item={item} /> ))}
+        {stats.map((item) => (<PageStat key={item.name} item={item} />))}
       </dl>
 
       <div className="rounded-lg bg-white p-6 shadow">
-         <div className="mb-4 w-full max-w-xs relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><MagnifyingGlassIcon className="h-5 w-5 text-gray-400" /></div>
-            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full rounded-md border-0 bg-white py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm" placeholder="Search..." type="search" />
+        <div className="mb-4 w-full max-w-xs relative">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><MagnifyingGlassIcon className="h-5 w-5 text-gray-400" /></div>
+          <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full rounded-md border-0 bg-white py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm" placeholder="Search..." type="search" />
         </div>
 
         <div className="flow-root">
           <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
             <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-               {isLoading ? <p>Loading...</p> : (
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Name</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">SKU</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Stock</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
-                    <th className="relative py-3.5 pl-3 pr-4 sm:pr-0">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {filteredInventory.map((item) => (
-                    <tr key={item.id}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">{item.name}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{item.sku}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{item.stock} {item.unit}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500"><StatusBadge status={item.status} /></td>
-                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                        <button onClick={() => setModalState({ open: true, mode: 'edit', item })} className="text-indigo-600 hover:text-indigo-900"><PencilIcon className="h-5 w-5" /></button>
-                        <button onClick={() => handleRemove(item)} className="ml-4 text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
-                      </td>
+              {isLoading ? <p>Loading...</p> : (
+                <table className="min-w-full divide-y divide-gray-300">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Name</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">SKU</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Stock</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
+                      <th className="relative py-3.5 pl-3 pr-4 sm:pr-0">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-               )}
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {filteredInventory.map((item) => (
+                      <tr key={item.id}>
+                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">{item.name}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{item.sku}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{item.stock} {item.unit}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500"><StatusBadge status={item.status} /></td>
+                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+                          <button onClick={() => setModalState({ open: true, mode: 'edit', item })} className="text-indigo-600 hover:text-indigo-900"><PencilIcon className="h-5 w-5" /></button>
+                          <button onClick={() => handleRemove(item)} className="ml-4 text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5" /></button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>
