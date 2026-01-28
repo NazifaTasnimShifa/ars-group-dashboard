@@ -1,4 +1,5 @@
 // src/pages/api/sales/index.js
+// Complete Sales API with Debtor Entry Creation
 import prisma from '@/lib/prisma';
 import { withAuth } from '@/lib/middleware';
 
@@ -30,9 +31,10 @@ async function handler(req, res) {
         break;
 
       case 'POST':
-        // Transactional Sales Logic
-        // Expected body: { company_id, customer, items: [{ productId, quantity, price }] }
-        const { items, customer, date } = req.body;
+        // Transactional Sales Logic with Debtor Entry Creation
+        // Expected body: { company_id, customer, customerId, items: [{ productId, quantity, price }], 
+        //                  status: 'Paid'|'Partial'|'Unpaid', paidAmount, paymentMethod }
+        const { items, customer, customerId, date, status, paidAmount, paymentMethod } = req.body;
 
         // Use company_id from body or query
         const targetCompanyId = req.body.company_id || company_id;
@@ -46,22 +48,30 @@ async function handler(req, res) {
             // 1. Calculate Total Amount
             const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
 
-            // 2. Create Sale Record
+            // 2. Determine payment status and amounts
+            const saleStatus = status || 'Paid';
+            const amountPaid = saleStatus === 'Paid' ? totalAmount : parseFloat(paidAmount || 0);
+            const amountDue = totalAmount - amountPaid;
+
+            // 3. Create Sale Record
             const sale = await tx.sales.create({
               data: {
                 company_id: String(targetCompanyId),
                 customer: customer || 'Walk-in',
                 date: date ? new Date(date) : new Date(),
                 totalAmount: totalAmount,
-                status: 'Completed', // Default status
+                paidAmount: amountPaid,
+                dueAmount: amountDue,
+                status: saleStatus,
+                paymentMethod: paymentMethod || 'Cash',
               }
             });
 
-            // 3. Process Items
+            // 4. Process Items - Check stock and deduct inventory
             for (const item of items) {
               // Check Stock
               const product = await tx.inventory_items.findUnique({
-                where: { id: String(item.productId) } // ID is String in schema
+                where: { id: String(item.productId) }
               });
 
               if (!product) {
@@ -81,15 +91,34 @@ async function handler(req, res) {
               // Create Sale Item
               await tx.sale_items.create({
                 data: {
-                  sale_id: sale.id, // Int
+                  sale_id: sale.id,
                   product_id: String(item.productId),
-                  quantity: parseInt(item.quantity),
+                  quantity: parseFloat(item.quantity),
                   price: parseFloat(item.price)
                 }
               });
             }
 
-            return sale;
+            // 5. Create Debtor Entry if there's an unpaid amount
+            if (amountDue > 0 && customerId) {
+              // Create debtor ledger entry
+              await tx.sundry_debtors.create({
+                data: {
+                  company_id: String(targetCompanyId),
+                  customer_id: customerId,
+                  name: customer || 'Walk-in',
+                  sale_id: sale.id,
+                  amount: amountDue,
+                  originalAmount: amountDue,
+                  paidAmount: 0,
+                  due: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+                  status: 'Pending',
+                  createdAt: new Date()
+                }
+              });
+            }
+
+            return { ...sale, itemsProcessed: items.length, debtorCreated: amountDue > 0 };
           });
 
           res.status(201).json({ success: true, data: result });
