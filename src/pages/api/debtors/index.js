@@ -1,42 +1,66 @@
 // src/pages/api/debtors/index.js
+// ARS ERP - Sundry Debtors API
+
 import prisma from '@/lib/prisma';
 import { withAuth } from '@/lib/middleware';
 
 async function handler(req, res) {
-  const { method } = req;
-  const { company_id } = req.query;
+  const { businessId, viewAll } = req.query;
 
-  try {
-    switch (method) {
-      case 'GET':
-        if (!company_id) return res.status(400).json({ success: false, message: 'Company ID required' });
-        const debtors = await prisma.debtors.findMany({
-          where: { company_id: String(company_id) },
-          orderBy: { name: 'asc' }
+  if (req.method === 'GET') {
+    try {
+      let businessIds = [];
+
+      if (viewAll === 'true') {
+        const allBusinesses = await prisma.business.findMany({
+          where: { isActive: true },
+          select: { id: true }
         });
-        res.status(200).json({ success: true, data: debtors });
-        break;
+        businessIds = allBusinesses.map(b => b.id);
+      } else if (businessId) {
+        businessIds = [businessId];
+      } else {
+        return res.status(200).json({ success: true, data: [] });
+      }
 
-      case 'POST':
-        const { id, ...dataToSave } = req.body;
-        const debtor = await prisma.debtors.create({
-          data: {
-            ...dataToSave,
-            due: new Date(req.body.due),
-            amount: parseFloat(req.body.amount),
-            aging: parseInt(req.body.aging || 0)
-          },
-        });
-        res.status(201).json({ success: true, data: debtor });
-        break;
+      const debtors = await prisma.sundry_debtors.findMany({
+        where: { company_id: { in: businessIds } },
+        orderBy: { amount: 'desc' }
+      });
 
-      default:
-        res.status(405).json({ success: false, message: 'Method not allowed' });
+      res.status(200).json({ success: true, data: debtors });
+
+    } catch (error) {
+      console.error('Debtors API Error:', error);
+      res.status(500).json({ success: false, error: error.message });
     }
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, error: error.message });
+  } else if (req.method === 'POST') {
+    try {
+      const { name, amount, businessId: companyId, due, aging } = req.body;
+
+      if (!name || !amount || !companyId) {
+        return res.status(400).json({ success: false, error: 'Missing required fields' });
+      }
+
+      const debtor = await prisma.sundry_debtors.create({
+        data: {
+          company_id: companyId,
+          name,
+          amount,
+          due: due ? new Date(due) : null,
+          aging: aging || 0
+        }
+      });
+
+      res.status(201).json({ success: true, data: debtor });
+
+    } catch (error) {
+      console.error('Debtors POST Error:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  } else {
+    res.status(405).json({ message: 'Method not allowed' });
   }
 }
 
-export default withAuth(handler, ['admin', 'manager', 'user']);
+export default withAuth(handler, ['USER', 'MANAGER', 'ADMIN']);

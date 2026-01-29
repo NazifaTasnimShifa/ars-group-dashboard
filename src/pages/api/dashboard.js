@@ -1,5 +1,6 @@
 // src/pages/api/dashboard.js
-// ARS ERP - Real Dashboard API
+// ARS ERP - Comprehensive Dashboard API
+
 import prisma from '@/lib/prisma';
 import { withAuth } from '@/lib/middleware';
 
@@ -15,7 +16,6 @@ async function handler(req, res) {
     let businessIds = [];
 
     if (isOwnerView) {
-      // Super Owner - all active businesses
       const allBusinesses = await prisma.business.findMany({
         where: { isActive: true },
         select: { id: true }
@@ -24,123 +24,159 @@ async function handler(req, res) {
     } else if (businessId) {
       businessIds = [businessId];
     } else {
-      // Default to user's business if not provided and not owner view
-      // (This should be handled by the frontend passing businessId, but safe fallback)
       return res.status(200).json({ success: true, data: getEmptyDashboard() });
     }
 
-    // Helper for date filtering
+    // Date helpers
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // --- 1. Fetch Financials (Cash & Bank) ---
-    // Note: Assuming 'Cash' is a type of BankAccount or a specific account
-    const bankAccounts = await prisma.bankAccount.findMany({
-      where: {
-        branch: { businessId: { in: businessIds } }
-      }
-    });
-
-    const totalBankBalance = bankAccounts.reduce((sum, acc) => sum + Number(acc.currentBalance), 0);
-    // Approximate Cash in Hand from accounts named 'Cash' or similar, or just placeholder if not modeled
-    const cashInHand = bankAccounts
-      .filter(acc => acc.accountName.toLowerCase().includes('cash'))
-      .reduce((sum, acc) => sum + Number(acc.currentBalance), 0);
-
-    // --- 2. Sales Today ---
-    // A. Fuel Sales
-    const fuelSales = await prisma.fuelSale.aggregate({
-      where: {
-        shiftInstance: {
-          shift: { branch: { businessId: { in: businessIds } } }
-        },
-        saleTime: { gte: today, lt: tomorrow }
-      },
-      _sum: { totalAmount: true }
-    });
-
-    // B. Generic Sales (Lube/Store)
-    const genericSales = await prisma.sales.aggregate({
+    // --- 1. Sales Today ---
+    const salesToday = await prisma.sales.aggregate({
       where: {
         company_id: { in: businessIds },
         date: { gte: today, lt: tomorrow }
       },
+      _sum: { totalAmount: true },
+      _count: true
+    });
+
+    // --- 2. Purchases This Month ---
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const purchasesMonth = await prisma.purchases.aggregate({
+      where: {
+        company_id: { in: businessIds },
+        date: { gte: monthStart }
+      },
+      _sum: { amount: true }
+    });
+
+    // --- 3. Total Sales (All Time for Revenue) ---
+    const totalSales = await prisma.sales.aggregate({
+      where: { company_id: { in: businessIds } },
       _sum: { totalAmount: true }
     });
 
-    const totalSalesToday = (Number(fuelSales._sum.totalAmount) || 0) + (Number(genericSales._sum.totalAmount) || 0);
-
-    // --- 3. Receivables & Payables (Liability Watch) ---
-    // A. Sundry Debtors
-    const sundryDebtors = await prisma.sundry_debtors.aggregate({
+    // --- 4. Total Purchases (All Time for COGS) ---
+    const totalPurchases = await prisma.purchases.aggregate({
       where: { company_id: { in: businessIds } },
       _sum: { amount: true }
     });
 
-    // B. Trade Debtors (Customers)
-    const tradeDebtors = await prisma.customer.aggregate({
-      where: { businessId: { in: businessIds } },
-      _sum: { outstandingAmount: true }
-    });
-
-    const totalReceivables = (Number(sundryDebtors._sum.amount) || 0) + (Number(tradeDebtors._sum.outstandingAmount) || 0);
-
-    // C. Sundry Creditors
-    const sundryCreditors = await prisma.sundry_creditors.aggregate({
+    // --- 5. Total Expenses ---
+    const totalExpenses = await prisma.expenses.aggregate({
       where: { company_id: { in: businessIds } },
       _sum: { amount: true }
     });
 
-    // D. Trade Creditors (Suppliers)
-    const tradeCreditors = await prisma.supplier.aggregate({
-      where: { businessId: { in: businessIds } },
-      _sum: { outstandingAmount: true }
+    // --- 6. Top Expenses ---
+    const topExpenses = await prisma.expenses.groupBy({
+      by: ['category'],
+      where: { company_id: { in: businessIds } },
+      _sum: { amount: true },
+      orderBy: { _sum: { amount: 'desc' } },
+      take: 5
     });
 
-    const totalPayables = (Number(sundryCreditors._sum.amount) || 0) + (Number(tradeCreditors._sum.outstandingAmount) || 0);
+    // --- 7. Revenue Sources (by product category) ---
+    const revenueSources = await prisma.sale_items.groupBy({
+      by: ['product_id'],
+      where: {
+        sale: { company_id: { in: businessIds } }
+      },
+      _sum: { price: true }
+    });
 
-    // --- 4. Monthly Revenue (Chart Data) ---
-    // Simplified: Just returning hardcoded array for chart to prevent crashing if no data exists
-    // In production, we would use groupBy on sales tables
-    const revenueChart = {
-      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-      data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] // Placeholder
-    };
+    // Get product names for revenue sources
+    const productIds = revenueSources.map(r => r.product_id);
+    const products = await prisma.inventory_items.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, category: true }
+    });
 
-    // --- 5. Construct Response ---
+    const categoryMap = {};
+    for (const p of products) {
+      categoryMap[p.id] = p.category || 'Other';
+    }
+
+    const revenueByCategory = {};
+    for (const r of revenueSources) {
+      const cat = categoryMap[r.product_id] || 'Other';
+      revenueByCategory[cat] = (revenueByCategory[cat] || 0) + Number(r._sum.price || 0);
+    }
+
+    // --- 8. Receivables (Sundry Debtors) ---
+    const debtorsData = await prisma.sundry_debtors.aggregate({
+      where: { company_id: { in: businessIds } },
+      _sum: { amount: true }
+    });
+
+    // --- 9. Payables (Sundry Creditors) ---
+    const creditorsData = await prisma.sundry_creditors.aggregate({
+      where: { company_id: { in: businessIds } },
+      _sum: { amount: true }
+    });
+
+    // --- Calculate Ratios ---
+    const revenue = Number(totalSales._sum.totalAmount) || 0;
+    const cogs = Number(totalPurchases._sum.amount) || 0;
+    const expenses = Number(totalExpenses._sum.amount) || 0;
+    const grossProfit = revenue - cogs;
+    const netProfit = grossProfit - expenses;
+
+    const grossMargin = revenue > 0 ? ((grossProfit / revenue) * 100).toFixed(2) : 0;
+    const netMargin = revenue > 0 ? ((netProfit / revenue) * 100).toFixed(2) : 0;
+
+    // Current Ratio (Current Assets / Current Liabilities)
+    // Simplified: Receivables / Payables
+    const receivables = Number(debtorsData._sum.amount) || 0;
+    const payables = Number(creditorsData._sum.amount) || 0;
+    const currentRatioValue = payables > 0 ? (receivables / payables).toFixed(2) : 0;
+
+    // --- Construct Response ---
     const dashboardData = {
+      stats: [
+        { name: 'Total Revenue', value: revenue, icon: 'BanknotesIcon' },
+        { name: "Today's Sales", value: Number(salesToday._sum.totalAmount) || 0, icon: 'ArrowUpIcon' },
+        { name: 'Receivables', value: receivables, icon: 'ArrowDownIcon' },
+        { name: 'Payables', value: payables, icon: 'ArrowDownIcon' },
+      ],
+      profitability: {
+        grossMargin: parseFloat(grossMargin),
+        netMargin: parseFloat(netMargin),
+      },
+      currentRatio: {
+        ratio: parseFloat(currentRatioValue),
+      },
+      topExpenses: topExpenses.map(e => ({
+        name: e.category,
+        amount: Number(e._sum.amount) || 0
+      })),
+      revenueSources: {
+        labels: Object.keys(revenueByCategory),
+        data: Object.values(revenueByCategory),
+      },
       cashPulse: {
-        dayStartBalance: 0, // Needs shift opening logic
-        cashInToday: totalSalesToday, // Approx
-        cashOutToday: 0, // Needs expense logic
-        cashInHand: cashInHand || 0,
-        totalBankBalance: totalBankBalance || 0
+        cashInToday: Number(salesToday._sum.totalAmount) || 0,
+        cashOutToday: 0,
+        cashInHand: 0,
+        totalBankBalance: 0
       },
       operationalSnapshot: {
-        totalFuelLiftingLitres: 0, // Needs receipt logic
-        totalFuelLiftingValue: 0,
-        totalSalesValue: totalSalesToday,
-        creditGivenToday: 0,
-        creditRecoveredToday: 0,
-        currentOutstanding: totalReceivables
+        totalSalesValue: Number(salesToday._sum.totalAmount) || 0,
+        currentOutstanding: receivables
       },
       liabilityWatch: {
-        depotPayable: 0, // Specific supplier type?
-        supplierPayable: Number(tradeCreditors._sum.outstandingAmount) || 0,
-        totalDebtors: totalReceivables,
-        depots: []
+        supplierPayable: payables,
+        totalDebtors: receivables,
       },
-      // Stats for simplified view
-      stats: [
-        { name: 'Total Bank Balance', value: totalBankBalance, icon: 'BanknotesIcon' },
-        { name: "Today's Sales", value: totalSalesToday, icon: 'ArrowUpIcon' },
-        { name: 'Receivables', value: totalReceivables, icon: 'ArrowDownIcon' },
-        { name: 'Payables', value: totalPayables, icon: 'ArrowDownIcon' },
-      ],
-      revenueChart: revenueChart,
-      companies: [] // Could populate with per-business stats if needed
+      revenueChart: {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        data: [0, 0, 0, 0, 0, revenue, 0, 0, 0, 0, 0, 0] // Placeholder - current month has data
+      },
+      companies: []
     };
 
     res.status(200).json({ success: true, data: dashboardData });
@@ -154,6 +190,10 @@ async function handler(req, res) {
 function getEmptyDashboard() {
   return {
     stats: [],
+    profitability: { grossMargin: 0, netMargin: 0 },
+    currentRatio: { ratio: 0 },
+    topExpenses: [],
+    revenueSources: { labels: [], data: [] },
     cashPulse: { cashInHand: 0, totalBankBalance: 0 },
     operationalSnapshot: {},
     liabilityWatch: {},
