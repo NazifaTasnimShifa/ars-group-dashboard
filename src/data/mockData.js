@@ -189,7 +189,7 @@ export const incomeStatementData = {
   ars_corp: {
     date: "For the year ended 30 June 2024",
     revenue: { name: "Commission Revenue", amount: 11500000 },
-    costOfGoodsSold: { name: "Cost of Sales (Commission)", amount: 1200000 }, // e.g., Dealer commission
+    costOfGoodsSold: { name: "Cost of Sales (Commission)", amount: 1200000 },
     expenses: {
       administrative: { name: "Administrative Expenses", amount: 1800000 },
       selling: { name: "Vehicle & Marketing Costs", amount: 950000 },
@@ -257,7 +257,7 @@ export const processLossData = {
     { id: 'PL-001', date: '2024-06-30', product: 'Petrol (Octane 95)', type: 'Vaporization', quantity: 75.5, unit: 'Litre', notes: 'Monthly estimated vaporization loss.' },
     { id: 'PL-002', date: '2024-07-15', product: 'Diesel', type: 'Spillage', quantity: 25, unit: 'Litre', notes: 'Spillage during tanker unloading.' },
   ],
-  ars_corp: [], // No process loss for the LPG business in this prototype
+  ars_corp: [],
 };
 
 
@@ -291,11 +291,9 @@ export const trialBalanceData = {
   ars_lube: {
     date: "As at 30 June 2024",
     accounts: [
-      // Debits
       { name: 'Property, Plant & Equipment', debit: 10793421, credit: 0 },
       { name: 'Current Assets', debit: 3798535, credit: 0 },
       { name: 'Expenses (Total)', debit: 5555026, credit: 0 },
-      // Credits
       { name: 'Paid up Capital', debit: 0, credit: 1800000 },
       { name: 'Retained Earnings (Opening Loss)', debit: 0, credit: 23136268 },
       { name: 'Bank Loan', debit: 0, credit: 35091487 },
@@ -306,11 +304,9 @@ export const trialBalanceData = {
   ars_corp: {
     date: "As at 30 June 2024",
     accounts: [
-      // Debits
       { name: 'Fixed Assets', debit: 6300000, credit: 0 },
       { name: 'Current Assets', debit: 3750500, credit: 0 },
       { name: 'Expenses (Total)', debit: 3000000, credit: 0 },
-      // Credits
       { name: 'Owner\'s Capital', debit: 0, credit: 3000000 },
       { name: 'Retained Earnings', debit: 0, credit: 950270 },
       { name: 'Long-term Loan', debit: 0, credit: 4000000 },
@@ -331,7 +327,7 @@ export const chartOfAccountsData = {
     { code: 3100, name: 'Paid up Capital', type: 'Equity', balance: 1800000 },
     { code: 4100, name: 'Sales Revenue', type: 'Income', balance: 4926846 },
     { code: 5210, name: 'Driver Salary', type: 'Expense', balance: 95000 },
-    { code: 5220, name: 'Fuel Costs', type: 'Expense', balance: 150000 }, // Mock data
+    { code: 5220, name: 'Fuel Costs', type: 'Expense', balance: 150000 },
     { code: 5310, name: 'Office Rent', type: 'Expense', balance: 144000 },
   ],
   ars_corp: [
