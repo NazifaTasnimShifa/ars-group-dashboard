@@ -11,7 +11,7 @@ async function main() {
 
   // --- 1. Create Roles ---
   console.log('📋 Creating Roles...');
-  
+
   const superOwnerRole = await prisma.role.upsert({
     where: { name: 'super_owner' },
     update: {},
@@ -87,7 +87,8 @@ async function main() {
         dateFormat: 'DD/MM/YYYY',
         lossThreshold: 0.4, // 0.4% permissible loss
         dayCloseTolerance: 100 // ±100 BDT variance allowed
-      }
+      },
+      isActive: true
     }
   });
 
@@ -108,7 +109,8 @@ async function main() {
         dateFormat: 'DD/MM/YYYY',
         fifoEnabled: true,
         defaultCreditDays: 30
-      }
+      },
+      isActive: true
     }
   });
 
@@ -234,8 +236,6 @@ async function main() {
     });
   }
 
-  console.log('  ✅ Fuel Types created: Petrol, Diesel, High Octane\n');
-
   // --- 6. Create Cylinder Types ---
   console.log('🔵 Creating Cylinder Types...');
 
@@ -259,8 +259,6 @@ async function main() {
     });
   }
 
-  console.log('  ✅ Cylinder Types created: 12KG, 35KG, 45KG\n');
-
   // --- 7. Create Expense Categories ---
   console.log('💰 Creating Expense Categories...');
 
@@ -274,26 +272,144 @@ async function main() {
     { code: 'MISC', name: 'Miscellaneous', icon: 'ellipsis-horizontal' }
   ];
 
-  // Note: ExpenseCategory model needs to be added to schema
-  // For now, we'll skip this if the model doesn't exist
+  // --- 8. Create Inventory Items (Demo) ---
+  console.log('📦 Creating Inventory Items...');
 
-  console.log('  ✅ Expense Categories defined (will be created when model is added)\n');
+  // ARS Lube Products
+  const products = [
+    { name: 'Synthetic 5W-30 Engine Oil', sku: 'LUBE-001', category: 'Lubricants', price: 3500, cost: 2800, stock: 150 },
+    { name: 'Mineral 10W-40 Engine Oil', sku: 'LUBE-002', category: 'Lubricants', price: 1200, cost: 900, stock: 200 },
+    { name: 'Gear Oil 90W', sku: 'LUBE-003', category: 'Lubricants', price: 800, cost: 650, stock: 80 },
+    { name: 'Brake Fluid DOT-4', sku: 'LUBE-004', category: 'Fluids', price: 450, cost: 300, stock: 50 },
+    { name: 'Grease Cartridge', sku: 'LUBE-005', category: 'Lubricants', price: 250, cost: 180, stock: 300 }
+  ];
+
+  const inventoryIds = [];
+
+  for (const p of products) {
+    // Only crate if not exists to avoid duplicates on re-seed
+    const existing = await prisma.inventory_items.findFirst({
+      where: { company_id: arsLube.id, sku: p.sku }
+    });
+
+    let item;
+    if (!existing) {
+      item = await prisma.inventory_items.create({
+        data: {
+          company_id: arsLube.id,
+          name: p.name,
+          sku: p.sku,
+          category: p.category,
+          salePrice: p.price,
+          costPrice: p.cost,
+          stock: p.stock,
+          status: 'In Stock'
+        }
+      });
+    } else {
+      item = existing;
+    }
+    inventoryIds.push(item);
+  }
+  console.log('  ✅ Inventory Items created for ARS Lube\n');
+
+  // --- 9. Create Customers & Suppliers ---
+  console.log('🤝 Creating Debtors & Creditors...');
+
+  // Customers (Debtors)
+  await prisma.customer.create({ data: { businessId: arsLube.id, name: 'Metro Transport Ltd', phone: '01711000000', address: 'Dhaka', outstandingAmount: 50000 } });
+  await prisma.customer.create({ data: { businessId: arsLube.id, name: 'City Bus Service', phone: '01811000000', address: 'Mirpur', outstandingAmount: 25000 } });
+
+  // Suppliers (Creditors)
+  await prisma.supplier.create({ data: { businessId: arsLube.id, name: 'Shell Global Dist', phone: '022222222', address: 'Chittagong', outstandingAmount: 150000 } });
+
+  console.log('  ✅ Mock Customers & Suppliers created\n');
+
+  // --- 10. Create Transactions (Sales & Purchases) ---
+  console.log('💸 Creating Mock Transactions...');
+
+  const today = new Date();
+
+  // Sale 1: Paid mock sale
+  if (inventoryIds.length > 0) {
+    await prisma.sales.create({
+      data: {
+        company_id: arsLube.id,
+        customer: 'Walk-in Customer',
+        date: today,
+        totalAmount: 7000,
+        status: 'Paid',
+        paymentMethod: 'Cash',
+        items: {
+          create: [
+            { product_id: inventoryIds[0].id, quantity: 2, price: 3500 }
+          ]
+        }
+      }
+    });
+
+    // Sale 2: Credit (Unpaid) -> Should link to Debtor
+    const creditSale = await prisma.sales.create({
+      data: {
+        company_id: arsLube.id,
+        customer: 'Metro Transport Ltd',
+        date: today,
+        totalAmount: 12000,
+        status: 'Unpaid',
+        items: {
+          create: [
+            { product_id: inventoryIds[1].id, quantity: 10, price: 1200 }
+          ]
+        }
+      }
+    });
+
+    await prisma.sundry_debtors.create({
+      data: {
+        company_id: arsLube.id,
+        name: 'Metro Transport Ltd',
+        sale_id: creditSale.id,
+        amount: 12000,
+        due: new Date(new Date().setDate(today.getDate() + 30))
+      }
+    });
+
+    // Purchase 1: Stocking up
+    await prisma.purchases.create({
+      data: {
+        company_id: arsLube.id,
+        supplier: 'Shell Global Dist',
+        date: new Date(new Date().setDate(today.getDate() - 2)), // 2 days ago
+        amount: 50000,
+        status: 'Paid',
+        items: {
+          create: [
+            { product_id: inventoryIds[0].id, quantity: 10, unitCost: 2800, total: 28000 },
+            { product_id: inventoryIds[1].id, quantity: 20, unitCost: 900, total: 18000 }
+          ]
+        }
+      }
+    });
+  }
+
+  // Expenses
+  await prisma.expenses.create({
+    data: {
+      company_id: arsLube.id,
+      category: 'Rent',
+      description: 'Office Rent - Dec',
+      amount: 15000,
+      status: 'Paid',
+      date: today
+    }
+  });
+
+  console.log('  ✅ Mock Sales, Purchases & Expenses created for today\n');
 
   // --- Summary ---
   console.log('═══════════════════════════════════════════════════════════');
   console.log('✅ ARS ERP Database Seeding Completed!');
   console.log('═══════════════════════════════════════════════════════════');
-  console.log('');
-  console.log('📌 Login Credentials:');
-  console.log('   Super Owner: owner@arsgroup.com / admin123');
-  console.log('   ARS Corp Manager: manager@arscorp.com / admin123');
-  console.log('   ARS Lube Manager: manager@arslube.com / admin123');
-  console.log('   Cashier: cashier@arscorp.com / admin123');
-  console.log('');
-  console.log('🏢 Companies:');
-  console.log('   - ARS Corporation (Fuel Station + Gas Cylinders)');
-  console.log('   - ARS Lube (Lubricant Distribution)');
-  console.log('');
 }
 
 main()
