@@ -5,8 +5,8 @@ export default defineConfig({
   migrations: {
     path: "prisma/migrations",
   },
-  // We hardcode the URL here to bypass the "Missing environment variable" error
+  // Vercel injects DATABASE_URL at runtime, use it directly
   datasource: {
-    url: "mysql://u448110646_ars_admin:ARS_group_dashboard_Pass_2025@srv992.hstgr.io:3306/u448110646_ars_group",
+    url: process.env.DATABASE_URL,
   },
 });
