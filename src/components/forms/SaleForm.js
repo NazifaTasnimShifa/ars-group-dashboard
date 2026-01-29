@@ -1,22 +1,15 @@
 // src/components/forms/SaleForm.js
 // Proper Sales Invoice Form with Line Items
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
-
-// Demo products - in production this would come from API
-const PRODUCTS = [
-  { id: 'P001', name: 'Petrol', unit: 'Litre', price: 130 },
-  { id: 'P002', name: 'Diesel', unit: 'Litre', price: 115 },
-  { id: 'P003', name: 'Octane', unit: 'Litre', price: 135 },
-  { id: 'P004', name: 'LPG 12KG Cylinder', unit: 'Pcs', price: 1200 },
-  { id: 'P005', name: 'LPG 35KG Cylinder', unit: 'Pcs', price: 3500 },
-  { id: 'P006', name: 'Motor Oil 1L', unit: 'Pcs', price: 450 },
-  { id: 'P007', name: 'Motor Oil 4L', unit: 'Pcs', price: 1650 },
-  { id: 'P008', name: 'Gear Oil 1L', unit: 'Pcs', price: 380 },
-];
+import { useAppContext } from '@/contexts/AppContext';
 
 export default function SaleForm({ sale, onSave, onCancel }) {
+  const { authFetch } = useAppContext();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const [formData, setFormData] = useState({
     customer: '',
     date: new Date().toISOString().split('T')[0],
@@ -28,6 +21,31 @@ export default function SaleForm({ sale, onSave, onCancel }) {
   const [lineItems, setLineItems] = useState([
     { productId: '', productName: '', quantity: 1, unitPrice: 0, total: 0 }
   ]);
+
+  // Fetch products on mount
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        const res = await authFetch('/api/inventory');
+        const data = await res.json();
+        if (data.success) {
+          // Map inventory items to form format
+          const mapped = data.data.map(item => ({
+            id: item.id,
+            name: item.name,
+            unit: item.unit || 'Unit',
+            price: Number(item.salePrice) || 0
+          }));
+          setProducts(mapped);
+        }
+      } catch (err) {
+        console.error("Failed to fetch products:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchProducts();
+  }, [authFetch]);
 
   // Calculate grand total
   const grandTotal = lineItems.reduce((sum, item) => sum + (item.total || 0), 0);
@@ -42,9 +60,9 @@ export default function SaleForm({ sale, onSave, onCancel }) {
   const handleLineItemChange = (index, field, value) => {
     setLineItems(prev => {
       const updated = [...prev];
-      
+
       if (field === 'productId') {
-        const product = PRODUCTS.find(p => p.id === value);
+        const product = products.find(p => p.id === value);
         if (product) {
           updated[index] = {
             ...updated[index],
@@ -69,7 +87,7 @@ export default function SaleForm({ sale, onSave, onCancel }) {
           total: updated[index].quantity * price
         };
       }
-      
+
       return updated;
     });
   };
@@ -89,7 +107,7 @@ export default function SaleForm({ sale, onSave, onCancel }) {
   // Handle form submission
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     // Validate at least one line item has a product
     const validItems = lineItems.filter(item => item.productId && item.quantity > 0);
     if (validItems.length === 0) {
@@ -99,10 +117,12 @@ export default function SaleForm({ sale, onSave, onCancel }) {
 
     onSave({
       ...formData,
-      lineItems: validItems,
+      items: validItems, // Renamed to items to match API expectation
       totalAmount: grandTotal
     });
   };
+
+  if (loading) return <div className="p-4 text-center">Loading products...</div>;
 
   return (
     <form onSubmit={handleSubmit} className="max-h-[80vh] overflow-y-auto">
@@ -147,7 +167,7 @@ export default function SaleForm({ sale, onSave, onCancel }) {
               Add Item
             </button>
           </div>
-          
+
           <div className="divide-y">
             {lineItems.map((item, index) => (
               <div key={index} className="p-3 bg-white">
@@ -161,14 +181,14 @@ export default function SaleForm({ sale, onSave, onCancel }) {
                       className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
                     >
                       <option value="">Select product...</option>
-                      {PRODUCTS.map(product => (
+                      {products.map(product => (
                         <option key={product.id} value={product.id}>
                           {product.name} (৳{product.price}/{product.unit})
                         </option>
                       ))}
                     </select>
                   </div>
-                  
+
                   {/* Quantity */}
                   <div className="col-span-2">
                     <label className="block text-xs text-gray-500 mb-1">Qty</label>
@@ -181,7 +201,7 @@ export default function SaleForm({ sale, onSave, onCancel }) {
                       className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
                     />
                   </div>
-                  
+
                   {/* Unit Price */}
                   <div className="col-span-2">
                     <label className="block text-xs text-gray-500 mb-1">Price</label>
@@ -194,7 +214,7 @@ export default function SaleForm({ sale, onSave, onCancel }) {
                       className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
                     />
                   </div>
-                  
+
                   {/* Line Total */}
                   <div className="col-span-2">
                     <label className="block text-xs text-gray-500 mb-1">Total</label>
@@ -202,7 +222,7 @@ export default function SaleForm({ sale, onSave, onCancel }) {
                       ৳{item.total.toLocaleString()}
                     </div>
                   </div>
-                  
+
                   {/* Remove Button */}
                   <div className="col-span-1 flex justify-center">
                     <button
@@ -218,7 +238,7 @@ export default function SaleForm({ sale, onSave, onCancel }) {
               </div>
             ))}
           </div>
-          
+
           {/* Grand Total */}
           <div className="bg-gray-50 px-4 py-3 border-t flex justify-between items-center">
             <span className="text-sm font-medium text-gray-700">Grand Total</span>
