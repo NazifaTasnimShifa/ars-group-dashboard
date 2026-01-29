@@ -1,6 +1,7 @@
 // src/pages/api/login.js
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { signToken } from '@/lib/auth';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -68,8 +69,17 @@ export default async function handler(req, res) {
       businessId: user.businessId
     };
 
+    // Generate JWT token for API authorization
+    const token = signToken({
+      id: user.id,
+      email: user.email,
+      role: user.role.name.toUpperCase(), // USER, MANAGER, ADMIN format
+      company_id: user.businessId
+    });
+
     return res.status(200).json({
       success: true,
+      token: token,
       user: userResponse
     });
 

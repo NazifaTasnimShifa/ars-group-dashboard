@@ -8,6 +8,7 @@ const AppContext = createContext();
 
 export function AppProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [businesses, setBusinesses] = useState([]);
   const [currentBusiness, setCurrentBusiness] = useState(null);
@@ -38,7 +39,10 @@ export function AppProvider({ children }) {
 
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
+          const storedToken = sessionStorage.getItem('ars_token');
+
           setUser(parsedUser);
+          setToken(storedToken);
           setIsAuthenticated(true);
 
           // Fetch businesses for Super Owner
@@ -76,24 +80,27 @@ export function AppProvider({ children }) {
 
       if (data.success) {
         const loggedInUser = data.user;
-        
+        const authToken = data.token;
+
         setUser(loggedInUser);
+        setToken(authToken);
         setIsAuthenticated(true);
         sessionStorage.setItem('ars_user', JSON.stringify(loggedInUser));
+        sessionStorage.setItem('ars_token', authToken);
 
         // Role-based redirect logic
         if (loggedInUser.isSuperOwner) {
           // Super Owner: Fetch all businesses and go to Owner Dashboard
           const allBusinesses = await fetchBusinesses();
           setBusinesses(allBusinesses);
-          
+
           // Default to combined view (no specific business selected)
           router.push('/dashboard');
         } else if (loggedInUser.business) {
           // Regular user: Set their assigned business and go to dashboard
           setCurrentBusiness(loggedInUser.business);
           sessionStorage.setItem('ars_current_business', JSON.stringify(loggedInUser.business));
-          
+
           // Redirect based on business type
           if (loggedInUser.business.type === 'PETROL_PUMP') {
             router.push('/dashboard'); // Will show Pump Dashboard
@@ -106,7 +113,7 @@ export function AppProvider({ children }) {
           // No business assigned - error
           return 'No company assigned to this account. Contact admin.';
         }
-        
+
         return true;
       } else {
         return data.message || 'Invalid credentials.';
@@ -120,12 +127,31 @@ export function AppProvider({ children }) {
   // Logout function
   const logout = () => {
     setUser(null);
+    setToken(null);
     setIsAuthenticated(false);
     setCurrentBusiness(null);
     setBusinesses([]);
     sessionStorage.removeItem('ars_user');
+    sessionStorage.removeItem('ars_token');
     sessionStorage.removeItem('ars_current_business');
     router.push('/login');
+  };
+
+  // Authenticated fetch helper - automatically adds Authorization header
+  const authFetch = async (url, options = {}) => {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    return fetch(url, {
+      ...options,
+      headers
+    });
   };
 
   // Switch business (Super Owner only)
@@ -151,17 +177,17 @@ export function AppProvider({ children }) {
   // Check if user has a specific permission
   const hasPermission = (permissionKey, action = null) => {
     if (!user?.role?.permissions) return false;
-    
+
     const perms = user.role.permissions;
-    
+
     // Super Owner has all permissions
     if (perms.all === true) return true;
-    
+
     // Check specific permission
     if (action) {
       return perms[permissionKey]?.includes(action) || false;
     }
-    
+
     return !!perms[permissionKey];
   };
 
@@ -180,9 +206,9 @@ export function AppProvider({ children }) {
   const formatDate = (date) => {
     if (!date) return '';
     const d = new Date(date);
-    return d.toLocaleDateString('en-GB', { 
-      day: '2-digit', 
-      month: '2-digit', 
+    return d.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
       year: 'numeric',
       timeZone: 'Asia/Dhaka'
     });
@@ -191,23 +217,25 @@ export function AppProvider({ children }) {
   const value = {
     // Auth state
     user,
+    token,
     isAuthenticated,
     loading,
-    
+
     // Business context
     businesses,
     currentBusiness,
-    
+
     // Actions
     login,
     logout,
     switchBusiness,
     hasPermission,
-    
+    authFetch,
+
     // Helpers
     formatCurrency,
     formatDate,
-    
+
     // Convenience flags
     isSuperOwner: user?.isSuperOwner || false,
     isViewingAllBusinesses: user?.isSuperOwner && !currentBusiness
