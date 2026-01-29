@@ -1,5 +1,5 @@
 // src/components/dashboard/DebtorsTable.js
-// Fetches data from API instead of mock data
+// Fetches data from API with authentication
 
 import { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
@@ -12,6 +12,8 @@ export default function DebtorsTable() {
 
     useEffect(() => {
         const fetchDebtors = async () => {
+            if (!authFetch) return; // Wait for auth context
+
             setLoading(true);
             try {
                 let url = '/api/debtors';
@@ -21,7 +23,7 @@ export default function DebtorsTable() {
                     url += '?viewAll=true';
                 }
 
-                const res = await fetch(url);
+                const res = await authFetch(url);
                 const json = await res.json();
                 if (json.success && Array.isArray(json.data)) {
                     setData(json.data);
@@ -39,7 +41,7 @@ export default function DebtorsTable() {
         };
 
         fetchDebtors();
-    }, [currentBusiness, isSuperOwner, isViewingAllBusinesses]);
+    }, [currentBusiness, isSuperOwner, isViewingAllBusinesses, authFetch]);
 
     const getAgingColor = (aging) => {
         if (!aging || aging <= 7) return 'text-green-600';
