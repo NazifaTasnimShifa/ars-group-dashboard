@@ -1,8 +1,9 @@
 // src/pages/api/dashboard.js
-// ARS ERP - Dashboard API with Owner View Support
+// ARS ERP - Real Dashboard API
 import prisma from '@/lib/prisma';
+import { withAuth } from '@/lib/middleware';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
@@ -10,33 +11,137 @@ export default async function handler(req, res) {
   const { businessId, viewAll } = req.query;
 
   try {
-    // Determine which businesses to query
+    const isOwnerView = viewAll === 'true';
     let businessIds = [];
-    let isOwnerView = viewAll === 'true';
 
     if (isOwnerView) {
-      // Super Owner viewing all - get all businesses
+      // Super Owner - all active businesses
       const allBusinesses = await prisma.business.findMany({
         where: { isActive: true },
-        select: { id: true, name: true, shortName: true, type: true }
+        select: { id: true }
       });
       businessIds = allBusinesses.map(b => b.id);
     } else if (businessId) {
-      // Specific business
       businessIds = [businessId];
     } else {
-      // No filter provided - return empty
-      return res.status(200).json({ 
-        success: true, 
-        data: getEmptyDashboard() 
-      });
+      // Default to user's business if not provided and not owner view
+      // (This should be handled by the frontend passing businessId, but safe fallback)
+      return res.status(200).json({ success: true, data: getEmptyDashboard() });
     }
 
-    // For now, return enhanced demo data
-    // This will be replaced with real data when we implement the modules
-    const dashboardData = isOwnerView 
-      ? getOwnerDashboardData() 
-      : getCompanyDashboardData(businessId);
+    // Helper for date filtering
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // --- 1. Fetch Financials (Cash & Bank) ---
+    // Note: Assuming 'Cash' is a type of BankAccount or a specific account
+    const bankAccounts = await prisma.bankAccount.findMany({
+      where: {
+        branch: { businessId: { in: businessIds } }
+      }
+    });
+
+    const totalBankBalance = bankAccounts.reduce((sum, acc) => sum + Number(acc.currentBalance), 0);
+    // Approximate Cash in Hand from accounts named 'Cash' or similar, or just placeholder if not modeled
+    const cashInHand = bankAccounts
+      .filter(acc => acc.accountName.toLowerCase().includes('cash'))
+      .reduce((sum, acc) => sum + Number(acc.currentBalance), 0);
+
+    // --- 2. Sales Today ---
+    // A. Fuel Sales
+    const fuelSales = await prisma.fuelSale.aggregate({
+      where: {
+        shiftInstance: {
+          shift: { branch: { businessId: { in: businessIds } } }
+        },
+        saleTime: { gte: today, lt: tomorrow }
+      },
+      _sum: { totalAmount: true }
+    });
+
+    // B. Generic Sales (Lube/Store)
+    const genericSales = await prisma.sales.aggregate({
+      where: {
+        company_id: { in: businessIds },
+        date: { gte: today, lt: tomorrow }
+      },
+      _sum: { totalAmount: true }
+    });
+
+    const totalSalesToday = (Number(fuelSales._sum.totalAmount) || 0) + (Number(genericSales._sum.totalAmount) || 0);
+
+    // --- 3. Receivables & Payables (Liability Watch) ---
+    // A. Sundry Debtors
+    const sundryDebtors = await prisma.sundry_debtors.aggregate({
+      where: { company_id: { in: businessIds } },
+      _sum: { amount: true }
+    });
+
+    // B. Trade Debtors (Customers)
+    const tradeDebtors = await prisma.customer.aggregate({
+      where: { businessId: { in: businessIds } },
+      _sum: { outstandingAmount: true }
+    });
+
+    const totalReceivables = (Number(sundryDebtors._sum.amount) || 0) + (Number(tradeDebtors._sum.outstandingAmount) || 0);
+
+    // C. Sundry Creditors
+    const sundryCreditors = await prisma.sundry_creditors.aggregate({
+      where: { company_id: { in: businessIds } },
+      _sum: { amount: true }
+    });
+
+    // D. Trade Creditors (Suppliers)
+    const tradeCreditors = await prisma.supplier.aggregate({
+      where: { businessId: { in: businessIds } },
+      _sum: { outstandingAmount: true }
+    });
+
+    const totalPayables = (Number(sundryCreditors._sum.amount) || 0) + (Number(tradeCreditors._sum.outstandingAmount) || 0);
+
+    // --- 4. Monthly Revenue (Chart Data) ---
+    // Simplified: Just returning hardcoded array for chart to prevent crashing if no data exists
+    // In production, we would use groupBy on sales tables
+    const revenueChart = {
+      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] // Placeholder
+    };
+
+    // --- 5. Construct Response ---
+    const dashboardData = {
+      cashPulse: {
+        dayStartBalance: 0, // Needs shift opening logic
+        cashInToday: totalSalesToday, // Approx
+        cashOutToday: 0, // Needs expense logic
+        cashInHand: cashInHand || 0,
+        totalBankBalance: totalBankBalance || 0
+      },
+      operationalSnapshot: {
+        totalFuelLiftingLitres: 0, // Needs receipt logic
+        totalFuelLiftingValue: 0,
+        totalSalesValue: totalSalesToday,
+        creditGivenToday: 0,
+        creditRecoveredToday: 0,
+        currentOutstanding: totalReceivables
+      },
+      liabilityWatch: {
+        depotPayable: 0, // Specific supplier type?
+        supplierPayable: Number(tradeCreditors._sum.outstandingAmount) || 0,
+        totalDebtors: totalReceivables,
+        depots: []
+      },
+      // Stats for simplified view
+      stats: [
+        { name: 'Total Bank Balance', value: totalBankBalance, icon: 'BanknotesIcon' },
+        { name: "Today's Sales", value: totalSalesToday, icon: 'ArrowUpIcon' },
+        { name: 'Receivables', value: totalReceivables, icon: 'ArrowDownIcon' },
+        { name: 'Payables', value: totalPayables, icon: 'ArrowDownIcon' },
+      ],
+      revenueChart: revenueChart,
+      companies: [] // Could populate with per-business stats if needed
+    };
 
     res.status(200).json({ success: true, data: dashboardData });
 
@@ -46,11 +151,10 @@ export default async function handler(req, res) {
   }
 }
 
-// Empty dashboard structure
 function getEmptyDashboard() {
   return {
     stats: [],
-    cashPulse: {},
+    cashPulse: { cashInHand: 0, totalBankBalance: 0 },
     operationalSnapshot: {},
     liabilityWatch: {},
     companies: [],
@@ -58,144 +162,4 @@ function getEmptyDashboard() {
   };
 }
 
-// Owner Dashboard Data (Combined View)
-function getOwnerDashboardData() {
-  return {
-    // Cash & Bank Pulse
-    cashPulse: {
-      dayStartBalance: 285000,
-      cashInToday: 1250000,
-      cashOutToday: 350000,
-      cashInHand: 1185000,
-      totalBankBalance: 4500000
-    },
-    
-    // Operational Snapshot
-    operationalSnapshot: {
-      totalFuelLiftingLitres: 25000,
-      totalFuelLiftingValue: 3125000,
-      totalSalesValue: 1485000,
-      creditGivenToday: 180000,
-      creditRecoveredToday: 95000,
-      currentOutstanding: 875000
-    },
-    
-    // Liability Watch
-    liabilityWatch: {
-      depotPayable: 4500000,
-      supplierPayable: 850000,
-      totalDebtors: 875000,
-      depots: [
-        { name: 'Padma Oil', amount: 2100000 },
-        { name: 'Meghna Petroleum', amount: 1500000 },
-        { name: 'Jamuna Oil', amount: 900000 }
-      ]
-    },
-    
-    // Company Breakdown
-    companies: [
-      {
-        name: 'ARS Corporation',
-        type: 'PETROL_PUMP',
-        todaySales: 985000,
-        cashInHand: 785000,
-        receivables: 525000
-      },
-      {
-        name: 'ARS Lube',
-        type: 'LUBRICANT',
-        todaySales: 500000,
-        cashInHand: 400000,
-        receivables: 350000
-      }
-    ],
-    
-    // Legacy stats for existing components
-    stats: [
-      { name: 'Total Cash', value: 1185000, icon: 'BanknotesIcon' },
-      { name: "Today's Sales", value: 1485000, icon: 'ArrowUpIcon' },
-      { name: 'Receivables', value: 875000, icon: 'ArrowDownIcon' },
-      { name: 'Payables', value: 5350000, icon: 'ArrowDownIcon' },
-    ],
-    
-    revenueChart: {
-      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-      data: [2500000, 2760000, 2840000, 2360000, 3120000, 3440000, 3300000, 3780000, 3560000, 3900000, 4200000, 3700000]
-    },
-    
-    profitability: { grossMargin: 18.5, netMargin: 8.2 },
-    currentRatio: { ratio: 1.35 },
-    topExpenses: [
-      { name: 'Fuel Purchase (Depot)', amount: 25000000, percentage: 65 },
-      { name: 'Staff Salaries', amount: 900000, percentage: 12 },
-      { name: 'Electricity', amount: 170000, percentage: 8 },
-      { name: 'Maintenance', amount: 130000, percentage: 6 },
-      { name: 'Transport', amount: 90000, percentage: 5 },
-    ],
-    revenueSources: { 
-      labels: ['Petrol', 'Diesel', 'Octane', 'Lubricants', 'Gas Cylinders'],
-      data: [45, 35, 8, 7, 5]
-    }
-  };
-}
-
-// Company-specific Dashboard Data
-function getCompanyDashboardData(businessId) {
-  const isArsLube = businessId && businessId.includes('LUBE');
-  const multiplier = isArsLube ? 0.6 : 1;
-  
-  return {
-    cashPulse: {
-      dayStartBalance: 150000 * multiplier,
-      cashInToday: 650000 * multiplier,
-      cashOutToday: 180000 * multiplier,
-      cashInHand: 620000 * multiplier,
-      totalBankBalance: 2200000 * multiplier
-    },
-    
-    operationalSnapshot: {
-      totalFuelLiftingLitres: isArsLube ? 0 : 15000,
-      totalFuelLiftingValue: isArsLube ? 0 : 1875000,
-      totalSalesValue: 785000 * multiplier,
-      creditGivenToday: 95000 * multiplier,
-      creditRecoveredToday: 50000 * multiplier,
-      currentOutstanding: 450000 * multiplier
-    },
-    
-    liabilityWatch: {
-      depotPayable: isArsLube ? 0 : 2800000,
-      supplierPayable: isArsLube ? 850000 : 250000,
-      totalDebtors: 450000 * multiplier,
-      depots: isArsLube ? [] : [
-        { name: 'Padma Oil', amount: 1200000 },
-        { name: 'Meghna Petroleum', amount: 900000 },
-        { name: 'Jamuna Oil', amount: 700000 }
-      ]
-    },
-    
-    stats: [
-      { name: 'Cash in Hand', value: 620000 * multiplier, icon: 'BanknotesIcon' },
-      { name: "Today's Sales", value: 785000 * multiplier, icon: 'ArrowUpIcon' },
-      { name: 'Receivables', value: 450000 * multiplier, icon: 'ArrowDownIcon' },
-      { name: 'Payables', value: (isArsLube ? 850000 : 3050000), icon: 'ArrowDownIcon' },
-    ],
-    
-    revenueChart: {
-      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-      data: [1250000, 1380000, 1420000, 1180000, 1560000, 1720000, 1650000, 1890000, 1780000, 1950000, 2100000, 1850000].map(v => v * multiplier)
-    },
-    
-    profitability: { grossMargin: isArsLube ? 22 : 16, netMargin: isArsLube ? 10 : 7 },
-    currentRatio: { ratio: 1.35 },
-    topExpenses: [
-      { name: isArsLube ? 'Lubricant Purchase' : 'Fuel Purchase (Depot)', amount: 12500000 * multiplier, percentage: 65 },
-      { name: 'Staff Salaries', amount: 450000 * multiplier, percentage: 12 },
-      { name: 'Electricity', amount: 85000 * multiplier, percentage: 8 },
-      { name: 'Maintenance', amount: 65000 * multiplier, percentage: 6 },
-      { name: 'Transport', amount: 45000 * multiplier, percentage: 5 },
-    ],
-    revenueSources: isArsLube 
-      ? { labels: ['Motor Oil', 'Hydraulic', 'Gear Oil', 'Grease', 'Others'], data: [40, 25, 20, 10, 5] }
-      : { labels: ['Petrol', 'Diesel', 'Octane', 'Lubricants', 'Gas Cylinders'], data: [45, 35, 8, 7, 5] }
-  };
-}
+export default withAuth(handler, ['USER', 'MANAGER', 'ADMIN']);
