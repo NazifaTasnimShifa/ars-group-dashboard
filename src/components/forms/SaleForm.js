@@ -6,7 +6,7 @@ import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useAppContext } from '@/contexts/AppContext';
 
 export default function SaleForm({ sale, onSave, onCancel }) {
-  const { authFetch, currentBusiness } = useAppContext();
+  const { authFetch, currentBusiness, isSuperOwner, isViewingAllBusinesses, businesses } = useAppContext();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,12 +25,21 @@ export default function SaleForm({ sale, onSave, onCancel }) {
   // Fetch products on mount
   useEffect(() => {
     async function fetchProducts() {
-      if (!currentBusiness?.id) {
-        setLoading(false);
-        return;
-      }
       try {
-        const res = await authFetch(`/api/inventory?company_id=${currentBusiness.id}`);
+        let url = '/api/inventory';
+        
+        if (currentBusiness?.id) {
+          // Specific business selected
+          url += `?company_id=${currentBusiness.id}`;
+        } else if (isSuperOwner && businesses.length > 0) {
+          // Super owner viewing all - fetch from first business as default
+          url += `?company_id=${businesses[0].id}`;
+        } else {
+          setLoading(false);
+          return;
+        }
+        
+        const res = await authFetch(url);
         const data = await res.json();
         if (data.success) {
           // Map inventory items to form format
@@ -49,7 +58,7 @@ export default function SaleForm({ sale, onSave, onCancel }) {
       }
     }
     fetchProducts();
-  }, [authFetch, currentBusiness]);
+  }, [authFetch, currentBusiness, isSuperOwner, businesses]);
 
   // Calculate grand total
   const grandTotal = lineItems.reduce((sum, item) => sum + (item.total || 0), 0);
