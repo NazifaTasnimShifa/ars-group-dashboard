@@ -18,6 +18,8 @@ import RevenueSources from '@/components/dashboard/RevenueSources';
 import RevenueChart from '@/components/dashboard/RevenueChart';
 import DebtorsTable from '@/components/dashboard/DebtorsTable';
 import CreditorsTable from '@/components/dashboard/CreditorsTable';
+import CashFlowSummary from '@/components/dashboard/CashFlowSummary';
+import SalesPerformance from '@/components/dashboard/SalesPerformance';
 import Modal from '@/components/ui/Modal';
 
 // Forms
@@ -252,13 +254,6 @@ export default function DashboardPage() {
         {/* Content Section */}
         {loading && !data ? (
           <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>
-        ) : (!data || Object.keys(data).length === 0) ? (
-          <div className="p-12 text-center bg-white rounded-lg border border-dashed border-gray-300">
-            <h3 className="text-xl font-bold text-gray-900">Welcome, {user?.name}!</h3>
-            <p className="text-gray-500 mt-2">
-              {isSuperOwner ? 'Select a company from the dropdown above to view data.' : 'Start by adding your first transaction.'}
-            </p>
-          </div>
         ) : (
           <>
             {isSuperOwner && (
@@ -298,9 +293,15 @@ export default function DashboardPage() {
           </>
         )}
 
+        {/* Financial Cards Grid */}
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <DebtorsTable />
           <CreditorsTable />
+        </div>
+        
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <CashFlowSummary />
+          <SalesPerformance />
         </div>
       </div>
     </DashboardLayout>
