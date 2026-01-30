@@ -202,4 +202,4 @@ function getEmptyDashboard() {
   };
 }
 
-export default withAuth(handler, ['USER', 'MANAGER', 'ADMIN']);
+export default withAuth(handler, ['USER', 'MANAGER', 'ADMIN', 'CASHIER']);
