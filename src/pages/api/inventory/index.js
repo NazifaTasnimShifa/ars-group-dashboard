@@ -38,4 +38,4 @@ async function handler(req, res) {
   }
 }
 
-export default withAuth(handler, ['admin', 'manager', 'user']);
+export default withAuth(handler, ['USER', 'MANAGER', 'ADMIN', 'CASHIER']);
