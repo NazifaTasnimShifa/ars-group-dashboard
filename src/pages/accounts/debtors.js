@@ -1,5 +1,5 @@
 // src/pages/accounts/debtors.js
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -18,7 +18,7 @@ export default function DebtorsPage() {
 
   const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!selectedCompany) return;
     setIsLoading(true);
     try {
@@ -28,9 +28,9 @@ export default function DebtorsPage() {
       if (data.success) setDebtors(data.data);
     } catch (error) { console.error(error); }
     finally { setIsLoading(false); }
-  };
+  }, [selectedCompany, token]);
 
-  useEffect(() => { fetchData(); }, [selectedCompany, token]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   useEffect(() => {
     const totalReceivables = debtors.reduce((sum, d) => sum + Number(d.amount), 0);

@@ -1,5 +1,5 @@
 // src/pages/fixed-assets.js
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -16,7 +16,7 @@ export default function FixedAssetsPage() {
 
   const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
       if(!selectedCompany) return;
       setIsLoading(true);
       try {
@@ -25,9 +25,9 @@ export default function FixedAssetsPage() {
           if(data.success) setAssets(data.data);
       } catch(e) { console.error(e); }
       finally { setIsLoading(false); }
-  };
+  }, [selectedCompany]);
 
-  useEffect(() => { fetchData(); }, [selectedCompany]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const totalCost = assets.reduce((sum, a) => sum + Number(a.cost), 0);
   const totalBookValue = assets.reduce((sum, a) => sum + Number(a.bookValue), 0);

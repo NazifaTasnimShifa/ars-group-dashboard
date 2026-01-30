@@ -1,5 +1,5 @@
 // src/pages/accounts/creditors.js
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -17,7 +17,7 @@ export default function CreditorsPage() {
 
   const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!selectedCompany) return;
     setIsLoading(true);
     try {
@@ -27,9 +27,9 @@ export default function CreditorsPage() {
       if (data.success) setCreditors(data.data);
     } catch (err) { console.error(err); }
     finally { setIsLoading(false); }
-  };
+  }, [selectedCompany, token]);
 
-  useEffect(() => { fetchData(); }, [selectedCompany, token]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const filteredCreditors = useMemo(() => {
     if (!searchQuery) return creditors;

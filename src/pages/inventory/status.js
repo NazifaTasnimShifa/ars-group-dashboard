@@ -1,5 +1,5 @@
 // src/pages/inventory/status.js
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -26,7 +26,7 @@ export default function InventoryStatusPage() {
 
   const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!selectedCompany) return;
     setIsLoading(true);
     try {
@@ -36,9 +36,9 @@ export default function InventoryStatusPage() {
       if (data.success) setInventory(data.data);
     } catch (e) { console.error(e); }
     finally { setIsLoading(false); }
-  };
+  }, [selectedCompany, token]);
 
-  useEffect(() => { fetchData(); }, [selectedCompany, token]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const filteredInventory = useMemo(() => {
     if (!searchQuery) return inventory;
