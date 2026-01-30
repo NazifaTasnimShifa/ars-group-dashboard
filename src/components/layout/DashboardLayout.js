@@ -24,18 +24,25 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAppContext } from '@/contexts/AppContext';
 
-// Navigation structure - conditionally show items based on business type
-const getNavigation = (currentBusiness, isSuperOwner) => {
+// Navigation structure - conditionally show items based on business type AND user role
+const getNavigation = (currentBusiness, isSuperOwner, userRole) => {
+  const roleName = userRole?.name?.toLowerCase() || 'user';
+  const isCashier = roleName === 'cashier';
+  const isManager = roleName === 'manager' || isSuperOwner;
+
   const baseNav = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
   ];
 
-  // ARS Corp / Pump specific navigation
+  // ARS Corp / Pump specific navigation - cashiers get limited access
   const pumpNav = {
     name: 'Pump Operations',
     href: '/pump',
     icon: BeakerIcon,
-    children: [
+    children: isCashier ? [
+      { name: 'Daily Operations', href: '/pump/daily-operations' },
+      { name: 'Credit Sales', href: '/pump/credit-sales' },
+    ] : [
       { name: 'Daily Operations', href: '/pump/daily-operations' },
       { name: 'Dip Stock', href: '/pump/dip-stock' },
       { name: 'Gas Cylinders', href: '/pump/cylinder-operations' },
@@ -43,7 +50,7 @@ const getNavigation = (currentBusiness, isSuperOwner) => {
     ],
   };
 
-  // ARS Lube specific navigation
+  // ARS Lube specific navigation - not visible to cashiers
   const lubeNav = {
     name: 'Lube Operations',
     href: '/lube',
@@ -55,6 +62,7 @@ const getNavigation = (currentBusiness, isSuperOwner) => {
     ],
   };
 
+  // Common navigation - only visible to managers and above
   const commonNav = [
     {
       name: 'Financial Reports',
@@ -91,7 +99,7 @@ const getNavigation = (currentBusiness, isSuperOwner) => {
     { name: 'Fixed Assets', href: '/fixed-assets', icon: TruckIcon },
   ];
 
-  // Build navigation based on context
+  // Build navigation based on context and role
   let nav = [...baseNav];
   
   if (isSuperOwner) {
@@ -101,10 +109,16 @@ const getNavigation = (currentBusiness, isSuperOwner) => {
   } else if (currentBusiness?.type === 'PETROL_PUMP') {
     nav.push(pumpNav);
   } else if (currentBusiness?.type === 'LUBRICANT') {
-    nav.push(lubeNav);
+    // Cashiers don't see Lube operations
+    if (!isCashier) {
+      nav.push(lubeNav);
+    }
   }
   
-  nav = [...nav, ...commonNav];
+  // Cashiers don't see common navigation (reports, inventory, accounts, fixed assets)
+  if (!isCashier) {
+    nav = [...nav, ...commonNav];
+  }
   
   return nav;
 };
@@ -119,8 +133,8 @@ export default function DashboardLayout({ children }) {
   const { currentBusiness, logout, user, isSuperOwner, isViewingAllBusinesses } = useAppContext();
   const router = useRouter();
 
-  // Get navigation based on current context
-  const navigation = getNavigation(currentBusiness, isSuperOwner);
+  // Get navigation based on current context and user role
+  const navigation = getNavigation(currentBusiness, isSuperOwner, user?.role);
 
   // Get display name for header
   const getDisplayName = () => {

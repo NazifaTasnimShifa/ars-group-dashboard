@@ -37,6 +37,22 @@ async function main() {
     }
   });
 
+  const cashierRole = await prisma.role.upsert({
+    where: { name: 'cashier' },
+    update: {},
+    create: {
+      name: 'cashier',
+      displayName: 'Pump Cashier',
+      description: 'Limited access for pump operations only',
+      permissions: { 
+        dashboard: ['view'], 
+        pump: ['daily_operations', 'credit_sales'],
+        sales: ['read', 'write']
+      },
+      isSystem: true
+    }
+  });
+
   console.log('  ✅ Roles created\n');
 
   // --- 2. Create Businesses ---
@@ -109,6 +125,12 @@ async function main() {
     where: { email: 'manager@arscorp.com' },
     update: { password: hashedPassword },
     create: { email: 'manager@arscorp.com', password: hashedPassword, name: 'ARS Corp Manager', roleId: managerRole.id, businessId: arsCorp.id }
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'cashier@arscorp.com' },
+    update: { password: hashedPassword },
+    create: { email: 'cashier@arscorp.com', password: hashedPassword, name: 'Pump Cashier', roleId: cashierRole.id, businessId: arsCorp.id }
   });
 
   console.log('  ✅ Users created\n');
@@ -378,6 +400,7 @@ async function main() {
   console.log('   Super Owner: owner@arsgroup.com / admin123');
   console.log('   ARS Lube Manager: manager@arslube.com / admin123');
   console.log('   ARS Corp Manager: manager@arscorp.com / admin123');
+  console.log('   Pump Cashier: cashier@arscorp.com / admin123');
 }
 
 main()
