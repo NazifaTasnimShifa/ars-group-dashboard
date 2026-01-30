@@ -1,17 +1,19 @@
 // src/components/dashboard/CreditorsTable.js
-// Fetches data from API instead of mock data
+// Fetches data from API with authentication
 
 import { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import FilterButtons from '@/components/ui/FilterButtons';
 
 export default function CreditorsTable() {
-    const { currentBusiness, isSuperOwner, isViewingAllBusinesses, formatCurrency } = useAppContext();
+    const { currentBusiness, isSuperOwner, isViewingAllBusinesses, formatCurrency, authFetch } = useAppContext();
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchCreditors = async () => {
+            if (!authFetch) return; // Wait for auth context
+
             setLoading(true);
             try {
                 let url = '/api/creditors';
@@ -21,7 +23,7 @@ export default function CreditorsTable() {
                     url += '?viewAll=true';
                 }
 
-                const res = await fetch(url);
+                const res = await authFetch(url);
                 const json = await res.json();
                 if (json.success && Array.isArray(json.data)) {
                     setData(json.data);
@@ -39,7 +41,7 @@ export default function CreditorsTable() {
         };
 
         fetchCreditors();
-    }, [currentBusiness, isSuperOwner, isViewingAllBusinesses]);
+    }, [currentBusiness, isSuperOwner, isViewingAllBusinesses, authFetch]);
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '-';
