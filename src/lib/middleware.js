@@ -25,9 +25,14 @@ export function withAuth(handler, allowedRoles = []) {
 
         // Check Role
         if (allowedRoles.length > 0) {
-            // Normalize role checking (handling potential casing issues, though Enum should be uppercase)
-            const userRole = decoded.role; // Should be USER, MANAGER, ADMIN
-            if (!allowedRoles.includes(userRole)) {
+            // Normalize role checking - convert to uppercase for comparison
+            const userRole = (decoded.role || '').toUpperCase();
+            const normalizedAllowedRoles = allowedRoles.map(r => r.toUpperCase());
+            
+            // Also check for super_owner which has all access
+            if (userRole === 'SUPER_OWNER') {
+                // Super owner bypasses role checks
+            } else if (!normalizedAllowedRoles.includes(userRole)) {
                 return res.status(403).json({ success: false, message: `Forbidden: Requires one of [${allowedRoles.join(', ')}]` });
             }
         }

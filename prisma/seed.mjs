@@ -112,7 +112,7 @@ async function main() {
   await prisma.user.upsert({
     where: { email: 'owner@arsgroup.com' },
     update: { password: hashedPassword },
-    create: { email: 'owner@arsgroup.com', password: hashedPassword, name: 'Md Iqbal Haider Khan', roleId: superOwnerRole.id, businessId: null }
+    create: { email: 'owner@arsgroup.com', password: hashedPassword, name: 'ARS Group Owner', roleId: superOwnerRole.id, businessId: null }
   });
 
   await prisma.user.upsert({
