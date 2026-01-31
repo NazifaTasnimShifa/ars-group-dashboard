@@ -127,10 +127,16 @@ export default function SaleForm({ sale, onSave, onCancel }) {
       alert('Please add at least one product');
       return;
     }
+    // Map items to API expected format (unitPrice -> price)
+    const formattedItems = validItems.map(item => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      price: item.unitPrice  // API expects 'price', not 'unitPrice'
+    }));
 
     onSave({
       ...formData,
-      items: validItems, // Renamed to items to match API expectation
+      items: formattedItems,
       totalAmount: grandTotal
     });
   };
