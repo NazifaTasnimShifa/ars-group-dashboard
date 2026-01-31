@@ -97,24 +97,29 @@ export default function DashboardPage() {
 
   // --- 2. Generic Save Handler ---
   const handleSave = async (type, formData) => {
-    if (!currentBusiness && !isSuperOwner) {
+    // Determine which business to use
+    let businessToUse = currentBusiness;
+    if (!businessToUse && isSuperOwner && businesses.length > 0) {
+      businessToUse = businesses[0]; // Use first business as fallback for super owner
+    }
+    
+    if (!businessToUse) {
       alert('Please select a company first');
       return;
     }
 
     let url = '';
     let payload = { ...formData };
-
-    if (currentBusiness) {
-      payload.businessId = currentBusiness.id;
-    }
+    
+    // Set company_id (API expects company_id, not businessId)
+    payload.company_id = businessToUse.id;
 
     switch (type) {
-      case 'sales': url = '/api/sales'; payload.id = `INV-${Date.now()}`; break;
-      case 'purchases': url = '/api/purchases'; payload.id = `PO-${Date.now()}`; break;
-      case 'inventory': url = '/api/inventory'; payload.id = `ITM-${Date.now()}`; break;
-      case 'debtors': url = '/api/debtors'; delete payload.id; break;
-      case 'creditors': url = '/api/creditors'; delete payload.id; break;
+      case 'sales': url = '/api/sales'; break;
+      case 'purchases': url = '/api/purchases'; break;
+      case 'inventory': url = '/api/inventory'; break;
+      case 'debtors': url = '/api/debtors'; break;
+      case 'creditors': url = '/api/creditors'; break;
       default: alert('Unknown data type'); return;
     }
 
