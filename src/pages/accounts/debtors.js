@@ -11,7 +11,7 @@ import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons
 export default function DebtorsPage() {
   const [modalState, setModalState] = useState({ open: false, mode: 'add', debtor: null });
   const [searchQuery, setSearchQuery] = useState('');
-  const { selectedCompany, token } = useAppContext();
+  const { currentBusiness, token } = useAppContext();
   const [debtors, setDebtors] = useState([]);
   const [stats, setStats] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -19,16 +19,16 @@ export default function DebtorsPage() {
   const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
   const fetchData = useCallback(async () => {
-    if (!selectedCompany) return;
+    if (!currentBusiness) return;
     setIsLoading(true);
     try {
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/debtors?company_id=${selectedCompany.id}`, { headers });
+      const res = await fetch(`/api/debtors?company_id=${currentBusiness.id}`, { headers });
       const data = await res.json();
       if (data.success) setDebtors(data.data);
     } catch (error) { console.error(error); }
     finally { setIsLoading(false); }
-  }, [selectedCompany, token]);
+  }, [currentBusiness, token]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -55,7 +55,7 @@ export default function DebtorsPage() {
     const url = isAdd ? '/api/debtors' : `/api/debtors/${modalState.debtor.id}`;
 
     // Ensure company_id is present
-    const payload = { ...formData, company_id: selectedCompany.id };
+    const payload = { ...formData, company_id: currentBusiness.id };
 
     // Remove ID from payload for update (handled in URL)
     if (!isAdd) delete payload.id;

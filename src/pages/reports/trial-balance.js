@@ -8,25 +8,22 @@ import PageHeader from '@/components/ui/PageHeader';
 const formatCurrency = (val) => val === 0 ? '-' : `৳${(val || 0).toLocaleString('en-IN')}`;
 
 export default function TrialBalancePage() {
-  const { selectedCompany } = useAppContext();
+  const { currentBusiness, authFetch } = useAppContext();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (selectedCompany) {
+    if (currentBusiness) {
       setLoading(true);
-      fetch(`/api/reports?type=trial-balance&companyId=${selectedCompany.id}`)
+      authFetch(`/api/reports?type=trial-balance&companyId=${currentBusiness.id}`)
         .then(res => res.json())
-        .then(fetchedData => {
-          setData(fetchedData);
+        .then(result => {
+          setData(result.data);
           setLoading(false);
         })
-        .catch(err => {
-          console.error(err);
-          setLoading(false);
-        });
+        .catch(() => setLoading(false));
     }
-  }, [selectedCompany]);
+  }, [currentBusiness, authFetch]);
 
   if (loading || !data || !data.accounts) { 
     return <DashboardLayout><div>Loading...</div></DashboardLayout>; 
@@ -37,7 +34,7 @@ export default function TrialBalancePage() {
 
   return (
     <DashboardLayout>
-      <PageHeader title="Trial Balance" description={`Verifies that total debits equal total credits for ${selectedCompany.name} as at ${data.date}.`} />
+      <PageHeader title="Trial Balance" description={`Verifies that total debits equal total credits for ${currentBusiness.name} as at ${data.date}.`} />
       <div className="max-w-4xl mx-auto rounded-lg bg-white p-6 shadow">
         <table className="min-w-full">
           <thead className="border-b-2 border-gray-800">

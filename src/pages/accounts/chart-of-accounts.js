@@ -16,7 +16,7 @@ const typeColors = {
 };
 
 export default function ChartOfAccountsPage() {
-  const { selectedCompany } = useAppContext();
+  const { currentBusiness } = useAppContext();
   const [accounts, setAccounts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [modalState, setModalState] = useState({ open: false, mode: 'add', account: null });
@@ -24,10 +24,10 @@ export default function ChartOfAccountsPage() {
   const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
   const fetchData = useCallback(async () => {
-    if (!selectedCompany) return;
+    if (!currentBusiness) return;
     setIsLoading(true);
     try {
-        const res = await fetch(`/api/chart-of-accounts?company_id=${selectedCompany.id}`);
+        const res = await fetch(`/api/chart-of-accounts?company_id=${currentBusiness.id}`);
         const data = await res.json();
         if (data.success) {
             setAccounts(Array.isArray(data.data) ? data.data : []);
@@ -37,7 +37,7 @@ export default function ChartOfAccountsPage() {
     } finally {
         setIsLoading(false);
     }
-  }, [selectedCompany]);
+  }, [currentBusiness]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -50,7 +50,7 @@ export default function ChartOfAccountsPage() {
       ? '/api/chart-of-accounts' 
       : `/api/chart-of-accounts/${modalState.account.id}`;
     
-    const payload = { ...formData, company_id: selectedCompany.id };
+    const payload = { ...formData, company_id: currentBusiness.id };
     
     // API expects no ID in body for updates usually, but we must ensure we don't send it for creation if it's auto-increment
     if (isAdd) delete payload.id;

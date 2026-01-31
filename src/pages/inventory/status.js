@@ -20,23 +20,23 @@ const StatusBadge = ({ status }) => {
 export default function InventoryStatusPage() {
   const [modalState, setModalState] = useState({ open: false, mode: 'add', item: null });
   const [searchQuery, setSearchQuery] = useState('');
-  const { selectedCompany, token } = useAppContext();
+  const { currentBusiness, token } = useAppContext();
   const [inventory, setInventory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
   const fetchData = useCallback(async () => {
-    if (!selectedCompany) return;
+    if (!currentBusiness) return;
     setIsLoading(true);
     try {
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/inventory?company_id=${selectedCompany.id}`, { headers });
+      const res = await fetch(`/api/inventory?company_id=${currentBusiness.id}`, { headers });
       const data = await res.json();
       if (data.success) setInventory(data.data);
     } catch (e) { console.error(e); }
     finally { setIsLoading(false); }
-  }, [selectedCompany, token]);
+  }, [currentBusiness, token]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -57,7 +57,7 @@ export default function InventoryStatusPage() {
 
     const payload = {
       ...formData,
-      company_id: selectedCompany.id,
+      company_id: currentBusiness.id,
       id: id
     };
 

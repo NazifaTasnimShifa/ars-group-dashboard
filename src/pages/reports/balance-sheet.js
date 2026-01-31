@@ -33,8 +33,8 @@ const ReportSection = ({ title, items }) => {
 };
 
 export default function BalanceSheetPage() {
-  const { selectedCompany } = useAppContext();
-  const data = selectedCompany ? balanceSheetData[selectedCompany.id] : null;
+  const { currentBusiness } = useAppContext();
+  const data = currentBusiness ? balanceSheetData[currentBusiness.id] : null;
 
   if (!data) {
     return <DashboardLayout><div>Loading report data...</div></DashboardLayout>;
@@ -55,7 +55,7 @@ export default function BalanceSheetPage() {
     <DashboardLayout>
       <PageHeader
         title="Balance Sheet"
-        description={`A statement of the financial position of ${selectedCompany.name} as at ${data.date}.`}
+        description={`A statement of the financial position of ${currentBusiness.name} as at ${data.date}.`}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
