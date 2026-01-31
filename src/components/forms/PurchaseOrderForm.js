@@ -6,7 +6,7 @@ import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useAppContext } from '@/contexts/AppContext';
 
 export default function PurchaseOrderForm({ purchase, onSave, onCancel }) {
-  const { authFetch } = useAppContext();
+  const { authFetch, currentBusiness, isSuperOwner, businesses } = useAppContext();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,7 +26,18 @@ export default function PurchaseOrderForm({ purchase, onSave, onCancel }) {
   useEffect(() => {
     async function fetchProducts() {
       try {
-        const res = await authFetch('/api/inventory');
+        let url = '/api/inventory';
+        
+        if (currentBusiness?.id) {
+          url += `?company_id=${currentBusiness.id}`;
+        } else if (isSuperOwner && businesses.length > 0) {
+          url += `?company_id=${businesses[0].id}`;
+        } else {
+          setLoading(false);
+          return;
+        }
+        
+        const res = await authFetch(url);
         const data = await res.json();
         if (data.success) {
           // Map inventory items
@@ -46,7 +57,7 @@ export default function PurchaseOrderForm({ purchase, onSave, onCancel }) {
       }
     }
     fetchProducts();
-  }, [authFetch]);
+  }, [authFetch, currentBusiness, isSuperOwner, businesses]);
 
   // Calculate grand total
   const grandTotal = lineItems.reduce((sum, item) => sum + (item.total || 0), 0);
