@@ -22,7 +22,7 @@ export default function CreditorsPage() {
     setIsLoading(true);
     try {
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/creditors?company_id=${currentBusiness.id}`, { headers });
+      const res = await authFetch(`/api/creditors?company_id=${currentBusiness.id}`, { headers });
       const data = await res.json();
       if (data.success) setCreditors(data.data);
     } catch (err) { console.error(err); }
@@ -54,7 +54,7 @@ export default function CreditorsPage() {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       };
-      const res = await fetch(url, {
+      const res = await authFetch(url, {
         method,
         headers,
         body: JSON.stringify(payload)
@@ -70,7 +70,7 @@ export default function CreditorsPage() {
     if (!confirm(`Delete ${creditor.name}?`)) return;
     try {
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/creditors/${creditor.id}`, { method: 'DELETE', headers });
+      const res = await authFetch(`/api/creditors/${creditor.id}`, { method: 'DELETE', headers });
       if (res.ok) fetchData();
       else alert('Failed to delete');
     } catch (err) { console.error(err); }
@@ -133,3 +133,4 @@ export default function CreditorsPage() {
     </DashboardLayout>
   );
 }
+

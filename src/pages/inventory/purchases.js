@@ -36,7 +36,7 @@ export default function PurchasesPage() {
     setIsLoading(true);
     try {
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/purchases?company_id=${currentBusiness.id}`, { headers });
+      const res = await authFetch(`/api/purchases?company_id=${currentBusiness.id}`, { headers });
       const data = await res.json();
       if (data.success) setPurchases(data.data);
     } catch (e) { console.error(e); }
@@ -80,7 +80,7 @@ export default function PurchasesPage() {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       };
-      const res = await fetch(url, { method, headers, body: JSON.stringify(payload) });
+      const res = await authFetch(url, { method, headers, body: JSON.stringify(payload) });
       if (res.ok) {
         setModalState({ open: false, mode: 'add', purchase: null });
         fetchData();
@@ -92,7 +92,7 @@ export default function PurchasesPage() {
     if (!confirm(`Delete Purchase Order ${purchase.id}?`)) return;
     try {
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/purchases/${purchase.id}`, { method: 'DELETE', headers });
+      const res = await authFetch(`/api/purchases/${purchase.id}`, { method: 'DELETE', headers });
       if (res.ok) fetchData();
       else alert('Failed to delete');
     } catch (e) { console.error(e); }
@@ -162,3 +162,4 @@ export default function PurchasesPage() {
     </DashboardLayout>
   );
 }
+

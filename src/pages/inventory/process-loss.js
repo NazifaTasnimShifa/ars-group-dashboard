@@ -65,7 +65,7 @@ export default function ProcessLossPage() {
     setIsLoading(true);
     try {
         // Correct API Endpoint
-        const res = await fetch(`/api/process-loss?company_id=${currentBusiness.id}`);
+        const res = await authFetch(`/api/process-loss?company_id=${currentBusiness.id}`);
         const data = await res.json();
         if(data.success) setLosses(data.data);
     } catch (error) { console.error("Failed to fetch:", error); } 
@@ -82,7 +82,7 @@ export default function ProcessLossPage() {
     const url = isAdd ? '/api/process-loss' : `/api/process-loss/${id}`;
 
     try {
-        const res = await fetch(url, {
+        const res = await authFetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -97,7 +97,7 @@ export default function ProcessLossPage() {
   const handleRemove = async (loss) => {
     if(!confirm(`Remove record ${loss.id}?`)) return;
     try {
-        const res = await fetch(`/api/process-loss/${loss.id}`, { method: 'DELETE' });
+        const res = await authFetch(`/api/process-loss/${loss.id}`, { method: 'DELETE' });
         if(res.ok) fetchData();
     } catch (e) { console.error(e); }
   };
@@ -159,3 +159,4 @@ export default function ProcessLossPage() {
     </DashboardLayout>
   );
 }
+

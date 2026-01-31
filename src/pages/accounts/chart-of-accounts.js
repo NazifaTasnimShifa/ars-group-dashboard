@@ -27,7 +27,7 @@ export default function ChartOfAccountsPage() {
     if (!currentBusiness) return;
     setIsLoading(true);
     try {
-        const res = await fetch(`/api/chart-of-accounts?company_id=${currentBusiness.id}`);
+        const res = await authFetch(`/api/chart-of-accounts?company_id=${currentBusiness.id}`);
         const data = await res.json();
         if (data.success) {
             setAccounts(Array.isArray(data.data) ? data.data : []);
@@ -56,7 +56,7 @@ export default function ChartOfAccountsPage() {
     if (isAdd) delete payload.id;
 
     try {
-        const res = await fetch(url, {
+        const res = await authFetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -73,7 +73,7 @@ export default function ChartOfAccountsPage() {
   const handleRemove = async (account) => {
     if(!confirm(`Delete account ${account.name}?`)) return;
     try {
-        const res = await fetch(`/api/chart-of-accounts/${account.id}`, { method: 'DELETE' });
+        const res = await authFetch(`/api/chart-of-accounts/${account.id}`, { method: 'DELETE' });
         if(res.ok) fetchData();
         else alert('Failed to delete');
     } catch (e) { console.error(e); }
@@ -138,3 +138,4 @@ export default function ChartOfAccountsPage() {
     </DashboardLayout>
   );
 }
+

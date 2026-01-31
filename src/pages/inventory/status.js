@@ -31,7 +31,7 @@ export default function InventoryStatusPage() {
     setIsLoading(true);
     try {
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/inventory?company_id=${currentBusiness.id}`, { headers });
+      const res = await authFetch(`/api/inventory?company_id=${currentBusiness.id}`, { headers });
       const data = await res.json();
       if (data.success) setInventory(data.data);
     } catch (e) { console.error(e); }
@@ -68,7 +68,7 @@ export default function InventoryStatusPage() {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       };
-      const res = await fetch(url, { method, headers, body: JSON.stringify(payload) });
+      const res = await authFetch(url, { method, headers, body: JSON.stringify(payload) });
       if (res.ok) {
         setModalState({ open: false, mode: 'add', item: null });
         fetchData();
@@ -80,7 +80,7 @@ export default function InventoryStatusPage() {
     if (!confirm(`Delete ${item.name}?`)) return;
     try {
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/inventory/${item.id}`, { method: 'DELETE', headers });
+      const res = await authFetch(`/api/inventory/${item.id}`, { method: 'DELETE', headers });
       if (res.ok) fetchData();
       else alert('Failed to delete');
     } catch (e) { console.error(e); }
@@ -145,3 +145,4 @@ export default function InventoryStatusPage() {
     </DashboardLayout>
   );
 }
+
