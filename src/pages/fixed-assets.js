@@ -10,7 +10,7 @@ import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/20/solid';
 
 export default function FixedAssetsPage() {
   const [modalState, setModalState] = useState({ open: false, mode: 'add', asset: null });
-  const { currentBusiness } = useAppContext();
+  const { currentBusiness, authFetch } = useAppContext();
   const [assets, setAssets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -20,12 +20,12 @@ export default function FixedAssetsPage() {
       if(!currentBusiness) return;
       setIsLoading(true);
       try {
-          const res = await fetch(`/api/assets?company_id=${currentBusiness.id}`);
+          const res = await authFetch(`/api/assets?company_id=${currentBusiness.id}`);
           const data = await res.json();
           if(data.success) setAssets(data.data);
       } catch(e) { console.error(e); }
       finally { setIsLoading(false); }
-  }, [currentBusiness]);
+  }, [currentBusiness, authFetch]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -52,7 +52,7 @@ export default function FixedAssetsPage() {
       const url = isAdd ? '/api/assets' : `/api/assets/${id}`;
 
       try {
-          const res = await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+          const res = await authFetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
           if(res.ok) {
               setModalState({ open: false, mode: 'add', asset: null });
               fetchData();
@@ -63,7 +63,7 @@ export default function FixedAssetsPage() {
   const handleRemove = async (asset) => {
       if(!confirm(`Delete ${asset.name}?`)) return;
       try {
-          const res = await fetch(`/api/assets/${asset.id}`, { method: 'DELETE' });
+          const res = await authFetch(`/api/assets/${asset.id}`, { method: 'DELETE' });
           if(res.ok) fetchData();
           else alert('Failed to delete');
       } catch(e) { console.error(e); }
