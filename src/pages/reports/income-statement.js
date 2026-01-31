@@ -21,25 +21,22 @@ const StatementRow = ({ name, amount, isTotal = false, isSubtotal = false, inden
 };
 
 export default function IncomeStatementPage() {
-  const { selectedCompany } = useAppContext();
+  const { currentBusiness, authFetch } = useAppContext();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (selectedCompany) {
+    if (currentBusiness) {
       setLoading(true);
-      fetch(`/api/reports?type=income-statement&companyId=${selectedCompany.id}`)
+      authFetch(`/api/reports?type=income-statement&companyId=${currentBusiness.id}`)
         .then(res => res.json())
-        .then(fetchedData => {
-          setData(fetchedData);
+        .then(result => {
+          setData(result.data);
           setLoading(false);
         })
-        .catch(err => {
-          console.error(err);
-          setLoading(false);
-        });
+        .catch(() => setLoading(false));
     }
-  }, [selectedCompany]);
+  }, [currentBusiness, authFetch]);
 
   if (loading || !data || !data.revenue) {
     return <DashboardLayout><div>Loading report data...</div></DashboardLayout>;
@@ -53,13 +50,13 @@ export default function IncomeStatementPage() {
     <DashboardLayout>
       <PageHeader
         title="Income Statement"
-        description={`A summary of revenues, costs, and expenses for ${selectedCompany.name}.`}
+        description={`A summary of revenues, costs, and expenses for ${currentBusiness.name}.`}
       />
 
       <div className="max-w-4xl mx-auto">
         <div className="rounded-lg bg-white p-6 shadow">
             <div className="text-center mb-4">
-                <h2 className="text-lg font-bold text-gray-900">{selectedCompany.name}</h2>
+                <h2 className="text-lg font-bold text-gray-900">{currentBusiness.name}</h2>
                 <p className="text-sm text-gray-500">Income Statement</p>
                 <p className="text-sm text-gray-500">{data.date}</p>
             </div>

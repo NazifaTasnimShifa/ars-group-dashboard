@@ -10,22 +10,22 @@ import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/20/solid';
 
 export default function FixedAssetsPage() {
   const [modalState, setModalState] = useState({ open: false, mode: 'add', asset: null });
-  const { selectedCompany } = useAppContext();
+  const { currentBusiness } = useAppContext();
   const [assets, setAssets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
   const fetchData = useCallback(async () => {
-      if(!selectedCompany) return;
+      if(!currentBusiness) return;
       setIsLoading(true);
       try {
-          const res = await fetch(`/api/assets?company_id=${selectedCompany.id}`);
+          const res = await fetch(`/api/assets?company_id=${currentBusiness.id}`);
           const data = await res.json();
           if(data.success) setAssets(data.data);
       } catch(e) { console.error(e); }
       finally { setIsLoading(false); }
-  }, [selectedCompany]);
+  }, [currentBusiness]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -44,7 +44,7 @@ export default function FixedAssetsPage() {
       
       const payload = { 
           ...formData, 
-          company_id: selectedCompany.id,
+          company_id: currentBusiness.id,
           id: id 
       };
       

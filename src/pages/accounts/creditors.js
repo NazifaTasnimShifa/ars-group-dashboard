@@ -11,23 +11,23 @@ import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons
 export default function CreditorsPage() {
   const [modalState, setModalState] = useState({ open: false, mode: 'add', creditor: null });
   const [searchQuery, setSearchQuery] = useState('');
-  const { selectedCompany, token } = useAppContext();
+  const { currentBusiness, token } = useAppContext();
   const [creditors, setCreditors] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
   const fetchData = useCallback(async () => {
-    if (!selectedCompany) return;
+    if (!currentBusiness) return;
     setIsLoading(true);
     try {
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/creditors?company_id=${selectedCompany.id}`, { headers });
+      const res = await fetch(`/api/creditors?company_id=${currentBusiness.id}`, { headers });
       const data = await res.json();
       if (data.success) setCreditors(data.data);
     } catch (err) { console.error(err); }
     finally { setIsLoading(false); }
-  }, [selectedCompany, token]);
+  }, [currentBusiness, token]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -46,7 +46,7 @@ export default function CreditorsPage() {
     // Numeric ID handling: Create URL does not need ID, Update URL needs appended ID
     const url = isAdd ? '/api/creditors' : `/api/creditors/${modalState.creditor.id}`;
 
-    const payload = { ...formData, company_id: selectedCompany.id };
+    const payload = { ...formData, company_id: currentBusiness.id };
     if (isAdd) delete payload.id; // Ensure ID is not sent for creation
 
     try {

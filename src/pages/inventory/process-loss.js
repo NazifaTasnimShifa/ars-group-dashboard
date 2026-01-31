@@ -56,28 +56,28 @@ const ProcessLossForm = ({ loss, onSave, onCancel }) => {
 export default function ProcessLossPage() {
   const [modalState, setModalState] = useState({ open: false, mode: 'add', loss: null });
   const [searchQuery, setSearchQuery] = useState('');
-  const { selectedCompany } = useAppContext();
+  const { currentBusiness } = useAppContext();
   const [losses, setLosses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
-    if (!selectedCompany) return;
+    if (!currentBusiness) return;
     setIsLoading(true);
     try {
         // Correct API Endpoint
-        const res = await fetch(`/api/process-loss?company_id=${selectedCompany.id}`);
+        const res = await fetch(`/api/process-loss?company_id=${currentBusiness.id}`);
         const data = await res.json();
         if(data.success) setLosses(data.data);
     } catch (error) { console.error("Failed to fetch:", error); } 
     finally { setIsLoading(false); }
-  }, [selectedCompany]);
+  }, [currentBusiness]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleSave = async (formData) => {
     const isAdd = modalState.mode === 'add';
     const id = isAdd ? `PL-${Date.now()}` : modalState.loss.id;
-    const payload = { ...formData, company_id: selectedCompany.id, id, date: isAdd ? new Date().toISOString() : modalState.loss.date };
+    const payload = { ...formData, company_id: currentBusiness.id, id, date: isAdd ? new Date().toISOString() : modalState.loss.date };
     const method = isAdd ? 'POST' : 'PUT';
     const url = isAdd ? '/api/process-loss' : `/api/process-loss/${id}`;
 

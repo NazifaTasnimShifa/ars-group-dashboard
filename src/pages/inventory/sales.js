@@ -26,23 +26,23 @@ const StatusBadge = ({ status }) => {
 export default function SalesPage() {
   const [modalState, setModalState] = useState({ open: false, mode: 'add', sale: null });
   const [searchQuery, setSearchQuery] = useState('');
-  const { selectedCompany, token } = useAppContext();
+  const { currentBusiness, token } = useAppContext();
   const [sales, setSales] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
   const fetchData = useCallback(async () => {
-    if (!selectedCompany) return;
+    if (!currentBusiness) return;
     setIsLoading(true);
     try {
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/sales?company_id=${selectedCompany.id}`, { headers });
+      const res = await fetch(`/api/sales?company_id=${currentBusiness.id}`, { headers });
       const data = await res.json();
       if (data.success) setSales(data.data);
     } catch (e) { console.error(e); }
     finally { setIsLoading(false); }
-  }, [selectedCompany, token]);
+  }, [currentBusiness, token]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -70,7 +70,7 @@ export default function SalesPage() {
 
     const payload = {
       ...formData,
-      company_id: selectedCompany.id,
+      company_id: currentBusiness.id,
     };
     if (id) payload.id = id;
 

@@ -25,23 +25,23 @@ const StatusBadge = ({ status }) => {
 export default function PurchasesPage() {
   const [modalState, setModalState] = useState({ open: false, mode: 'add', purchase: null });
   const [searchQuery, setSearchQuery] = useState('');
-  const { selectedCompany, token } = useAppContext();
+  const { currentBusiness, token } = useAppContext();
   const [purchases, setPurchases] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
 
   const fetchData = useCallback(async () => {
-    if (!selectedCompany) return;
+    if (!currentBusiness) return;
     setIsLoading(true);
     try {
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/purchases?company_id=${selectedCompany.id}`, { headers });
+      const res = await fetch(`/api/purchases?company_id=${currentBusiness.id}`, { headers });
       const data = await res.json();
       if (data.success) setPurchases(data.data);
     } catch (e) { console.error(e); }
     finally { setIsLoading(false); }
-  }, [selectedCompany, token]);
+  }, [currentBusiness, token]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -68,7 +68,7 @@ export default function PurchasesPage() {
 
     const payload = {
       ...formData,
-      company_id: selectedCompany.id,
+      company_id: currentBusiness.id,
       id: id
     };
 
