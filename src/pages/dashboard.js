@@ -57,7 +57,8 @@ export default function DashboardPage() {
     isViewingAllBusinesses,
     formatCurrency,
     formatDate,
-    loading: authLoading
+    loading: authLoading,
+    authFetch
   } = useAppContext();
 
   const [data, setData] = useState(null);
@@ -76,7 +77,7 @@ export default function DashboardPage() {
         url += '?viewAll=true';
       }
 
-      const res = await fetch(url);
+      const res = await authFetch(url);
       const fetchedData = await res.json();
       if (fetchedData.success) {
         setData(fetchedData.data);
@@ -90,7 +91,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentBusiness, isSuperOwner, authLoading]);
+  }, [currentBusiness, isSuperOwner, authLoading, authFetch]);
 
   useEffect(() => { fetchDashboardData(); }, [fetchDashboardData]);
 
@@ -118,7 +119,7 @@ export default function DashboardPage() {
     }
 
     try {
-      const res = await fetch(url, {
+      const res = await authFetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
