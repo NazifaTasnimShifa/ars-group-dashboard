@@ -1529,7 +1529,9 @@ model sundry_debtors {
   sale_id         String?  @unique
   email           String?
   phone           String?
-  amount          Decimal  @db.Decimal(15, 2) // Current outstanding
+  amount          Decimal  @db.Decimal(15, 2) // Current outstanding balance
+  originalAmount  Decimal? @db.Decimal(15, 2) // Total invoice amount
+  paidAmount      Decimal? @default(0) @db.Decimal(15, 2) // Amount paid so far
   due             DateTime?
   aging           Int      @default(0)
   createdAt       DateTime @default(now())
