@@ -16,7 +16,7 @@ const typeColors = {
 };
 
 export default function ChartOfAccountsPage() {
-  const { currentBusiness } = useAppContext();
+  const { currentBusiness, authFetch } = useAppContext();
   const [accounts, setAccounts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [modalState, setModalState] = useState({ open: false, mode: 'add', account: null });
