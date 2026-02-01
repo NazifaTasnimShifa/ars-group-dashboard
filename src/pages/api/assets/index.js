@@ -10,21 +10,29 @@ async function handler(req, res) {
     switch (method) {
       case 'GET':
         if (!company_id) return res.status(400).json({ success: false, message: 'Company ID required' });
-        const assets = await prisma.fixed_assets.findMany({
-          where: { company_id: String(company_id) },
+        const assets = await prisma.fixedAsset.findMany({
+          where: { assetCode: { startsWith: company_id } },
           orderBy: { acquisitionDate: 'desc' }
         });
         res.status(200).json({ success: true, data: assets });
         break;
 
       case 'POST':
-        const asset = await prisma.fixed_assets.create({
+        const asset = await prisma.fixedAsset.create({
           data: {
-            ...req.body,
+            assetCode: req.body.id || `FA-${Date.now()}`,
+            name: req.body.name,
+            category: req.body.assetType || 'OTHER',
             acquisitionDate: new Date(req.body.acquisitionDate),
-            cost: parseFloat(req.body.cost),
-            depreciation: parseFloat(req.body.depreciation || 0),
+            acquisitionCost: parseFloat(req.body.cost),
+            usefulLifeYears: req.body.usefulLifeYears || 10,
+            depreciationMethod: 'STRAIGHT_LINE',
+            depreciationRate: req.body.depreciationRate || 10,
+            accumulatedDepreciation: parseFloat(req.body.depreciation || 0),
             bookValue: parseFloat(req.body.bookValue || req.body.cost),
+            status: 'ACTIVE',
+            location: req.body.location,
+            notes: req.body.notes
           },
         });
         res.status(201).json({ success: true, data: asset });
