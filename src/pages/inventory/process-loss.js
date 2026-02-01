@@ -56,7 +56,7 @@ const ProcessLossForm = ({ loss, onSave, onCancel }) => {
 export default function ProcessLossPage() {
   const [modalState, setModalState] = useState({ open: false, mode: 'add', loss: null });
   const [searchQuery, setSearchQuery] = useState('');
-  const { currentBusiness } = useAppContext();
+  const { currentBusiness, authFetch } = useAppContext();
   const [losses, setLosses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 

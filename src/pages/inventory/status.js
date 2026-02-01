@@ -20,7 +20,7 @@ const StatusBadge = ({ status }) => {
 export default function InventoryStatusPage() {
   const [modalState, setModalState] = useState({ open: false, mode: 'add', item: null });
   const [searchQuery, setSearchQuery] = useState('');
-  const { currentBusiness, token } = useAppContext();
+  const { currentBusiness, token, authFetch } = useAppContext();
   const [inventory, setInventory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
