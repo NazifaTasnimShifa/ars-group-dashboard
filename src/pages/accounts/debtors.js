@@ -11,7 +11,7 @@ import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons
 export default function DebtorsPage() {
   const [modalState, setModalState] = useState({ open: false, mode: 'add', debtor: null });
   const [searchQuery, setSearchQuery] = useState('');
-  const { currentBusiness, token } = useAppContext();
+  const { currentBusiness, token, authFetch } = useAppContext();
   const [debtors, setDebtors] = useState([]);
   const [stats, setStats] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
