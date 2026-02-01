@@ -36,18 +36,18 @@ async function handler(req, res) {
     }
   } else if (req.method === 'POST') {
     try {
-      const { name, amount, businessId: companyId, due, status } = req.body;
+      const { name, amount, company_id, due, status } = req.body;
 
-      if (!name || !amount || !companyId) {
-        return res.status(400).json({ success: false, error: 'Missing required fields' });
+      if (!name || !amount || !company_id) {
+        return res.status(400).json({ success: false, error: 'Missing required fields: name, amount, company_id' });
       }
 
       const creditor = await prisma.sundry_creditors.create({
         data: {
-          company_id: companyId,
+          company_id,
           name,
-          amount,
-          originalAmount: amount,
+          amount: parseFloat(amount),
+          originalAmount: parseFloat(amount),
           paidAmount: 0,
           due: due ? new Date(due) : null,
           status: status || 'Pending'
