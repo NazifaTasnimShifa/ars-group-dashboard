@@ -90,12 +90,12 @@ export function AppProvider({ children }) {
 
         // Role-based redirect logic
         if (loggedInUser.isSuperOwner) {
-          // Super Owner: Fetch all businesses and go to Owner Dashboard
+          // Super Owner: Fetch all businesses and go to Business Selection
           const allBusinesses = await fetchBusinesses();
           setBusinesses(allBusinesses);
 
-          // Default to combined view (no specific business selected)
-          router.push('/dashboard');
+          // Force business selection - redirect to selection page
+          router.push('/select-business');
         } else if (loggedInUser.business) {
           // Regular user: Set their assigned business and go to dashboard
           setCurrentBusiness(loggedInUser.business);
