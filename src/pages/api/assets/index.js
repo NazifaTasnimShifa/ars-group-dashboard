@@ -1,7 +1,8 @@
 // src/pages/api/assets/index.js
 import prisma from '@/lib/prisma';
+import { withAuth } from '@/lib/middleware';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const { method } = req;
   const { company_id } = req.query;
 
@@ -37,3 +38,5 @@ export default async function handler(req, res) {
     res.status(500).json({ success: false, error: error.message });
   }
 }
+
+export default withAuth(handler, ['USER', 'MANAGER', 'ADMIN', 'CASHIER']);
