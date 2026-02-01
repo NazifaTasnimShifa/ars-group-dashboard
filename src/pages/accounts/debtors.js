@@ -23,7 +23,7 @@ export default function DebtorsPage() {
     setIsLoading(true);
     try {
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/debtors?company_id=${currentBusiness.id}`, { headers });
+      const res = await authFetch(`/api/debtors?company_id=${currentBusiness.id}`, { headers });
       const data = await res.json();
       if (data.success) setDebtors(data.data);
     } catch (error) { console.error(error); }
@@ -65,7 +65,7 @@ export default function DebtorsPage() {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       };
-      const res = await fetch(url, { method, headers, body: JSON.stringify(payload) });
+      const res = await authFetch(url, { method, headers, body: JSON.stringify(payload) });
       if (res.ok) {
         setModalState({ open: false, mode: 'add', debtor: null });
         fetchData();
@@ -77,7 +77,7 @@ export default function DebtorsPage() {
     if (!confirm(`Delete ${debtor.name}?`)) return;
     try {
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/debtors/${debtor.id}`, { method: 'DELETE', headers });
+      const res = await authFetch(`/api/debtors/${debtor.id}`, { method: 'DELETE', headers });
       if (res.ok) fetchData();
     } catch (error) { console.error(error); }
   };
@@ -139,3 +139,4 @@ export default function DebtorsPage() {
     </DashboardLayout>
   );
 }
+

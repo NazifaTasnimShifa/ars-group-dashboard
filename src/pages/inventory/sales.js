@@ -37,7 +37,7 @@ export default function SalesPage() {
     setIsLoading(true);
     try {
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/sales?company_id=${currentBusiness.id}`, { headers });
+      const res = await authFetch(`/api/sales?company_id=${currentBusiness.id}`, { headers });
       const data = await res.json();
       if (data.success) setSales(data.data);
     } catch (e) { console.error(e); }
@@ -84,7 +84,7 @@ export default function SalesPage() {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       };
-      const res = await fetch(url, { method, headers, body: JSON.stringify(payload) });
+      const res = await authFetch(url, { method, headers, body: JSON.stringify(payload) });
       if (res.ok) {
         setModalState({ open: false, mode: 'add', sale: null });
         fetchData();
@@ -99,7 +99,7 @@ export default function SalesPage() {
     if (!confirm(`Delete Invoice ${sale.id}?`)) return;
     try {
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch(`/api/sales/${sale.id}`, { method: 'DELETE', headers });
+      const res = await authFetch(`/api/sales/${sale.id}`, { method: 'DELETE', headers });
       if (res.ok) fetchData();
       else alert('Failed to delete');
     } catch (e) { console.error(e); }
@@ -169,3 +169,4 @@ export default function SalesPage() {
     </DashboardLayout>
   );
 }
+
