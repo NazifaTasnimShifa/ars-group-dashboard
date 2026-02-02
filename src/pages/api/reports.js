@@ -12,59 +12,85 @@ export default async function handler(req, res) {
     const company = await prisma.business.findUnique({ where: { id: String(companyId) } });
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
-    // --- 1. Fetch Live Data for Calculations ---
+    // --- 1. Fetch Live Data for Calculations (with fallbacks for missing data) ---
     
     // Revenue (Sum of Sales)
-    const salesAgg = await prisma.sales.aggregate({
-      where: { company_id: String(companyId) },
-      _sum: { amount: true }
-    });
-    const totalRevenue = Number(salesAgg._sum.amount || 0);
+    let totalRevenue = 0;
+    try {
+      const salesAgg = await prisma.sales.aggregate({
+        where: { company_id: String(companyId) },
+        _sum: { amount: true }
+      });
+      totalRevenue = Number(salesAgg._sum.amount || 0);
+    } catch (e) { console.log('Sales aggregate error:', e.message); }
 
     // COGS (Sum of Purchases)
-    const purchasesAgg = await prisma.purchases.aggregate({
-      where: { company_id: String(companyId) },
-      _sum: { amount: true }
-    });
-    const totalPurchases = Number(purchasesAgg._sum.amount || 0);
+    let totalPurchases = 0;
+    try {
+      const purchasesAgg = await prisma.purchases.aggregate({
+        where: { company_id: String(companyId) },
+        _sum: { amount: true }
+      });
+      totalPurchases = Number(purchasesAgg._sum.amount || 0);
+    } catch (e) { console.log('Purchases aggregate error:', e.message); }
 
     // Inventory Value
-    const inventoryItems = await prisma.inventory_items.findMany({
-      where: { company_id: String(companyId) }
-    });
-    const inventoryValue = inventoryItems.reduce((sum, item) => sum + (Number(item.stock) * Number(item.costPrice)), 0);
+    let inventoryValue = 0;
+    try {
+      const inventoryItems = await prisma.inventory_items.findMany({
+        where: { company_id: String(companyId) }
+      });
+      inventoryValue = inventoryItems.reduce((sum, item) => sum + (Number(item.stock || 0) * Number(item.costPrice || 0)), 0);
+    } catch (e) { console.log('Inventory error:', e.message); }
 
     // Fixed Assets
-    const assetsAgg = await prisma.fixedAsset.aggregate({
-      _sum: { bookValue: true, accumulatedDepreciation: true }
-    });
-    const totalFixedAssets = Number(assetsAgg._sum.bookValue || 0);
-    const totalDepreciation = Number(assetsAgg._sum.accumulatedDepreciation || 0);
+    let totalFixedAssets = 0;
+    let totalDepreciation = 0;
+    try {
+      const assetsAgg = await prisma.fixedAsset.aggregate({
+        _sum: { bookValue: true, accumulatedDepreciation: true }
+      });
+      totalFixedAssets = Number(assetsAgg._sum.bookValue || 0);
+      totalDepreciation = Number(assetsAgg._sum.accumulatedDepreciation || 0);
+    } catch (e) { console.log('Fixed assets error:', e.message); }
 
     // Debtors & Creditors
-    const debtorsAgg = await prisma.sundry_debtors.aggregate({
-      where: { company_id: String(companyId) },
-      _sum: { amount: true }
-    });
-    const totalReceivables = Number(debtorsAgg._sum.amount || 0);
+    let totalReceivables = 0;
+    try {
+      const debtorsAgg = await prisma.sundry_debtors.aggregate({
+        where: { company_id: String(companyId) },
+        _sum: { amount: true }
+      });
+      totalReceivables = Number(debtorsAgg._sum.amount || 0);
+    } catch (e) { console.log('Debtors error:', e.message); }
 
-    const creditorsAgg = await prisma.sundry_creditors.aggregate({
-      where: { company_id: String(companyId) },
-      _sum: { amount: true }
-    });
-    const totalPayables = Number(creditorsAgg._sum.amount || 0);
+    let totalPayables = 0;
+    try {
+      const creditorsAgg = await prisma.sundry_creditors.aggregate({
+        where: { company_id: String(companyId) },
+        _sum: { amount: true }
+      });
+      totalPayables = Number(creditorsAgg._sum.amount || 0);
+    } catch (e) { console.log('Creditors error:', e.message); }
 
     // Expenses (from Chart of Accounts or mock calc)
-    const expenses = await prisma.chartOfAccount.findMany({
-        where: { businessId: String(companyId), accountType: 'EXPENSE' }
-    });
-    const totalOperatingExpenses = expenses.reduce((sum, acc) => sum + Number(acc.balance), 0);
+    let expenses = [];
+    let totalOperatingExpenses = 0;
+    try {
+      expenses = await prisma.chartOfAccount.findMany({
+          where: { businessId: String(companyId), accountType: 'EXPENSE' }
+      });
+      totalOperatingExpenses = expenses.reduce((sum, acc) => sum + Number(acc.balance || 0), 0);
+    } catch (e) { console.log('ChartOfAccount error:', e.message); }
 
     // Cash (from Chart of Accounts)
-    const cashAccounts = await prisma.chartOfAccount.findMany({
-        where: { businessId: String(companyId), accountType: 'ASSET', name: { contains: 'Cash' } }
-    });
-    const totalCash = cashAccounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
+    let totalCash = 0;
+    try {
+      const cashAccounts = await prisma.chartOfAccount.findMany({
+          where: { businessId: String(companyId), accountType: 'ASSET', name: { contains: 'Cash' } }
+      });
+      totalCash = cashAccounts.reduce((sum, acc) => sum + Number(acc.balance || 0), 0);
+    } catch (e) { console.log('Cash accounts error:', e.message); }
 
 
     // --- 2. Build Response Objects ---
