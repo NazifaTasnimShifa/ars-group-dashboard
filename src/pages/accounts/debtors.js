@@ -16,8 +16,7 @@ export default function DebtorsPage() {
   const [stats, setStats] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
-
+  const formatCurrency = (value) => `৳${Number(value || 0).toLocaleString('en-IN')}`;
   const fetchData = useCallback(async () => {
     if (!currentBusiness) return;
     setIsLoading(true);
