@@ -72,8 +72,7 @@ export default function DashboardPage() {
     try {
       let url = '/api/dashboard';
       if (currentBusiness) {
-        url += `?businessId=${currentBusiness.id}`;
-      } else if (isSuperOwner) {
+        url += `?company_id=${currentBusiness.id}`;      } else if (isSuperOwner) {
         url += '?viewAll=true';
       }
 
