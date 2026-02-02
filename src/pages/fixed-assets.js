@@ -29,8 +29,8 @@ export default function FixedAssetsPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const totalCost = assets.reduce((sum, a) => sum + Number(a.cost), 0);
-  const totalBookValue = assets.reduce((sum, a) => sum + Number(a.bookValue), 0);
+  const totalCost = assets.reduce((sum, a) => sum + Number(a.acquisitionCost || 0), 0);
+  const totalBookValue = assets.reduce((sum, a) => sum + Number(a.bookValue || 0), 0);
 
   const stats = [
     { name: 'Total Asset Cost', stat: formatCurrency(totalCost) },
