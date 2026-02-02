@@ -24,22 +24,46 @@ export default function IncomeStatementPage() {
   const { currentBusiness, authFetch } = useAppContext();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (currentBusiness) {
-      setLoading(true);
-      authFetch(`/api/reports?type=income-statement&companyId=${currentBusiness.id}`)
-        .then(res => res.json())
-        .then(result => {
-          setData(result.data);
-          setLoading(false);
-        })
-        .catch(() => setLoading(false));
-    }
+    const fetchData = async () => {
+      if (!currentBusiness?.id || !authFetch) return;
+
+      try {
+        setLoading(true);
+        const res = await authFetch(`/api/reports?type=income-statement&companyId=${currentBusiness.id}`);
+        const json = await res.json();
+        
+        if (res.ok) {
+           setData(json);
+        } else {
+           setError(json.error || 'Failed to fetch report');
+           setData(null);
+        }
+      } catch (err) {
+        console.error(err);
+        setError('Failed to load report data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [currentBusiness, authFetch]);
 
-  if (loading || !data || !data.revenue) {
-    return <DashboardLayout><div>Loading report data...</div></DashboardLayout>;
+  if (loading) {
+     return <DashboardLayout><div className="p-8 text-center">Loading report data...</div></DashboardLayout>;
+  }
+
+  if (error || !data || !data.revenue) {
+     return (
+        <DashboardLayout>
+            <div className="p-8 text-center text-red-600">
+                {error || 'No data available for this report.'}
+            </div>
+        </DashboardLayout>
+    );
   }
 
   const grossProfit = data.revenue.amount - data.costOfGoodsSold.amount;
