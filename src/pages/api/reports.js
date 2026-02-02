@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const company = await prisma.companies.findUnique({ where: { id: String(companyId) } });
+    const company = await prisma.business.findUnique({ where: { id: String(companyId) } });
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
     // --- 1. Fetch Live Data for Calculations ---
@@ -35,35 +35,34 @@ export default async function handler(req, res) {
     const inventoryValue = inventoryItems.reduce((sum, item) => sum + (Number(item.stock) * Number(item.costPrice)), 0);
 
     // Fixed Assets
-    const assetsAgg = await prisma.fixed_assets.aggregate({
-      where: { company_id: String(companyId) },
-      _sum: { bookValue: true, depreciation: true }
+    const assetsAgg = await prisma.fixedAsset.aggregate({
+      _sum: { bookValue: true, accumulatedDepreciation: true }
     });
     const totalFixedAssets = Number(assetsAgg._sum.bookValue || 0);
-    const totalDepreciation = Number(assetsAgg._sum.depreciation || 0);
+    const totalDepreciation = Number(assetsAgg._sum.accumulatedDepreciation || 0);
 
     // Debtors & Creditors
-    const debtorsAgg = await prisma.debtors.aggregate({
+    const debtorsAgg = await prisma.sundry_debtors.aggregate({
       where: { company_id: String(companyId) },
       _sum: { amount: true }
     });
     const totalReceivables = Number(debtorsAgg._sum.amount || 0);
 
-    const creditorsAgg = await prisma.creditors.aggregate({
+    const creditorsAgg = await prisma.sundry_creditors.aggregate({
       where: { company_id: String(companyId) },
       _sum: { amount: true }
     });
     const totalPayables = Number(creditorsAgg._sum.amount || 0);
 
     // Expenses (from Chart of Accounts or mock calc)
-    const expenses = await prisma.chart_of_accounts.findMany({
-        where: { company_id: String(companyId), type: 'Expense' }
+    const expenses = await prisma.chartOfAccount.findMany({
+        where: { businessId: String(companyId), accountType: 'EXPENSE' }
     });
     const totalOperatingExpenses = expenses.reduce((sum, acc) => sum + Number(acc.balance), 0);
 
     // Cash (from Chart of Accounts)
-    const cashAccounts = await prisma.chart_of_accounts.findMany({
-        where: { company_id: String(companyId), type: 'Asset', name: { contains: 'Cash' } }
+    const cashAccounts = await prisma.chartOfAccount.findMany({
+        where: { businessId: String(companyId), accountType: 'ASSET', name: { contains: 'Cash' } }
     });
     const totalCash = cashAccounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
 
