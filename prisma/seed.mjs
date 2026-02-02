@@ -200,6 +200,8 @@ async function main() {
       await prisma.sundry_debtors.create({
         data: {
           ...d,
+          originalAmount: d.amount,
+          paidAmount: 0,
           due: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
         }
       });
@@ -391,6 +393,125 @@ async function main() {
   }
 
   console.log('  ✅ Expenses created\n');
+
+  // --- 11. Create Chart of Accounts ---
+  console.log('📊 Creating Chart of Accounts...');
+
+  const chartOfAccounts = [
+    // Assets
+    { businessId: arsCorp.id, code: '1000', name: 'Cash & Cash Equivalents', accountType: 'ASSET' },
+    { businessId: arsCorp.id, code: '1100', name: 'Bank Accounts', accountType: 'ASSET' },
+    { businessId: arsCorp.id, code: '1200', name: 'Accounts Receivable', accountType: 'ASSET' },
+    { businessId: arsCorp.id, code: '1500', name: 'Inventory - Fuel', accountType: 'ASSET' },
+    { businessId: arsCorp.id, code: '1600', name: 'Inventory - LPG', accountType: 'ASSET' },
+    { businessId: arsCorp.id, code: '1800', name: 'Pumps & Equipment', accountType: 'ASSET' },
+    
+    // Liabilities
+    { businessId: arsCorp.id, code: '2000', name: 'Accounts Payable', accountType: 'LIABILITY' },
+    { businessId: arsCorp.id, code: '2100', name: 'Short-term Loans', accountType: 'LIABILITY' },
+    
+    // Equity
+    { businessId: arsCorp.id, code: '3000', name: 'Owner\'s Capital', accountType: 'EQUITY' },
+    { businessId: arsCorp.id, code: '3100', name: 'Retained Earnings', accountType: 'EQUITY' },
+    
+    // Revenue
+    { businessId: arsCorp.id, code: '4000', name: 'Fuel Sales Revenue', accountType: 'REVENUE' },
+    { businessId: arsCorp.id, code: '4100', name: 'LPG Sales Revenue', accountType: 'REVENUE' },
+    
+    // Expenses
+    { businessId: arsCorp.id, code: '5000', name: 'Cost of Goods Sold', accountType: 'EXPENSE' },
+    { businessId: arsCorp.id, code: '5100', name: 'Salaries & Wages', accountType: 'EXPENSE' },
+    { businessId: arsCorp.id, code: '5200', name: 'Rent Expense', accountType: 'EXPENSE' },
+    { businessId: arsCorp.id, code: '5300', name: 'Utilities', accountType: 'EXPENSE' },
+    
+    // ARS Lube Accounts
+    { businessId: arsLube.id, code: '1000', name: 'Cash & Cash Equivalents', accountType: 'ASSET' },
+    { businessId: arsLube.id, code: '1100', name: 'Bank Accounts', accountType: 'ASSET' },
+    { businessId: arsLube.id, code: '1200', name: 'Accounts Receivable', accountType: 'ASSET' },
+    { businessId: arsLube.id, code: '1500', name: 'Inventory - Lubricants', accountType: 'ASSET' },
+    { businessId: arsLube.id, code: '1800', name: 'Machinery & Equipment', accountType: 'ASSET' },
+    { businessId: arsLube.id, code: '2000', name: 'Accounts Payable', accountType: 'LIABILITY' },
+    { businessId: arsLube.id, code: '3000', name: 'Owner\'s Capital', accountType: 'EQUITY' },
+    { businessId: arsLube.id, code: '4000', name: 'Lubricant Sales Revenue', accountType: 'REVENUE' },
+    { businessId: arsLube.id, code: '5000', name: 'Cost of Goods Sold', accountType: 'EXPENSE' },
+  ];
+
+  for (const account of chartOfAccounts) {
+    const existing = await prisma.chartOfAccount.findUnique({
+      where: { businessId_code: { businessId: account.businessId, code: account.code } }
+    });
+    if (!existing) {
+      await prisma.chartOfAccount.create({ data: account });
+    }
+  }
+
+  console.log('  ✅ Chart of Accounts created\n');
+
+  // --- 12. Create Fixed Assets ---
+  console.log('🏢 Creating Fixed Assets...');
+
+  // Using schema definition: assetCode (unique), name, category (enum), acquisitionDate, acquisitionCost, usefulLifeYears, depreciationMethod (enum), depreciationRate
+  const fixedAssets = [
+    { 
+      assetCode: 'FA-PUMP-001',
+      name: 'Petrol Pump Machine #1',
+      category: 'PLANT_MACHINERY',
+      acquisitionDate: new Date('2020-01-15'),
+      acquisitionCost: 850000,
+      usefulLifeYears: 10,
+      depreciationMethod: 'STRAIGHT_LINE',
+      depreciationRate: 10,
+      bookValue: 680000,
+      status: 'ACTIVE'
+    },
+    { 
+      assetCode: 'FA-PUMP-002',
+      name: 'Diesel Pump Machine #2',
+      category: 'PLANT_MACHINERY',
+      acquisitionDate: new Date('2021-03-20'),
+      acquisitionCost: 900000,
+      usefulLifeYears: 10,
+      depreciationMethod: 'STRAIGHT_LINE',
+      depreciationRate: 10,
+      bookValue: 765000,
+      status: 'ACTIVE'
+    },
+    { 
+      assetCode: 'FA-VEH-001',
+      name: 'Delivery Van (Dhaka-Ta-12-3456)',
+      category: 'VEHICLE',
+      acquisitionDate: new Date('2019-06-10'),
+      acquisitionCost: 2500000,
+      usefulLifeYears: 8,
+      depreciationMethod: 'WRITTEN_DOWN_VALUE',
+      depreciationRate: 15,
+      bookValue: 1500000,
+      status: 'ACTIVE'
+    },
+    { 
+      assetCode: 'FA-BLD-001',
+      name: 'Station Building',
+      category: 'BUILDING',
+      acquisitionDate: new Date('2015-01-01'),
+      acquisitionCost: 15000000,
+      usefulLifeYears: 50,
+      depreciationMethod: 'STRAIGHT_LINE',
+      depreciationRate: 2,
+      bookValue: 12000000,
+      status: 'ACTIVE'
+    }
+  ];
+
+  for (const asset of fixedAssets) {
+    const existing = await prisma.fixedAsset.findUnique({
+      where: { assetCode: asset.assetCode }
+    });
+    if (!existing) {
+      await prisma.fixedAsset.create({ data: asset });
+    }
+  }
+
+  console.log('  ✅ Fixed Assets created\n');
 
   // --- Summary ---
   console.log('═══════════════════════════════════════════════════════════');

@@ -26,7 +26,7 @@ const StatusBadge = ({ status }) => {
 export default function SalesPage() {
   const [modalState, setModalState] = useState({ open: false, mode: 'add', sale: null });
   const [searchQuery, setSearchQuery] = useState('');
-  const { currentBusiness, token } = useAppContext();
+  const { currentBusiness, token, authFetch } = useAppContext();
   const [sales, setSales] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
