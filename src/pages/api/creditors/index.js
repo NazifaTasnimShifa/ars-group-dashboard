@@ -5,7 +5,7 @@ import prisma from '@/lib/prisma';
 import { withAuth } from '@/lib/middleware';
 
 async function handler(req, res) {
-  const { businessId, viewAll } = req.query;
+  const { company_id, viewAll } = req.query;
 
   if (req.method === 'GET') {
     try {
@@ -17,8 +17,8 @@ async function handler(req, res) {
           select: { id: true }
         });
         businessIds = allBusinesses.map(b => b.id);
-      } else if (businessId) {
-        businessIds = [businessId];
+      } else if (company_id) {
+        businessIds = [company_id];
       } else {
         return res.status(200).json({ success: true, data: [] });
       }
