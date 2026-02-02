@@ -18,8 +18,7 @@ export default function DebtorsTable() {
             try {
                 let url = '/api/debtors';
                 if (currentBusiness?.id) {
-                    url += `?businessId=${currentBusiness.id}`;
-                } else if (isSuperOwner) {
+                    url += `?company_id=${currentBusiness.id}`;                } else if (isSuperOwner) {
                     url += '?viewAll=true';
                 }
 
