@@ -6,8 +6,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from '@/components/ui/PageHeader';
 
 const ReportRow = ({ name, amount, isTotal = false, isSubtotal = false, indent = false }) => {
-    const formatCurrency = (val) => `৳${val.toLocaleString('en-IN')}`;
-    return (
+    const formatCurrency = (val) => `৳${(val || 0).toLocaleString('en-IN')}`;    return (
         <div className={`flex justify-between py-2 ${!isTotal && 'border-b'} ${indent && 'pl-6'}`}>
             <p className={`text-sm ${isTotal || isSubtotal ? 'font-bold' : 'text-gray-600'}`}>
                 {name}

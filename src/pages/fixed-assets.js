@@ -14,7 +14,7 @@ export default function FixedAssetsPage() {
   const [assets, setAssets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
+  const formatCurrency = (value) => `৳${Number(value || 0).toLocaleString('en-IN')}`;
 
   const fetchData = useCallback(async () => {
       if(!currentBusiness) return;
@@ -107,8 +107,8 @@ export default function FixedAssetsPage() {
                     <tr key={asset.id}>
                       <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">{asset.name}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{new Date(asset.acquisitionDate).toLocaleDateString()}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-right">{formatCurrency(asset.cost)}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-red-500 text-right">({formatCurrency(asset.depreciation)})</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-right">{formatCurrency(asset.acquisitionCost)}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-red-500 text-right">({formatCurrency(asset.accumulatedDepreciation)})</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm font-semibold text-gray-900 text-right">{formatCurrency(asset.bookValue)}</td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
                         <button onClick={() => setModalState({ open: true, mode: 'edit', asset })} className="text-indigo-600 hover:text-indigo-900 mr-4"><PencilIcon className="h-5 w-5" /></button>

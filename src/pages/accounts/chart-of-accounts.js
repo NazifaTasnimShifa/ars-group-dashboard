@@ -21,8 +21,7 @@ export default function ChartOfAccountsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [modalState, setModalState] = useState({ open: false, mode: 'add', account: null });
 
-  const formatCurrency = (value) => `৳${Number(value).toLocaleString('en-IN')}`;
-
+  const formatCurrency = (value) => `৳${Number(value || 0).toLocaleString('en-IN')}`;
   const fetchData = useCallback(async () => {
     if (!currentBusiness) return;
     setIsLoading(true);
