@@ -37,15 +37,15 @@ async function handler(req, res) {
         }
       };
     } else {
-        // Default to Current Month if no dates provided (matches Frontend default)
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        dateFilter = {
-            date: {
-                gte: startOfMonth,
-                lte: now
-            }
-        };
+      // Default to Current Month if no dates provided (matches Frontend default)
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      dateFilter = {
+        date: {
+          gte: startOfMonth,
+          lte: now
+        }
+      };
     }
 
     // --- 1. Sales (Revenue) in Period ---
@@ -79,9 +79,9 @@ async function handler(req, res) {
     // --- 4. Top Expenses in Period ---
     const topExpenses = await prisma.expenses.groupBy({
       by: ['category'],
-      where: { 
-          company_id: { in: businessIds },
-          ...dateFilter
+      where: {
+        company_id: { in: businessIds },
+        ...dateFilter
       },
       _sum: { amount: true },
       orderBy: { _sum: { amount: 'desc' } },
@@ -92,9 +92,9 @@ async function handler(req, res) {
     const revenueSources = await prisma.sale_items.groupBy({
       by: ['product_id'],
       where: {
-        sale: { 
-            company_id: { in: businessIds },
-            ...dateFilter
+        sale: {
+          company_id: { in: businessIds },
+          ...dateFilter
         }
       },
       _sum: { price: true }
@@ -134,7 +134,7 @@ async function handler(req, res) {
     const revenue = Number(salesData._sum.totalAmount) || 0;
     const purchases = Number(purchasesData._sum.amount) || 0;
     const expenses = Number(expensesData._sum.amount) || 0;
-    
+
     // Simple Gross Profit (Revenue - Purchases). note: Accounting-wise this should be COGS, 
     // but assuming Purchases ~ COGS for simple dashboard or we'd need opening/closing stock. 
     // Sticking to simplified logic: GP = Revenue - Purchases
@@ -152,16 +152,16 @@ async function handler(req, res) {
     // Fetch settings for the first business in the list (or aggregate if multiple - simplified to first/sum for now)
     // For proper multi-business, we'd sum targets.
     const businessesWithSettings = await prisma.business.findMany({
-        where: { id: { in: businessIds } },
-        select: { settings: true }
+      where: { id: { in: businessIds } },
+      select: { settings: true }
     });
-    
+
     let totalTarget = 0;
     businessesWithSettings.forEach(b => {
-        const settings = b.settings || {};
-        totalTarget += Number(settings.salesTarget || 10000000); // Default 1 Crore if not set
+      const settings = b.settings || {};
+      totalTarget += Number(settings.salesTarget || 10000000); // Default 1 Crore if not set
     });
-    
+
     // --- 9. Cash Flow Calculations ---
     const operatingCashFlow = revenue - purchases - expenses;
 
@@ -169,7 +169,7 @@ async function handler(req, res) {
     const dashboardData = {
       stats: [
         { name: 'Revenue', value: revenue, icon: 'BanknotesIcon' },
-        { name: 'Purchases', value: purchases, icon: 'ArrowUpIcon' }, 
+        { name: 'Purchases', value: purchases, icon: 'ArrowUpIcon' },
         { name: 'Receivables', value: receivables, icon: 'ArrowDownIcon' },
         { name: 'Payables', value: payables, icon: 'ArrowDownIcon' },
       ],
@@ -189,19 +189,19 @@ async function handler(req, res) {
         data: Object.values(revenueByCategory),
       },
       cashPulse: {
-        cashInToday: revenue, 
-        cashOutToday: expenses, 
+        cashInToday: revenue,
+        cashOutToday: expenses,
         cashInHand: 0,
         totalBankBalance: 0
       },
       cashFlow: {
-          operating: operatingCashFlow,
-          investing: 0, // Placeholder
-          financing: 0  // Placeholder
+        operating: operatingCashFlow,
+        investing: 0, // Placeholder
+        financing: 0  // Placeholder
       },
       salesPerformance: {
-          achieved: revenue,
-          target: totalTarget
+        achieved: revenue,
+        target: totalTarget
       },
       operationalSnapshot: {
         totalSalesValue: revenue,
@@ -213,7 +213,7 @@ async function handler(req, res) {
       },
       revenueChart: {
         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-        data: [0, 0, 0, 0, 0, revenue, 0, 0, 0, 0, 0, 0] 
+        data: [0, 0, 0, 0, 0, revenue, 0, 0, 0, 0, 0, 0]
       },
       companies: []
     };
@@ -237,6 +237,7 @@ function getEmptyDashboard() {
     operationalSnapshot: {},
     liabilityWatch: {},
     companies: [],
+    cashFlow: { operating: 0, investing: 0, financing: 0 },
     revenueChart: { labels: [], data: [] }
   };
 }

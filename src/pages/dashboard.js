@@ -53,9 +53,9 @@ import DateRangeFilter from '@/components/ui/DateRangeFilter';
 
 export default function DashboardPage() {
   const [modalState, setModalState] = useState({ open: false, title: '', content: null });
-  const { 
+  const {
     // ... context
-    user, currentBusiness, businesses, switchBusiness, isSuperOwner, isViewingAllBusinesses, formatCurrency, loading: authLoading, authFetch 
+    user, currentBusiness, businesses, switchBusiness, isSuperOwner, isViewingAllBusinesses, formatCurrency, loading: authLoading, authFetch
   } = useAppContext(); // Removed unused formatDate
 
   const [data, setData] = useState(null);
@@ -69,13 +69,13 @@ export default function DashboardPage() {
     try {
       let url = '/api/dashboard';
       const params = new URLSearchParams();
-      
+
       if (currentBusiness) params.append('company_id', currentBusiness.id);
       else if (isSuperOwner) params.append('viewAll', 'true');
-      
+
       if (range.startDate && range.endDate) {
-          params.append('startDate', range.startDate);
-          params.append('endDate', range.endDate);
+        params.append('startDate', range.startDate);
+        params.append('endDate', range.endDate);
       }
 
       const res = await authFetch(`${url}?${params.toString()}`);
@@ -102,18 +102,18 @@ export default function DashboardPage() {
   // So we REMOVE the explicit useEffect(() => { fetchDashboardData() }, ...) to avoid double calling.
 
   const handleFilterChange = (range) => {
-      setDateRange(range);
-      fetchDashboardData(range);
+    setDateRange(range);
+    fetchDashboardData(range);
   };
 
   // ... handleSave ...
 
   // ... render ... 
-  
+
   return (
     <DashboardLayout>
       {/* ... Modal ... */}
-      
+
       <div className="space-y-6">
         {/* Header with Switcher - Always Visible */}
         <div className="sm:flex sm:items-center sm:justify-between">
@@ -122,20 +122,20 @@ export default function DashboardPage() {
               {isSuperOwner ? 'Owner Dashboard' : (currentBusiness?.name || 'Dashboard')}
             </h3>
             {isSuperOwner && (
-               <p className="mt-1 text-sm text-gray-500">
-                 {isViewingAllBusinesses ? 'Combined view of all companies' : `Viewing: ${currentBusiness?.name || 'Select a company'}`}
-               </p>
+              <p className="mt-1 text-sm text-gray-500">
+                {isViewingAllBusinesses ? 'Combined view of all companies' : `Viewing: ${currentBusiness?.name || 'Select a company'}`}
+              </p>
             )}
           </div>
 
           <div className="mt-4 sm:mt-0 flex items-center gap-3">
-             {/* Replaced Date Input with Global Filter */}
-             <DateRangeFilter onFilterChange={handleFilterChange} />
+            {/* Replaced Date Input with Global Filter */}
+            <DateRangeFilter onFilterChange={handleFilterChange} />
 
             {isSuperOwner && (
               <Menu as="div" className="relative inline-block text-left">
                 {/* ... existing menu ... */}
-                 <Menu.Button className="inline-flex items-center gap-x-2 rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                <Menu.Button className="inline-flex items-center gap-x-2 rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
                   {isViewingAllBusinesses ? (
                     <><GlobeAltIcon className="h-5 w-5 text-indigo-500" /> All Companies</>
                   ) : (
@@ -170,8 +170,8 @@ export default function DashboardPage() {
             )}
 
             <Menu as="div" className="relative inline-block text-left">
-               {/* ... Add New button ... */}
-               <Menu.Button className="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+              {/* ... Add New button ... */}
+              <Menu.Button className="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
                 <PlusCircleIcon className="h-5 w-5" /> Add New <ChevronDownIcon className="h-5 w-5 text-indigo-200" />
               </Menu.Button>
               <Transition as={Fragment} enter="transition ease-out duration-100" enterFrom="transform opacity-0 scale-95" enterTo="transform opacity-100 scale-100" leave="transition ease-in duration-75" leaveFrom="transform opacity-100 scale-100" leaveTo="transform opacity-0 scale-95">
@@ -191,8 +191,10 @@ export default function DashboardPage() {
         </div>
 
         {/* Content Section */}
-        {loading && !data ? (
+        {loading ? (
           <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>
+        ) : !data ? (
+          <div className="text-center py-10 text-gray-500">No data available.</div>
         ) : (
           <>
             {isSuperOwner && (
@@ -237,14 +239,14 @@ export default function DashboardPage() {
           <DebtorsTable />
           <CreditorsTable />
         </div>
-        
+
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          {data.cashFlow && <CashFlowSummary data={data.cashFlow} />}
-          {data.salesPerformance && (
-              <SalesPerformance 
-                  achieved={data.salesPerformance.achieved} 
-                  target={data.salesPerformance.target} 
-              />
+          {data?.cashFlow && <CashFlowSummary data={data.cashFlow} />}
+          {data?.salesPerformance && (
+            <SalesPerformance
+              achieved={data.salesPerformance.achieved}
+              target={data.salesPerformance.target}
+            />
           )}
         </div>
       </div>
