@@ -17,14 +17,36 @@ export default async function handler(req, res) {
         break;
 
       case 'POST':
-        const newLoss = await prisma.process_loss.create({
-          data: {
-            ...req.body,
-            date: new Date(req.body.date),
-            quantity: parseFloat(req.body.quantity),
-          },
-        });
-        res.status(201).json({ success: true, data: newLoss });
+        const { company_id: bodyCompanyId, productId, quantity, date, reason } = req.body;
+        const targetCompanyId = bodyCompanyId || company_id;
+
+        try {
+            const result = await prisma.$transaction(async (tx) => {
+                // 1. Create Process Loss Record
+                const newLoss = await tx.process_loss.create({
+                    data: {
+                        company_id: String(targetCompanyId),
+                        productId: String(productId),
+                        quantity: parseFloat(quantity),
+                        date: new Date(date),
+                        reason: reason
+                    },
+                });
+
+                // 2. Deduct from Inventory
+                await tx.inventory_items.update({
+                    where: { id: String(productId) },
+                    data: { stock: { decrement: parseFloat(quantity) } }
+                });
+
+                return newLoss;
+            });
+            
+            res.status(201).json({ success: true, data: result });
+        } catch (txError) {
+             console.error("Transaction failed:", txError);
+             res.status(400).json({ success: false, message: txError.message });
+        }
         break;
 
       default:
