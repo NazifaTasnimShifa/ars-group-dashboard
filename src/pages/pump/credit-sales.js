@@ -130,7 +130,7 @@ export default function CreditSalesPage() {
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white">
             <p className="text-blue-100 text-sm">Today&apos;s Credit Sales</p>
             <p className="text-2xl font-bold mt-1">{formatCurrency(todayTotal)}</p>
-            <p className="text-blue-200 text-xs">{TODAY_SALES.length} transactions</p>
+            <p className="text-blue-200 text-xs">{salesData.length} transactions</p>
           </div>
           <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-5 text-white">
             <p className="text-red-100 text-sm">Total Outstanding</p>
@@ -189,58 +189,57 @@ export default function CreditSalesPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {loading ? (
-                      <tr>
-                        <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
-                          Loading...
-                        </td>
-                      </tr>
-                    ) : salesData.length === 0 ? (
-                      <tr>
-                        <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
-                          No credit sales found for this date.
-                        </td>
-                      </tr>
-                    ) : (
-                      salesData.map((sale) => (
-                        <tr key={sale.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <ClockIcon className="h-4 w-4 inline mr-1" />
-                            {new Date(sale.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {sale.customerName || 'Unknown'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {sale.vehicleNumber || '-'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {sale.items?.map(i => i.productName).join(', ') || '-'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 font-mono">
-                            {sale.items?.reduce((sum, i) => sum + i.quantity, 0).toFixed(2) || '0.00'} L
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-gray-900">
-                            {formatCurrency(sale.totalAmount)}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                  <tfoot className="bg-gray-50">
+                  {loading ? (
                     <tr>
-                      <td colSpan="4" className="px-6 py-4 text-right font-semibold text-gray-700">
-                        Total:
-                      </td>
-                      <td className="px-6 py-4 text-right font-bold text-gray-900">
-                        {TODAY_SALES.reduce((s, r) => s + r.litres, 0)} L
-                      </td>
-                      <td className="px-6 py-4 text-right font-bold text-indigo-600">
-                        {formatCurrency(todayTotal)}
+                      <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                        Loading...
                       </td>
                     </tr>
-                  </tfoot>
+                  ) : salesData.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                        No credit sales found for this date.
+                      </td>
+                    </tr>
+                  ) : (
+                    salesData.map((sale) => (
+                      <tr key={sale.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <ClockIcon className="h-4 w-4 inline mr-1" />
+                          {new Date(sale.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {sale.customerName || 'Unknown'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {sale.vehicleNumber || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {sale.items?.map(i => i.productName).join(', ') || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 font-mono">
+                          {sale.items?.reduce((sum, i) => sum + i.quantity, 0).toFixed(2) || '0.00'} L
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-gray-900">
+                          {formatCurrency(sale.totalAmount)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+                <tfoot className="bg-gray-50">
+                  <tr>
+                    <td colSpan="4" className="px-6 py-4 text-right font-semibold text-gray-700">
+                      Total:
+                    </td>
+                    <td className="px-6 py-4 text-right font-bold text-gray-900">
+                      {salesData.reduce((sum, sale) => sum + (sale.items?.reduce((s, i) => s + i.quantity, 0) || 0), 0).toFixed(2)} L
+                    </td>
+                    <td className="px-6 py-4 text-right font-bold text-indigo-600">
+                      {formatCurrency(todayTotal)}
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>
