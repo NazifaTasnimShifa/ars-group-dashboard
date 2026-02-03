@@ -6,10 +6,37 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useAppContext } from '@/contexts/AppContext';
 import { sundryDebtors } from '@/data/mockData';
 import { PlusCircleIcon, PhoneIcon } from '@heroicons/react/24/outline';
+import Modal from '@/components/ui/Modal';
+import DebtorForm from '@/components/forms/DebtorForm';
 
 export default function LubeDealersPage() {
-    const { currentBusiness, formatCurrency, formatDate } = useAppContext();
+    const { currentBusiness, formatCurrency, formatDate, authFetch } = useAppContext();
     const [dealers, setDealers] = useState([]);
+    const [modalOpen, setModalOpen] = useState(false);
+
+    useEffect(() => {
+        const businessKey = currentBusiness?.code === 'ARS-LUBE' ? 'ars_lube' : 'ars_lube';
+        setDealers(sundryDebtors[businessKey] || sundryDebtors.ars_lube);
+    }, [currentBusiness]);
+
+    const handleSave = async (data) => {
+        try {
+            const res = await authFetch('/api/debtors', {
+                method: 'POST',
+                body: JSON.stringify({ ...data, company_id: currentBusiness?.id })
+            });
+            const result = await res.json();
+            if (result.success) {
+                alert('Dealer added successfully!');
+                setModalOpen(false);
+            } else {
+                alert(result.message || 'Failed to save');
+            }
+        } catch (err) {
+            console.error('Save error:', err);
+            alert('Failed to save. Please try again.');
+        }
+    };
 
     useEffect(() => {
         const businessKey = currentBusiness?.code === 'ARS-LUBE' ? 'ars_lube' : 'ars_lube';
@@ -31,7 +58,7 @@ export default function LubeDealersPage() {
                         <p className="mt-1 text-sm text-gray-500">Track customer outstanding balances</p>
                     </div>
                     <button
-                        onClick={() => alert('Add Dealer feature is under development.')}
+                        onClick={() => setModalOpen(true)}
                         className="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
                     >
                         <PlusCircleIcon className="h-5 w-5" />
@@ -62,6 +89,11 @@ export default function LubeDealersPage() {
                     ))}
                 </div>
             </div>
+
+            {/* Modal for Dealer Form */}
+            <Modal open={modalOpen} setOpen={setModalOpen} title="Add Dealer">
+                <DebtorForm onSave={handleSave} onCancel={() => setModalOpen(false)} />
+            </Modal>
         </DashboardLayout>
     );
 }

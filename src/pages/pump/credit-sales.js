@@ -4,6 +4,8 @@
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import Modal from '@/components/ui/Modal';
+import SaleForm from '@/components/forms/SaleForm';
 import {
   CalendarDaysIcon,
   UserGroupIcon,
@@ -31,14 +33,48 @@ const TODAY_SALES = [
 ];
 
 export default function CreditSalesPage() {
-  const { formatCurrency } = useAppContext();
+  const { formatCurrency, authFetch, currentBusiness } = useAppContext();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [activeTab, setActiveTab] = useState('sales'); // sales, customers
+  const [modalState, setModalState] = useState({ open: false, title: '', type: null });
 
   // Calculate totals
   const todayTotal = TODAY_SALES.reduce((sum, s) => sum + s.amount, 0);
   const totalOutstanding = CREDIT_CUSTOMERS.reduce((sum, c) => sum + c.used, 0);
   const totalLimit = CREDIT_CUSTOMERS.reduce((sum, c) => sum + c.limit, 0);
+
+  // Modal handlers
+  const openModal = (type, title) => {
+    setModalState({ open: true, title, type });
+  };
+
+  const closeModal = () => {
+    setModalState({ open: false, title: '', type: null });
+  };
+
+  const handleSave = async (data) => {
+    try {
+      const res = await authFetch('/api/sales', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...data,
+          company_id: currentBusiness?.id,
+          paymentMethod: 'Credit' // Force credit payment for credit sales
+        })
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert('Credit sale recorded successfully!');
+        closeModal();
+        // TODO: Refresh data
+      } else {
+        alert(result.message || 'Failed to save');
+      }
+    } catch (err) {
+      console.error('Save error:', err);
+      alert('Failed to save. Please try again.');
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -62,7 +98,7 @@ export default function CreditSalesPage() {
               />
             </div>
             <button
-              onClick={() => alert('New Credit Sale feature is under development.')}
+              onClick={() => openModal('creditSale', 'New Credit Sale')}
               className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-md hover:bg-indigo-700"
             >
               <PlusIcon className="h-5 w-5 mr-1" />
@@ -101,8 +137,8 @@ export default function CreditSalesPage() {
             <button
               onClick={() => setActiveTab('sales')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'sales'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
               Today&apos;s Sales
@@ -110,8 +146,8 @@ export default function CreditSalesPage() {
             <button
               onClick={() => setActiveTab('customers')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'customers'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
               Credit Customers
@@ -233,14 +269,14 @@ export default function CreditSalesPage() {
 
                   <div className="mt-4 flex gap-2">
                     <button
-                      onClick={() => alert('Receive Payment feature is under development.')}
+                      onClick={() => alert('Receive Payment feature coming soon.')}
                       className="flex-1 px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700"
                     >
                       <BanknotesIcon className="h-4 w-4 inline mr-1" />
                       Receive Payment
                     </button>
                     <button
-                      onClick={() => alert('New Sale feature is under development.')}
+                      onClick={() => openModal('creditSale', 'New Sale for ' + customer.name)}
                       className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
                     >
                       <PlusIcon className="h-4 w-4 inline mr-1" />
@@ -253,6 +289,13 @@ export default function CreditSalesPage() {
           </div>
         )}
       </div>
+
+      {/* Modal for Credit Sale Form */}
+      <Modal open={modalState.open} setOpen={closeModal} title={modalState.title}>
+        {modalState.type === 'creditSale' && (
+          <SaleForm onSave={handleSave} onCancel={closeModal} />
+        )}
+      </Modal>
     </DashboardLayout>
   );
 }
