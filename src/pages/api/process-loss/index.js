@@ -9,8 +9,19 @@ export default async function handler(req, res) {
     switch (method) {
       case 'GET':
         if (!company_id) return res.status(400).json({ success: false, message: 'Company ID required' });
+
+        const { startDate, endDate } = req.query;
+        let whereClause = { company_id: String(company_id) };
+
+        if (startDate && endDate) {
+          whereClause.date = {
+            gte: new Date(startDate),
+            lte: new Date(new Date(endDate).setHours(23, 59, 59, 999))
+          };
+        }
+
         const losses = await prisma.process_loss.findMany({
-          where: { company_id: String(company_id) },
+          where: whereClause,
           orderBy: { date: 'desc' }
         });
         res.status(200).json({ success: true, data: losses });
