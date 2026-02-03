@@ -1,5 +1,6 @@
 // src/pages/reports/balance-sheet.js
 
+import { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { balanceSheetData } from '@/data/mockData';
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -32,37 +33,74 @@ const ReportSection = ({ title, items }) => {
 };
 
 export default function BalanceSheetPage() {
-  const { currentBusiness } = useAppContext();
-  const data = currentBusiness ? balanceSheetData[currentBusiness.id] : null;
+  const { currentBusiness, authFetch } = useAppContext();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  if (!data) {
-    return <DashboardLayout><div>Loading report data...</div></DashboardLayout>;
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!currentBusiness?.id || !authFetch) return;
+
+      try {
+        setLoading(true);
+        const res = await authFetch(`/api/reports?type=balance-sheet&companyId=${currentBusiness.id}`);
+        const json = await res.json();
+        
+        if (res.ok) {
+           setData(json);
+        } else {
+           setError(json.error || 'Failed to fetch report');
+        }
+      } catch (err) {
+        console.error(err);
+        setError('Failed to load report data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [currentBusiness, authFetch]);
+
+  if (loading) {
+    return <DashboardLayout><div className="p-8 text-center">Loading report data...</div></DashboardLayout>;
   }
 
-  const totalNonCurrentAssets = data.assets.nonCurrent.reduce((sum, item) => sum + item.amount, 0);
-  const totalCurrentAssets = data.assets.current.reduce((sum, item) => sum + item.amount, 0);
+  if (error || !data) {
+    return (
+        <DashboardLayout>
+            <div className="p-8 text-center text-red-600">
+                {error || 'No data available for this report.'}
+            </div>
+        </DashboardLayout>
+    );
+  }
+
+  const totalNonCurrentAssets = data.assets?.nonCurrent?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
+  const totalCurrentAssets = data.assets?.current?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
   const totalAssets = totalNonCurrentAssets + totalCurrentAssets;
 
-  const totalNonCurrentLiabilities = data.liabilities.nonCurrent.reduce((sum, item) => sum + item.amount, 0);
-  const totalCurrentLiabilities = data.liabilities.current.reduce((sum, item) => sum + item.amount, 0);
+  const totalNonCurrentLiabilities = data.liabilities?.nonCurrent?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
+  const totalCurrentLiabilities = data.liabilities?.current?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
   const totalLiabilities = totalNonCurrentLiabilities + totalCurrentLiabilities;
 
-  const totalEquity = data.equity.reduce((sum, item) => sum + item.amount, 0);
+  const totalEquity = data.equity?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
   const totalLiabilitiesAndEquity = totalLiabilities + totalEquity;
 
   return (
     <DashboardLayout>
       <PageHeader
         title="Balance Sheet"
-        description={`A statement of the financial position of ${currentBusiness.name} as at ${data.date}.`}
+        description={`A statement of the financial position of ${currentBusiness?.name} as at ${data.date}.`}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* ASSETS Column */}
         <div className="rounded-lg bg-white p-6 shadow">
             <h3 className="text-lg font-bold text-gray-900 border-b pb-2">ASSETS</h3>
-            <ReportSection title="Non-Current Assets" items={data.assets.nonCurrent} />
-            <ReportSection title="Current Assets" items={data.assets.current} />
+            <ReportSection title="Non-Current Assets" items={data.assets?.nonCurrent || []} />
+            <ReportSection title="Current Assets" items={data.assets?.current || []} />
             <div className="mt-4 pt-4 border-t-2 border-gray-800">
                 <ReportRow name="TOTAL ASSETS" amount={totalAssets} isTotal />
             </div>
@@ -71,9 +109,9 @@ export default function BalanceSheetPage() {
         {/* LIABILITIES & EQUITY Column */}
         <div className="rounded-lg bg-white p-6 shadow">
             <h3 className="text-lg font-bold text-gray-900 border-b pb-2">LIABILITIES & EQUITY</h3>
-            <ReportSection title="Non-Current Liabilities" items={data.liabilities.nonCurrent} />
-            <ReportSection title="Current Liabilities" items={data.liabilities.current} />
-            <ReportSection title="Shareholders' Equity" items={data.equity} />
+            <ReportSection title="Non-Current Liabilities" items={data.liabilities?.nonCurrent || []} />
+            <ReportSection title="Current Liabilities" items={data.liabilities?.current || []} />
+            <ReportSection title="Shareholders' Equity" items={data.equity || []} />
             <div className="mt-4 pt-4 border-t-2 border-gray-800">
                 <ReportRow name="TOTAL LIABILITIES & EQUITY" amount={totalLiabilitiesAndEquity} isTotal />
             </div>
