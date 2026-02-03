@@ -94,6 +94,8 @@ async function handler(req, res) {
                   name: customer,
                   sale_id: sale.id,
                   amount: totalAmount, // Track full amount as receivable initially
+                  originalAmount: totalAmount,
+                  paidAmount: 0,
                   due: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days default
                 }
               });
