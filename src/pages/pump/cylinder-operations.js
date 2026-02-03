@@ -4,8 +4,9 @@
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { 
-  CalendarDaysIcon, 
+import Modal from '@/components/ui/Modal';
+import {
+  CalendarDaysIcon,
   ArrowDownTrayIcon,
   ArrowUpTrayIcon,
   ArrowPathIcon,
@@ -62,7 +63,7 @@ export default function CylinderOperationsPage() {
       notes
     };
     setTransactions(prev => [newTx, ...prev]);
-    
+
     // Update stock based on transaction type
     if (type === 'receive') {
       handleStockChange(cylinderId, 'filled', qty);
@@ -154,7 +155,7 @@ export default function CylinderOperationsPage() {
               </button>
             </div>
           </div>
-          
+
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -184,11 +185,10 @@ export default function CylinderOperationsPage() {
                         {cylinder.weight} KG
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          cylinder.category === 'domestic' ? 'bg-green-100 text-green-800' :
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${cylinder.category === 'domestic' ? 'bg-green-100 text-green-800' :
                           cylinder.category === 'commercial' ? 'bg-blue-100 text-blue-800' :
-                          'bg-purple-100 text-purple-800'
-                        }`}>
+                            'bg-purple-100 text-purple-800'
+                          }`}>
                           {cylinder.category}
                         </span>
                       </td>
@@ -262,16 +262,14 @@ export default function CylinderOperationsPage() {
             ) : (
               <div className="space-y-2">
                 {transactions.map((tx) => (
-                  <div key={tx.id} className={`flex items-center justify-between p-3 rounded-lg ${
-                    tx.type === 'receive' ? 'bg-green-50' :
+                  <div key={tx.id} className={`flex items-center justify-between p-3 rounded-lg ${tx.type === 'receive' ? 'bg-green-50' :
                     tx.type === 'issue' ? 'bg-blue-50' : 'bg-gray-50'
-                  }`}>
+                    }`}>
                     <div className="flex items-center gap-3">
                       <span className="text-sm text-gray-500">{tx.time}</span>
-                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                        tx.type === 'receive' ? 'bg-green-200 text-green-800' :
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${tx.type === 'receive' ? 'bg-green-200 text-green-800' :
                         tx.type === 'issue' ? 'bg-blue-200 text-blue-800' : 'bg-gray-200 text-gray-800'
-                      }`}>
+                        }`}>
                         {tx.type.toUpperCase()}
                       </span>
                       <span className="font-medium text-gray-900">{tx.cylinderName}</span>
@@ -284,6 +282,66 @@ export default function CylinderOperationsPage() {
           </div>
         </div>
       </div>
+      {/* Transaction Modal */}
+      <Modal
+        open={showModal}
+        setOpen={setShowModal}
+        title={`${modalType === 'receive' ? 'Receive' : modalType === 'issue' ? 'Issue/Sell' : 'Return Empty'} Cylinders`}
+      >
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.target);
+          recordTransaction(
+            modalType,
+            formData.get('cylinderId'),
+            Number(formData.get('quantity')),
+            formData.get('notes')
+          );
+          setShowModal(false);
+        }} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Cylinder Type</label>
+            <select name="cylinderId" required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+              {CYLINDER_TYPES.map(type => (
+                <option key={type.id} value={type.id}>{type.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Quantity</label>
+            <input
+              type="number"
+              name="quantity"
+              required
+              min="1"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Notes</label>
+            <input
+              type="text"
+              name="notes"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            />
+          </div>
+          <div className="flex justify-end gap-3 mt-5">
+            <button
+              type="button"
+              onClick={() => setShowModal(false)}
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-indigo-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-indigo-700"
+            >
+              Save
+            </button>
+          </div>
+        </form>
+      </Modal>
     </DashboardLayout>
   );
 }

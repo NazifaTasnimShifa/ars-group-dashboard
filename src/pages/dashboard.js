@@ -106,13 +106,60 @@ export default function DashboardPage() {
     fetchDashboardData(range);
   };
 
-  // ... handleSave ...
+  // Modal handlers
+  const openModal = (type) => {
+    const formConfig = {
+      sale: { title: 'Add Sale Invoice', component: SaleForm },
+      purchase: { title: 'Add Purchase Order', component: PurchaseOrderForm },
+      product: { title: 'Add Inventory Item', component: InventoryItemForm },
+      debtor: { title: 'Add Customer / Debtor', component: DebtorForm },
+      creditor: { title: 'Add Supplier / Creditor', component: CreditorForm },
+    };
+    const config = formConfig[type];
+    if (config) {
+      setModalState({ open: true, title: config.title, content: type });
+    }
+  };
+
+  const closeModal = () => {
+    setModalState({ open: false, title: '', content: null });
+  };
+
+  const handleSave = async (data) => {
+    // Handle form submission - this will be called by the form components
+    try {
+      closeModal();
+      fetchDashboardData(dateRange); // Refresh dashboard data
+    } catch (err) {
+      console.error('Save error:', err);
+    }
+  };
+
+  const renderModalContent = () => {
+    switch (modalState.content) {
+      case 'sale':
+        return <SaleForm onSave={handleSave} onCancel={closeModal} />;
+      case 'purchase':
+        return <PurchaseOrderForm onSave={handleSave} onCancel={closeModal} />;
+      case 'product':
+        return <InventoryItemForm onSave={handleSave} onCancel={closeModal} />;
+      case 'debtor':
+        return <DebtorForm onSave={handleSave} onCancel={closeModal} />;
+      case 'creditor':
+        return <CreditorForm onSave={handleSave} onCancel={closeModal} />;
+      default:
+        return null;
+    }
+  };
 
   // ... render ... 
 
   return (
     <DashboardLayout>
-      {/* ... Modal ... */}
+      {/* Modal for Add New Items */}
+      <Modal open={modalState.open} setOpen={closeModal} title={modalState.title}>
+        {renderModalContent()}
+      </Modal>
 
       <div className="space-y-6">
         {/* Header with Switcher - Always Visible */}
