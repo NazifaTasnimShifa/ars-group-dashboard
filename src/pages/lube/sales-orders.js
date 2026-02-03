@@ -38,7 +38,10 @@ export default function LubeSalesOrdersPage() {
                         <h1 className="text-2xl font-bold text-gray-900">Sales Orders</h1>
                         <p className="mt-1 text-sm text-gray-500">Manage lubricant and fuel sales invoices</p>
                     </div>
-                    <button className="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                    <button
+                        onClick={() => alert('New Sale feature is under development.')}
+                        className="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                    >
                         <PlusCircleIcon className="h-5 w-5" />
                         New Sale
                     </button>

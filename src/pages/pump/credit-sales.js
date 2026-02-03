@@ -4,8 +4,8 @@
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { 
-  CalendarDaysIcon, 
+import {
+  CalendarDaysIcon,
   UserGroupIcon,
   PlusIcon,
   BanknotesIcon,
@@ -61,7 +61,10 @@ export default function CreditSalesPage() {
                 className="text-sm text-gray-700 border-0 focus:ring-0 p-0 bg-transparent"
               />
             </div>
-            <button className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-md hover:bg-indigo-700">
+            <button
+              onClick={() => alert('New Credit Sale feature is under development.')}
+              className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-md hover:bg-indigo-700"
+            >
               <PlusIcon className="h-5 w-5 mr-1" />
               New Credit Sale
             </button>
@@ -97,21 +100,19 @@ export default function CreditSalesPage() {
           <nav className="-mb-px flex space-x-8">
             <button
               onClick={() => setActiveTab('sales')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'sales'
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'sales'
                   ? 'border-indigo-500 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               Today&apos;s Sales
             </button>
             <button
               onClick={() => setActiveTab('customers')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'customers'
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'customers'
                   ? 'border-indigo-500 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               Credit Customers
             </button>
@@ -147,9 +148,8 @@ export default function CreditSalesPage() {
                         {sale.vehicle}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          sale.fuelType === 'Diesel' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
-                        }`}>
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${sale.fuelType === 'Diesel' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
+                          }`}>
                           {sale.fuelType}
                         </span>
                       </td>
@@ -186,11 +186,10 @@ export default function CreditSalesPage() {
             {CREDIT_CUSTOMERS.map((customer) => {
               const utilization = (customer.used / customer.limit) * 100;
               const isNearLimit = utilization > 80;
-              
+
               return (
-                <div key={customer.id} className={`bg-white rounded-xl shadow-sm border p-5 ${
-                  isNearLimit ? 'border-red-200' : 'border-gray-200'
-                }`}>
+                <div key={customer.id} className={`bg-white rounded-xl shadow-sm border p-5 ${isNearLimit ? 'border-red-200' : 'border-gray-200'
+                  }`}>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-blue-100 rounded-lg">
@@ -214,7 +213,7 @@ export default function CreditSalesPage() {
                       <span className="font-medium text-gray-900">{utilization.toFixed(0)}%</span>
                     </div>
                     <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className={`h-full transition-all ${isNearLimit ? 'bg-red-500' : 'bg-blue-500'}`}
                         style={{ width: `${utilization}%` }}
                       />
@@ -233,11 +232,17 @@ export default function CreditSalesPage() {
                   </div>
 
                   <div className="mt-4 flex gap-2">
-                    <button className="flex-1 px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700">
+                    <button
+                      onClick={() => alert('Receive Payment feature is under development.')}
+                      className="flex-1 px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700"
+                    >
                       <BanknotesIcon className="h-4 w-4 inline mr-1" />
                       Receive Payment
                     </button>
-                    <button className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700">
+                    <button
+                      onClick={() => alert('New Sale feature is under development.')}
+                      className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
+                    >
                       <PlusIcon className="h-4 w-4 inline mr-1" />
                       New Sale
                     </button>

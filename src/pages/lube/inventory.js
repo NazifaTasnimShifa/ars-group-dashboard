@@ -37,7 +37,10 @@ export default function LubeInventoryPage() {
                         <h1 className="text-2xl font-bold text-gray-900">Lube Inventory</h1>
                         <p className="mt-1 text-sm text-gray-500">View and manage lubricant stock levels</p>
                     </div>
-                    <button className="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                    <button
+                        onClick={() => alert('Add Product feature is under development.')}
+                        className="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                    >
                         <PlusCircleIcon className="h-5 w-5" />
                         Add Product
                     </button>

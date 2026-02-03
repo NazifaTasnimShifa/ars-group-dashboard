@@ -30,7 +30,10 @@ export default function LubeDealersPage() {
                         <h1 className="text-2xl font-bold text-gray-900">Dealers / Debtors</h1>
                         <p className="mt-1 text-sm text-gray-500">Track customer outstanding balances</p>
                     </div>
-                    <button className="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                    <button
+                        onClick={() => alert('Add Dealer feature is under development.')}
+                        className="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                    >
                         <PlusCircleIcon className="h-5 w-5" />
                         Add Dealer
                     </button>
@@ -52,8 +55,8 @@ export default function LubeDealersPage() {
                                 </div>
                             </div>
                             <div className="bg-gray-50 px-5 py-3 flex justify-between">
-                                <button className="text-sm text-indigo-600 hover:text-indigo-800">View Details</button>
-                                <button className="text-sm text-green-600 hover:text-green-800">Record Payment</button>
+                                <button onClick={() => alert('View Details feature is under development.')} className="text-sm text-indigo-600 hover:text-indigo-800">View Details</button>
+                                <button onClick={() => alert('Record Payment feature is under development.')} className="text-sm text-green-600 hover:text-green-800">Record Payment</button>
                             </div>
                         </div>
                     ))}
