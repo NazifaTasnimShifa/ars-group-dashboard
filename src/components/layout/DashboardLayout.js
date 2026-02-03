@@ -21,6 +21,8 @@ import {
   CubeIcon,
   BanknotesIcon,
   ClipboardDocumentListIcon,
+  Cog6ToothIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import { useAppContext } from '@/contexts/AppContext';
 
@@ -99,9 +101,19 @@ const getNavigation = (currentBusiness, isSuperOwner, userRole) => {
     { name: 'Fixed Assets', href: '/fixed-assets', icon: TruckIcon },
   ];
 
+  // Administration navigation (Super Owner only)
+  const adminNav = {
+    name: 'Administration',
+    href: '/owner',
+    icon: Cog6ToothIcon,
+    children: [
+      { name: 'User Management', href: '/owner/users' },
+    ],
+  };
+
   // Build navigation based on context and role
   let nav = [...baseNav];
-  
+
   if (isSuperOwner) {
     // Super Owner sees all navigations
     nav.push(pumpNav);
@@ -114,12 +126,18 @@ const getNavigation = (currentBusiness, isSuperOwner, userRole) => {
       nav.push(lubeNav);
     }
   }
-  
+
   // Cashiers don't see common navigation (reports, inventory, accounts, fixed assets)
   if (!isCashier) {
     nav = [...nav, ...commonNav];
   }
-  
+
+  // Add administration menu for Super Owner
+  if (isSuperOwner) {
+    nav.push(adminNav);
+  }
+
+
   return nav;
 };
 
@@ -319,9 +337,8 @@ export default function DashboardLayout({ children }) {
               <span className="text-sm text-gray-500">
                 {user?.name}
               </span>
-              <span className={`text-xs px-2 py-1 rounded-full ${
-                isSuperOwner ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-700'
-              }`}>
+              <span className={`text-xs px-2 py-1 rounded-full ${isSuperOwner ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-700'
+                }`}>
                 {user?.role?.displayName || 'User'}
               </span>
             </div>
