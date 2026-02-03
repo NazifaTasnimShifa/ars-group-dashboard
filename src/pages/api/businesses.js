@@ -2,8 +2,9 @@
 // API endpoint to list all businesses (for Super Owner company switching)
 
 import prisma from '@/lib/prisma';
+import { withAuth } from '@/lib/middleware';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
@@ -36,3 +37,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ message: 'Failed to fetch businesses' });
   }
 }
+
+export default withAuth(handler, ['SUPER_OWNER']);
