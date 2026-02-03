@@ -239,8 +239,13 @@ export default function DashboardPage() {
         </div>
         
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <CashFlowSummary />
-          <SalesPerformance />
+          {data.cashFlow && <CashFlowSummary data={data.cashFlow} />}
+          {data.salesPerformance && (
+              <SalesPerformance 
+                  achieved={data.salesPerformance.achieved} 
+                  target={data.salesPerformance.target} 
+              />
+          )}
         </div>
       </div>
     </DashboardLayout>

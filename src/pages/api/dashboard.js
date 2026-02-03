@@ -148,11 +148,28 @@ async function handler(req, res) {
     const payables = Number(creditorsData._sum.amount) || 0;
     const currentRatioValue = payables > 0 ? (receivables / payables).toFixed(2) : 0;
 
+    // --- 8. Sales Target (From Business Settings) ---
+    // Fetch settings for the first business in the list (or aggregate if multiple - simplified to first/sum for now)
+    // For proper multi-business, we'd sum targets.
+    const businessesWithSettings = await prisma.business.findMany({
+        where: { id: { in: businessIds } },
+        select: { settings: true }
+    });
+    
+    let totalTarget = 0;
+    businessesWithSettings.forEach(b => {
+        const settings = b.settings || {};
+        totalTarget += Number(settings.salesTarget || 10000000); // Default 1 Crore if not set
+    });
+    
+    // --- 9. Cash Flow Calculations ---
+    const operatingCashFlow = revenue - purchases - expenses;
+
     // --- Construct Response ---
     const dashboardData = {
       stats: [
         { name: 'Revenue', value: revenue, icon: 'BanknotesIcon' },
-        { name: 'Purchases', value: purchases, icon: 'ArrowUpIcon' }, // Changed from Today's Sales
+        { name: 'Purchases', value: purchases, icon: 'ArrowUpIcon' }, 
         { name: 'Receivables', value: receivables, icon: 'ArrowDownIcon' },
         { name: 'Payables', value: payables, icon: 'ArrowDownIcon' },
       ],
@@ -172,10 +189,19 @@ async function handler(req, res) {
         data: Object.values(revenueByCategory),
       },
       cashPulse: {
-        cashInToday: revenue, // Refers to Period Revenue now, effectively "Cash In Period"
-        cashOutToday: expenses, // Refers to Period Expenses
+        cashInToday: revenue, 
+        cashOutToday: expenses, 
         cashInHand: 0,
         totalBankBalance: 0
+      },
+      cashFlow: {
+          operating: operatingCashFlow,
+          investing: 0, // Placeholder
+          financing: 0  // Placeholder
+      },
+      salesPerformance: {
+          achieved: revenue,
+          target: totalTarget
       },
       operationalSnapshot: {
         totalSalesValue: revenue,
@@ -187,7 +213,7 @@ async function handler(req, res) {
       },
       revenueChart: {
         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-        data: [0, 0, 0, 0, 0, revenue, 0, 0, 0, 0, 0, 0] // Still placeholder, simply putting period revenue in Jun.
+        data: [0, 0, 0, 0, 0, revenue, 0, 0, 0, 0, 0, 0] 
       },
       companies: []
     };
