@@ -12,13 +12,26 @@ export default async function handler(req, res) {
     const company = await prisma.business.findUnique({ where: { id: String(companyId) } });
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
+    // Date Filtering Logic
+    const { startDate, endDate } = req.query;
+    let dateFilter = {};
+    
+    if (startDate && endDate) {
+        dateFilter = {
+            date: {
+                gte: new Date(startDate),
+                lte: new Date(new Date(endDate).setHours(23, 59, 59, 999))
+            }
+        };
+    }
+
     // --- 1. Fetch Live Data for Calculations (with fallbacks for missing data) ---
     
     // Revenue (Sum of Sales)
     let totalRevenue = 0;
     try {
       const salesAgg = await prisma.sales.aggregate({
-        where: { company_id: String(companyId) },
+        where: { company_id: String(companyId), ...dateFilter },
         _sum: { amount: true }
       });
       totalRevenue = Number(salesAgg._sum.amount || 0);
@@ -28,13 +41,18 @@ export default async function handler(req, res) {
     let totalPurchases = 0;
     try {
       const purchasesAgg = await prisma.purchases.aggregate({
-        where: { company_id: String(companyId) },
+        where: { company_id: String(companyId), ...dateFilter },
         _sum: { amount: true }
       });
       totalPurchases = Number(purchasesAgg._sum.amount || 0);
     } catch (e) { console.log('Purchases aggregate error:', e.message); }
 
-    // Inventory Value
+    // Inventory Value (Snapshot, typically not date filtered unless historical tracking exists)
+    // For now, Inventory Value is "Current", so we DO NOT apply date filter unless user wants "Assets received in this period"
+    // Standard accounting practice: Balance Sheet items are "As At". P&L items are "For Period".
+    // Decision: Keep Inventory as CURRENT value for Balance Sheet. 
+    // BUT for reports like "Inventory Movement", date would matter. 
+    // For simplicity in this dashboard, let's keep Inventory as CURRENT Value.
     let inventoryValue = 0;
     try {
       const inventoryItems = await prisma.inventory_items.findMany({
@@ -43,7 +61,7 @@ export default async function handler(req, res) {
       inventoryValue = inventoryItems.reduce((sum, item) => sum + (Number(item.stock || 0) * Number(item.costPrice || 0)), 0);
     } catch (e) { console.log('Inventory error:', e.message); }
 
-    // Fixed Assets
+    // Fixed Assets (Current Value)
     let totalFixedAssets = 0;
     let totalDepreciation = 0;
     try {
@@ -54,7 +72,11 @@ export default async function handler(req, res) {
       totalDepreciation = Number(assetsAgg._sum.accumulatedDepreciation || 0);
     } catch (e) { console.log('Fixed assets error:', e.message); }
 
-    // Debtors & Creditors
+    // Debtors & Creditors (Current Outstanding)
+    // Filtering Debtor/Creditor Balances by date is tricky (requires analyzing all transaction history).
+    // For MVP, we usually show CURRENT outstanding.
+    // However, for "Sales in Period" vs "Cash Collected in Period" etc., we need to be careful.
+    // Let's stick to Current Balances for Balance Sheet items.
     let totalReceivables = 0;
     try {
       const debtorsAgg = await prisma.sundry_debtors.aggregate({
@@ -74,6 +96,13 @@ export default async function handler(req, res) {
     } catch (e) { console.log('Creditors error:', e.message); }
 
     // Expenses (from Chart of Accounts or mock calc)
+    // Expenses SHOULD be filtered by date if they are transactional. 
+    // IF ChartOfAccount tracks specific transactions, we filter. 
+    // Currently ChartOfAccount is a balance. 
+    // TODO: Ideally we should query a "Transactions" table for expenses. 
+    // Since we don't have a dedicated General Ledger yet, we serve the 'balance' field.
+    // This limitation means Date Filtering on Expenses won't work perfectly until we have a Ledger.
+    // For now, we return the current balance.
     let expenses = [];
     let totalOperatingExpenses = 0;
     try {
@@ -83,7 +112,7 @@ export default async function handler(req, res) {
       totalOperatingExpenses = expenses.reduce((sum, acc) => sum + Number(acc.balance || 0), 0);
     } catch (e) { console.log('ChartOfAccount error:', e.message); }
 
-    // Cash (from Chart of Accounts)
+    // Cash (Current Balance)
     let totalCash = 0;
     try {
       const cashAccounts = await prisma.chartOfAccount.findMany({

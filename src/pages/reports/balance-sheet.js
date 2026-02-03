@@ -1,10 +1,11 @@
 // src/pages/reports/balance-sheet.js
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { balanceSheetData } from '@/data/mockData';
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from '@/components/ui/PageHeader';
+import DateRangeFilter from '@/components/ui/DateRangeFilter';
 
 const ReportRow = ({ name, amount, isTotal = false, isSubtotal = false, indent = false }) => {
     const formatCurrency = (val) => `৳${(val || 0).toLocaleString('en-IN')}`;    return (
@@ -37,14 +38,19 @@ export default function BalanceSheetPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = useCallback(async (range) => {
       if (!currentBusiness?.id || !authFetch) return;
+
+      const start = range?.startDate || dateRange.startDate;
+      const end = range?.endDate || dateRange.endDate;
+      
+      if (!start || !end) return;
 
       try {
         setLoading(true);
-        const res = await authFetch(`/api/reports?type=balance-sheet&companyId=${currentBusiness.id}`);
+        const res = await authFetch(`/api/reports?type=balance-sheet&companyId=${currentBusiness.id}&startDate=${start}&endDate=${end}`);
         const json = await res.json();
         
         if (res.ok) {
@@ -58,10 +64,12 @@ export default function BalanceSheetPage() {
       } finally {
         setLoading(false);
       }
-    };
+    }, [currentBusiness, authFetch, dateRange]);
 
-    fetchData();
-  }, [currentBusiness, authFetch]);
+    const handleFilterChange = (range) => {
+      setDateRange(range);
+      fetchData(range);
+    };
 
   if (loading) {
     return <DashboardLayout><div className="p-8 text-center">Loading report data...</div></DashboardLayout>;
@@ -94,6 +102,10 @@ export default function BalanceSheetPage() {
         title="Balance Sheet"
         description={`A statement of the financial position of ${currentBusiness?.name} as at ${data.date}.`}
       />
+
+      <div className="mb-4 flex justify-end">
+         <DateRangeFilter onFilterChange={handleFilterChange} />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* ASSETS Column */}

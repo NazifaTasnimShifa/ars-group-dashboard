@@ -1,9 +1,10 @@
 // src/pages/reports/income-statement.js
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from '@/components/ui/PageHeader';
+import DateRangeFilter from '@/components/ui/DateRangeFilter';
 
 const StatementRow = ({ name, amount, isTotal = false, isSubtotal = false, indent = false, isLoss = false }) => {
     const formatCurrency = (val) => `৳${(val || 0).toLocaleString('en-IN')}`;
@@ -25,14 +26,19 @@ export default function IncomeStatementPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = useCallback(async (range) => {
       if (!currentBusiness?.id || !authFetch) return;
+      
+      const start = range?.startDate || dateRange.startDate;
+      const end = range?.endDate || dateRange.endDate;
+      
+      if (!start || !end) return;
 
       try {
         setLoading(true);
-        const res = await authFetch(`/api/reports?type=income-statement&companyId=${currentBusiness.id}`);
+        const res = await authFetch(`/api/reports?type=income-statement&companyId=${currentBusiness.id}&startDate=${start}&endDate=${end}`);
         const json = await res.json();
         
         if (res.ok) {
@@ -47,10 +53,12 @@ export default function IncomeStatementPage() {
       } finally {
         setLoading(false);
       }
-    };
+    }, [currentBusiness, authFetch, dateRange]);
 
-    fetchData();
-  }, [currentBusiness, authFetch]);
+    const handleFilterChange = (range) => {
+      setDateRange(range);
+      fetchData(range);
+    };
 
   if (loading) {
      return <DashboardLayout><div className="p-8 text-center">Loading report data...</div></DashboardLayout>;
@@ -78,11 +86,18 @@ export default function IncomeStatementPage() {
       />
 
       <div className="max-w-4xl mx-auto">
+        <div className="mb-4 flex justify-end">
+            <DateRangeFilter onFilterChange={handleFilterChange} />
+        </div>
         <div className="rounded-lg bg-white p-6 shadow">
             <div className="text-center mb-4">
                 <h2 className="text-lg font-bold text-gray-900">{currentBusiness.name}</h2>
                 <p className="text-sm text-gray-500">Income Statement</p>
-                <p className="text-sm text-gray-500">{data.date}</p>
+                <p className="text-sm text-gray-500">
+                    {dateRange.startDate && dateRange.endDate ? 
+                        `${new Date(dateRange.startDate).toLocaleDateString()} - ${new Date(dateRange.endDate).toLocaleDateString()}` 
+                        : data?.date}
+                </p>
             </div>
 
             <div className="space-y-4">

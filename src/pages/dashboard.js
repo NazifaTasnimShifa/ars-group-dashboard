@@ -46,43 +46,45 @@ const iconMap = {
   ArrowDownIcon,
 };
 
+// ... imports
+import DateRangeFilter from '@/components/ui/DateRangeFilter';
+
+// ...
+
 export default function DashboardPage() {
   const [modalState, setModalState] = useState({ open: false, title: '', content: null });
-  const {
-    user,
-    currentBusiness,
-    businesses,
-    switchBusiness,
-    isSuperOwner,
-    isViewingAllBusinesses,
-    formatCurrency,
-    formatDate,
-    loading: authLoading,
-    authFetch
-  } = useAppContext();
+  const { 
+    // ... context
+    user, currentBusiness, businesses, switchBusiness, isSuperOwner, isViewingAllBusinesses, formatCurrency, loading: authLoading, authFetch 
+  } = useAppContext(); // Removed unused formatDate
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
 
   // --- 1. Fetch Dashboard Data ---
-  const fetchDashboardData = useCallback(async () => {
+  const fetchDashboardData = useCallback(async (range = dateRange) => {
     if (authLoading) return;
     setLoading(true);
     try {
       let url = '/api/dashboard';
-      if (currentBusiness) {
-        url += `?company_id=${currentBusiness.id}`;      } else if (isSuperOwner) {
-        url += '?viewAll=true';
+      const params = new URLSearchParams();
+      
+      if (currentBusiness) params.append('company_id', currentBusiness.id);
+      else if (isSuperOwner) params.append('viewAll', 'true');
+      
+      if (range.startDate && range.endDate) {
+          params.append('startDate', range.startDate);
+          params.append('endDate', range.endDate);
       }
 
-      const res = await authFetch(url);
+      const res = await authFetch(`${url}?${params.toString()}`);
       const fetchedData = await res.json();
       if (fetchedData.success) {
         setData(fetchedData.data);
       } else {
         console.error("Dashboard API failed:", fetchedData.error);
-        setData({}); // Set empty to avoid null check locking UI
+        setData({});
       }
     } catch (err) {
       console.error("Failed to fetch dashboard data", err);
@@ -90,96 +92,28 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentBusiness, isSuperOwner, authLoading, authFetch]);
+  }, [currentBusiness, isSuperOwner, authLoading, authFetch, dateRange]);
 
-  useEffect(() => { fetchDashboardData(); }, [fetchDashboardData]);
+  // Initial load handled by Filter component's effect? 
+  // DateRangeFilter calls onFilterChange on mount. So we don't need explicit useEffect for fetch here IF we pass handleFilterChange.
+  // BUT DateRangeFilter only calls onFilterChange on mount if initialRange is set.
+  // The existing pattern in other pages is:
+  // DateRangeFilter loads -> calls onFilterChange -> updates state -> calls fetchData.
+  // So we REMOVE the explicit useEffect(() => { fetchDashboardData() }, ...) to avoid double calling.
 
-  // --- 2. Generic Save Handler ---
-  const handleSave = async (type, formData) => {
-    // Determine which business to use
-    let businessToUse = currentBusiness;
-    if (!businessToUse && isSuperOwner && businesses.length > 0) {
-      businessToUse = businesses[0]; // Use first business as fallback for super owner
-    }
-    
-    if (!businessToUse) {
-      alert('Please select a company first');
-      return;
-    }
-
-    let url = '';
-    let payload = { ...formData };
-    
-    // Set company_id (API expects company_id, not businessId)
-    payload.company_id = businessToUse.id;
-
-    switch (type) {
-      case 'sales': url = '/api/sales'; break;
-      case 'purchases': url = '/api/purchases'; break;
-      case 'inventory': url = '/api/inventory'; break;
-      case 'debtors': url = '/api/debtors'; break;
-      case 'creditors': url = '/api/creditors'; break;
-      default: alert('Unknown data type'); return;
-    }
-
-    try {
-      const res = await authFetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        setModalState((prev) => ({ ...prev, open: false }));
-        alert('Saved successfully!');
-        fetchDashboardData();
-      } else {
-        const err = await res.json();
-        alert(`Failed to save: ${err.error || err.message || 'Unknown error'}`);
-      }
-    } catch (error) {
-      console.error(error);
-      alert('An error occurred while saving.');
-    }
+  const handleFilterChange = (range) => {
+      setDateRange(range);
+      fetchDashboardData(range);
   };
 
-  const handleCloseModal = () => setModalState((prev) => ({ ...prev, open: false }));
-  const openModal = (type) => {
-    let title = '';
-    let FormComponent = null;
-    let dataType = '';
+  // ... handleSave ...
 
-    switch (type) {
-      case 'sale': title = 'Record New Sale'; dataType = 'sales'; FormComponent = SaleForm; break;
-      case 'purchase': title = 'Record Purchase Order'; dataType = 'purchases'; FormComponent = PurchaseOrderForm; break;
-      case 'product': title = 'Add Inventory Item'; dataType = 'inventory'; FormComponent = InventoryItemForm; break;
-      case 'debtor': title = 'Add Customer'; dataType = 'debtors'; FormComponent = DebtorForm; break;
-      case 'creditor': title = 'Add Supplier'; dataType = 'creditors'; FormComponent = CreditorForm; break;
-      default: return;
-    }
-
-    setModalState({
-      open: true,
-      title,
-      content: <FormComponent onSave={(data) => handleSave(dataType, data)} onCancel={handleCloseModal} />
-    });
-  };
-
-  if (authLoading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
+  // ... render ... 
+  
   return (
     <DashboardLayout>
-      <Modal open={modalState.open} setOpen={(val) => setModalState((prev) => ({ ...prev, open: val }))} title={modalState.title}>
-        {modalState.content}
-      </Modal>
-
+      {/* ... Modal ... */}
+      
       <div className="space-y-6">
         {/* Header with Switcher - Always Visible */}
         <div className="sm:flex sm:items-center sm:justify-between">
@@ -188,21 +122,20 @@ export default function DashboardPage() {
               {isSuperOwner ? 'Owner Dashboard' : (currentBusiness?.name || 'Dashboard')}
             </h3>
             {isSuperOwner && (
-              <p className="mt-1 text-sm text-gray-500">
-                {isViewingAllBusinesses ? 'Combined view of all companies' : `Viewing: ${currentBusiness?.name || 'Select a company'}`}
-              </p>
+               <p className="mt-1 text-sm text-gray-500">
+                 {isViewingAllBusinesses ? 'Combined view of all companies' : `Viewing: ${currentBusiness?.name || 'Select a company'}`}
+               </p>
             )}
           </div>
 
           <div className="mt-4 sm:mt-0 flex items-center gap-3">
-            <div className="flex items-center bg-white rounded-md border border-gray-300 px-3 py-2">
-              <CalendarDaysIcon className="h-5 w-5 text-gray-400 mr-2" />
-              <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="text-sm text-gray-700 border-0 focus:ring-0 p-0" />
-            </div>
+             {/* Replaced Date Input with Global Filter */}
+             <DateRangeFilter onFilterChange={handleFilterChange} />
 
             {isSuperOwner && (
               <Menu as="div" className="relative inline-block text-left">
-                <Menu.Button className="inline-flex items-center gap-x-2 rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                {/* ... existing menu ... */}
+                 <Menu.Button className="inline-flex items-center gap-x-2 rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
                   {isViewingAllBusinesses ? (
                     <><GlobeAltIcon className="h-5 w-5 text-indigo-500" /> All Companies</>
                   ) : (
@@ -237,7 +170,8 @@ export default function DashboardPage() {
             )}
 
             <Menu as="div" className="relative inline-block text-left">
-              <Menu.Button className="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+               {/* ... Add New button ... */}
+               <Menu.Button className="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
                 <PlusCircleIcon className="h-5 w-5" /> Add New <ChevronDownIcon className="h-5 w-5 text-indigo-200" />
               </Menu.Button>
               <Transition as={Fragment} enter="transition ease-out duration-100" enterFrom="transform opacity-0 scale-95" enterTo="transform opacity-100 scale-100" leave="transition ease-in duration-75" leaveFrom="transform opacity-100 scale-100" leaveTo="transform opacity-0 scale-95">

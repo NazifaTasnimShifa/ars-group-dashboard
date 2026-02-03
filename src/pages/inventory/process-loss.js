@@ -5,7 +5,8 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import Modal from '@/components/ui/Modal';
 import PageStat from '@/components/ui/PageStat';
-import FilterButtons from '@/components/ui/FilterButtons';
+// import FilterButtons from '@/components/ui/FilterButtons';
+import DateRangeFilter from '@/components/ui/DateRangeFilter';
 import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon } from '@heroicons/react/20/solid';
 
 const ProcessLossForm = ({ loss, onSave, onCancel }) => {
@@ -59,20 +60,33 @@ export default function ProcessLossPage() {
   const { currentBusiness, authFetch } = useAppContext();
   const [losses, setLosses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (range) => {
     if (!currentBusiness) return;
+    
+    // key fix: use provided range or fallback to state
+    const start = range?.startDate || dateRange.startDate;
+    const end = range?.endDate || dateRange.endDate;
+    
+    if (!start || !end) return;
+
     setIsLoading(true);
     try {
-        // Correct API Endpoint
-        const res = await authFetch(`/api/process-loss?company_id=${currentBusiness.id}`);
+        const res = await authFetch(`/api/process-loss?company_id=${currentBusiness.id}&startDate=${start}&endDate=${end}`);
         const data = await res.json();
         if(data.success) setLosses(data.data);
     } catch (error) { console.error("Failed to fetch:", error); } 
     finally { setIsLoading(false); }
-  }, [currentBusiness]);
+  }, [currentBusiness, dateRange]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  // Initial fetch handled by Filter
+  // useEffect(() => { fetchData(); }, [fetchData]);
+  
+  const handleFilterChange = (range) => {
+      setDateRange(range);
+      fetchData(range);
+  };
 
   const handleSave = async (formData) => {
     const isAdd = modalState.mode === 'add';
@@ -102,16 +116,10 @@ export default function ProcessLossPage() {
     } catch (e) { console.error(e); }
   };
 
-  // ... (Rest of UI similar to before, filteredLosses logic etc.)
-  // Minimal UI render for brevity, ensure Table matches previous logic
-  
   const filteredLosses = useMemo(() => {
     if (!searchQuery) return losses;
     return losses.filter(loss => loss.product.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [losses, searchQuery]);
-
-  const handleAdd = () => setModalState({ open: true, mode: 'add', loss: null });
-  const handleEdit = (loss) => setModalState({ open: true, mode: 'edit', loss });
 
   return (
     <DashboardLayout>
@@ -122,9 +130,14 @@ export default function ProcessLossPage() {
         <button onClick={handleAdd} className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Record Loss</button>
       </PageHeader>
       <div className="rounded-lg bg-white p-6 shadow">
-        <div className="mb-4 w-full max-w-xs relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><MagnifyingGlassIcon className="h-5 w-5 text-gray-400" /></div>
-            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full rounded-md border-0 bg-white py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm" placeholder="Search..." type="search" />
+        <div className="mb-4 w-full flex justify-between items-center">
+             <div className="max-w-xs relative w-full">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><MagnifyingGlassIcon className="h-5 w-5 text-gray-400" /></div>
+                <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full rounded-md border-0 bg-white py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm" placeholder="Search..." type="search" />
+            </div>
+            <div className="mt-4 sm:mt-0 ml-4">
+                 <DateRangeFilter onFilterChange={handleFilterChange} />
+            </div>
         </div>
         <div className="flow-root">
           <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">

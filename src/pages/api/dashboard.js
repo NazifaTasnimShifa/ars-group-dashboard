@@ -9,7 +9,7 @@ async function handler(req, res) {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  const { company_id, viewAll } = req.query;
+  const { company_id, viewAll, startDate, endDate } = req.query;
 
   try {
     const isOwnerView = viewAll === 'true';
@@ -27,69 +27,80 @@ async function handler(req, res) {
       return res.status(200).json({ success: true, data: getEmptyDashboard() });
     }
 
-    // Date helpers
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // --- Date Filtering Logic ---
+    let dateFilter = {};
+    if (startDate && endDate) {
+      dateFilter = {
+        date: {
+          gte: new Date(startDate),
+          lte: new Date(new Date(endDate).setHours(23, 59, 59, 999))
+        }
+      };
+    } else {
+        // Default to Current Month if no dates provided (matches Frontend default)
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        dateFilter = {
+            date: {
+                gte: startOfMonth,
+                lte: now
+            }
+        };
+    }
 
-    // --- 1. Sales Today ---
-    const salesToday = await prisma.sales.aggregate({
+    // --- 1. Sales (Revenue) in Period ---
+    const salesData = await prisma.sales.aggregate({
       where: {
         company_id: { in: businessIds },
-        date: { gte: today, lt: tomorrow }
+        ...dateFilter
       },
       _sum: { totalAmount: true },
       _count: true
     });
 
-    // --- 2. Purchases This Month ---
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    const purchasesMonth = await prisma.purchases.aggregate({
+    // --- 2. Purchases in Period ---
+    const purchasesData = await prisma.purchases.aggregate({
       where: {
         company_id: { in: businessIds },
-        date: { gte: monthStart }
+        ...dateFilter
       },
       _sum: { amount: true }
     });
 
-    // --- 3. Total Sales (All Time for Revenue) ---
-    const totalSales = await prisma.sales.aggregate({
-      where: { company_id: { in: businessIds } },
-      _sum: { totalAmount: true }
-    });
-
-    // --- 4. Total Purchases (All Time for COGS) ---
-    const totalPurchases = await prisma.purchases.aggregate({
-      where: { company_id: { in: businessIds } },
+    // --- 3. Expenses in Period ---
+    const expensesData = await prisma.expenses.aggregate({
+      where: {
+        company_id: { in: businessIds },
+        ...dateFilter
+      },
       _sum: { amount: true }
     });
 
-    // --- 5. Total Expenses ---
-    const totalExpenses = await prisma.expenses.aggregate({
-      where: { company_id: { in: businessIds } },
-      _sum: { amount: true }
-    });
-
-    // --- 6. Top Expenses ---
+    // --- 4. Top Expenses in Period ---
     const topExpenses = await prisma.expenses.groupBy({
       by: ['category'],
-      where: { company_id: { in: businessIds } },
+      where: { 
+          company_id: { in: businessIds },
+          ...dateFilter
+      },
       _sum: { amount: true },
       orderBy: { _sum: { amount: 'desc' } },
       take: 5
     });
 
-    // --- 7. Revenue Sources (by product category) ---
+    // --- 5. Revenue Sources in Period ---
     const revenueSources = await prisma.sale_items.groupBy({
       by: ['product_id'],
       where: {
-        sale: { company_id: { in: businessIds } }
+        sale: { 
+            company_id: { in: businessIds },
+            ...dateFilter
+        }
       },
       _sum: { price: true }
     });
 
-    // Get product names for revenue sources
+    // Get product details
     const productIds = revenueSources.map(r => r.product_id);
     const products = await prisma.inventory_items.findMany({
       where: { id: { in: productIds } },
@@ -107,30 +118,32 @@ async function handler(req, res) {
       revenueByCategory[cat] = (revenueByCategory[cat] || 0) + Number(r._sum.price || 0);
     }
 
-    // --- 8. Receivables (Sundry Debtors) ---
+    // --- 6. Receivables (Snapshot - Always All Time) ---
     const debtorsData = await prisma.sundry_debtors.aggregate({
       where: { company_id: { in: businessIds } },
       _sum: { amount: true }
     });
 
-    // --- 9. Payables (Sundry Creditors) ---
+    // --- 7. Payables (Snapshot - Always All Time) ---
     const creditorsData = await prisma.sundry_creditors.aggregate({
       where: { company_id: { in: businessIds } },
       _sum: { amount: true }
     });
 
-    // --- Calculate Ratios ---
-    const revenue = Number(totalSales._sum.totalAmount) || 0;
-    const cogs = Number(totalPurchases._sum.amount) || 0;
-    const expenses = Number(totalExpenses._sum.amount) || 0;
-    const grossProfit = revenue - cogs;
+    // --- Calculations ---
+    const revenue = Number(salesData._sum.totalAmount) || 0;
+    const purchases = Number(purchasesData._sum.amount) || 0;
+    const expenses = Number(expensesData._sum.amount) || 0;
+    
+    // Simple Gross Profit (Revenue - Purchases). note: Accounting-wise this should be COGS, 
+    // but assuming Purchases ~ COGS for simple dashboard or we'd need opening/closing stock. 
+    // Sticking to simplified logic: GP = Revenue - Purchases
+    const grossProfit = revenue - purchases;
     const netProfit = grossProfit - expenses;
 
     const grossMargin = revenue > 0 ? ((grossProfit / revenue) * 100).toFixed(2) : 0;
     const netMargin = revenue > 0 ? ((netProfit / revenue) * 100).toFixed(2) : 0;
 
-    // Current Ratio (Current Assets / Current Liabilities)
-    // Simplified: Receivables / Payables
     const receivables = Number(debtorsData._sum.amount) || 0;
     const payables = Number(creditorsData._sum.amount) || 0;
     const currentRatioValue = payables > 0 ? (receivables / payables).toFixed(2) : 0;
@@ -138,8 +151,8 @@ async function handler(req, res) {
     // --- Construct Response ---
     const dashboardData = {
       stats: [
-        { name: 'Total Revenue', value: revenue, icon: 'BanknotesIcon' },
-        { name: "Today's Sales", value: Number(salesToday._sum.totalAmount) || 0, icon: 'ArrowUpIcon' },
+        { name: 'Revenue', value: revenue, icon: 'BanknotesIcon' },
+        { name: 'Purchases', value: purchases, icon: 'ArrowUpIcon' }, // Changed from Today's Sales
         { name: 'Receivables', value: receivables, icon: 'ArrowDownIcon' },
         { name: 'Payables', value: payables, icon: 'ArrowDownIcon' },
       ],
@@ -159,13 +172,13 @@ async function handler(req, res) {
         data: Object.values(revenueByCategory),
       },
       cashPulse: {
-        cashInToday: Number(salesToday._sum.totalAmount) || 0,
-        cashOutToday: 0,
+        cashInToday: revenue, // Refers to Period Revenue now, effectively "Cash In Period"
+        cashOutToday: expenses, // Refers to Period Expenses
         cashInHand: 0,
         totalBankBalance: 0
       },
       operationalSnapshot: {
-        totalSalesValue: Number(salesToday._sum.totalAmount) || 0,
+        totalSalesValue: revenue,
         currentOutstanding: receivables
       },
       liabilityWatch: {
@@ -174,7 +187,7 @@ async function handler(req, res) {
       },
       revenueChart: {
         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-        data: [0, 0, 0, 0, 0, revenue, 0, 0, 0, 0, 0, 0] // Placeholder - current month has data
+        data: [0, 0, 0, 0, 0, revenue, 0, 0, 0, 0, 0, 0] // Still placeholder, simply putting period revenue in Jun.
       },
       companies: []
     };
