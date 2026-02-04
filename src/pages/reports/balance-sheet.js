@@ -71,6 +71,12 @@ export default function BalanceSheetPage() {
       fetchData(range);
     };
 
+    useEffect(() => {
+        if (currentBusiness?.id && dateRange.startDate && dateRange.endDate) {
+            fetchData(dateRange);
+        }
+    }, [currentBusiness, dateRange, fetchData]);
+
   if (loading) {
     return <DashboardLayout><div className="p-8 text-center">Loading report data...</div></DashboardLayout>;
   }
