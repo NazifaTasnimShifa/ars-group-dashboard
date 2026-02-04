@@ -27,7 +27,7 @@ export default function SaleForm({ sale, onSave, onCancel }) {
     async function fetchProducts() {
       try {
         let url = '/api/inventory';
-        
+
         if (currentBusiness?.id) {
           // Specific business selected
           url += `?company_id=${currentBusiness.id}`;
@@ -38,7 +38,7 @@ export default function SaleForm({ sale, onSave, onCancel }) {
           setLoading(false);
           return;
         }
-        
+
         const res = await authFetch(url);
         const data = await res.json();
         if (data.success) {
@@ -157,7 +157,7 @@ export default function SaleForm({ sale, onSave, onCancel }) {
               onChange={handleChange}
               required
               placeholder="Walk-in Customer"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             />
           </div>
           <div>
@@ -168,7 +168,7 @@ export default function SaleForm({ sale, onSave, onCancel }) {
               value={formData.date}
               onChange={handleChange}
               required
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             />
           </div>
         </div>
@@ -273,7 +273,7 @@ export default function SaleForm({ sale, onSave, onCancel }) {
               name="paymentMethod"
               value={formData.paymentMethod}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             >
               <option value="Cash">Cash</option>
               <option value="Card">Card</option>
@@ -289,7 +289,7 @@ export default function SaleForm({ sale, onSave, onCancel }) {
               name="status"
               value={formData.status}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             >
               <option value="Paid">Paid</option>
               <option value="Unpaid">Unpaid</option>
@@ -307,7 +307,7 @@ export default function SaleForm({ sale, onSave, onCancel }) {
             value={formData.notes}
             onChange={handleChange}
             placeholder="Any additional notes..."
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
         </div>
       </div>

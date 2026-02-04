@@ -27,7 +27,7 @@ export default function PurchaseOrderForm({ purchase, onSave, onCancel }) {
     async function fetchProducts() {
       try {
         let url = '/api/inventory';
-        
+
         if (currentBusiness?.id) {
           url += `?company_id=${currentBusiness.id}`;
         } else if (isSuperOwner && businesses.length > 0) {
@@ -36,7 +36,7 @@ export default function PurchaseOrderForm({ purchase, onSave, onCancel }) {
           setLoading(false);
           return;
         }
-        
+
         const res = await authFetch(url);
         const data = await res.json();
         if (data.success) {
@@ -150,7 +150,7 @@ export default function PurchaseOrderForm({ purchase, onSave, onCancel }) {
               onChange={handleChange}
               required
               placeholder="Supplier Name"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             />
           </div>
           <div>
@@ -161,7 +161,7 @@ export default function PurchaseOrderForm({ purchase, onSave, onCancel }) {
               value={formData.date}
               onChange={handleChange}
               required
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             />
           </div>
         </div>
@@ -174,7 +174,7 @@ export default function PurchaseOrderForm({ purchase, onSave, onCancel }) {
             name="referenceNumber"
             value={formData.referenceNumber}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
         </div>
 
@@ -278,7 +278,7 @@ export default function PurchaseOrderForm({ purchase, onSave, onCancel }) {
               name="status"
               value={formData.status}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             >
               <option value="Paid">Paid</option>
               <option value="Unpaid">Unpaid</option>
@@ -298,7 +298,7 @@ export default function PurchaseOrderForm({ purchase, onSave, onCancel }) {
             value={formData.notes}
             onChange={handleChange}
             placeholder="Delivery instructions..."
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
         </div>
       </div>

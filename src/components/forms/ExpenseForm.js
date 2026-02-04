@@ -72,7 +72,7 @@ export default function ExpenseForm({ expense, onSave, onCancel }) {
                             value={formData.category}
                             onChange={handleChange}
                             required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                         >
                             <option value="">Select category...</option>
                             {EXPENSE_CATEGORIES.map(cat => (
@@ -88,7 +88,7 @@ export default function ExpenseForm({ expense, onSave, onCancel }) {
                             value={formData.date}
                             onChange={handleChange}
                             required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                         />
                     </div>
                 </div>
@@ -102,7 +102,7 @@ export default function ExpenseForm({ expense, onSave, onCancel }) {
                         value={formData.description}
                         onChange={handleChange}
                         placeholder="e.g., Office electricity bill for December"
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                     />
                 </div>
 
@@ -119,7 +119,7 @@ export default function ExpenseForm({ expense, onSave, onCancel }) {
                             min="0"
                             step="0.01"
                             placeholder="0.00"
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                         />
                     </div>
                     <div>
@@ -128,7 +128,7 @@ export default function ExpenseForm({ expense, onSave, onCancel }) {
                             name="status"
                             value={formData.status}
                             onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                         >
                             <option value="Paid">Paid</option>
                             <option value="Accrued">Accrued (Pending Payment)</option>
@@ -146,7 +146,7 @@ export default function ExpenseForm({ expense, onSave, onCancel }) {
                             value={formData.payeeName}
                             onChange={handleChange}
                             placeholder="e.g., Electricity Company Ltd"
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                         />
                         <p className="mt-1 text-sm text-gray-500">
                             A creditor entry will be created for this payee
@@ -162,7 +162,7 @@ export default function ExpenseForm({ expense, onSave, onCancel }) {
                             name="paymentMethod"
                             value={formData.paymentMethod}
                             onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                         >
                             <option value="Cash">Cash</option>
                             <option value="Bank Transfer">Bank Transfer</option>
@@ -181,7 +181,7 @@ export default function ExpenseForm({ expense, onSave, onCancel }) {
                         value={formData.notes}
                         onChange={handleChange}
                         placeholder="Any additional notes..."
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                     />
                 </div>
             </div>
