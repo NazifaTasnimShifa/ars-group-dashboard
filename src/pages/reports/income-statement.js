@@ -24,11 +24,13 @@ const StatementRow = ({ name, amount, isTotal = false, isSubtotal = false, inden
 export default function IncomeStatementPage() {
   const { currentBusiness, authFetch } = useAppContext();
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Start with false to avoid infinite loading if context isn't ready immediately
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
 
   const fetchData = useCallback(async (range) => {
+      // Return early but DO NOT block UI in endless loading state
       if (!currentBusiness?.id || !authFetch) return;
       
       const start = range?.startDate || dateRange.startDate;

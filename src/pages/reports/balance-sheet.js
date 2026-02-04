@@ -36,7 +36,7 @@ const ReportSection = ({ title, items }) => {
 export default function BalanceSheetPage() {
   const { currentBusiness, authFetch } = useAppContext();
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
 

@@ -11,7 +11,7 @@ const formatCurrency = (val) => val === 0 ? '-' : `৳${(val || 0).toLocaleStrin
 export default function TrialBalancePage() {
   const { currentBusiness, authFetch } = useAppContext();
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
 
