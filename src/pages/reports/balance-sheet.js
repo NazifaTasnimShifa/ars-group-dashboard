@@ -86,13 +86,26 @@ export default function BalanceSheetPage() {
         <DashboardLayout>
             <div className="p-8 text-center text-red-600">
                 {error}
+                <button onClick={() => fetchData(dateRange)} className="ml-4 underline">Retry</button>
             </div>
         </DashboardLayout>
     );
   }
 
   if (!data) {
-      return <DashboardLayout><div className="p-8 text-center text-gray-500">Initializing report...</div></DashboardLayout>;
+      return (
+        <DashboardLayout>
+            <div className="p-8 text-center text-gray-500">
+                Initializing report...
+                {!currentBusiness ? ' (Waiting for Business Context)' : ''}
+                {!dateRange.startDate ? ' (Waiting for Dates)' : ''}
+                <br/>
+                <button onClick={() => fetchData(dateRange)} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded">
+                    Load Report
+                </button>
+            </div>
+        </DashboardLayout>
+      );
   }
 
   const totalNonCurrentAssets = data.assets?.nonCurrent?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
