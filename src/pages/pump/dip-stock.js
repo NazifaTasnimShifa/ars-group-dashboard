@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
+import { withAuth } from '@/lib/middleware';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { 
   CalendarDaysIcon, 
@@ -28,7 +29,7 @@ const INITIAL_READINGS = {
   'T4': { openingDip: 8500, closingDip: null, liftingToday: 0 },
 };
 
-export default function DipStockPage() {
+function DipStockPage() {
   const { formatCurrency } = useAppContext();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [readings, setReadings] = useState(INITIAL_READINGS);
@@ -215,4 +216,5 @@ export default function DipStockPage() {
       </div>
     </DashboardLayout>
   );
-}
+
+export default withAuth(DipStockPage, ['MANAGER', 'PUMP_ATTENDANT', 'ADMIN']);

@@ -31,6 +31,20 @@ export function AppProvider({ children }) {
 
       const res = await fetch('/api/businesses', { headers });
 
+      if (res.status === 401) {
+        // Token invalid or expired
+        console.warn("Token expired or invalid during business fetch. Clearing session.");
+        sessionStorage.removeItem('ars_token');
+        sessionStorage.removeItem('ars_user');
+        sessionStorage.removeItem('ars_current_business');
+        setUser(null);
+        setToken(null);
+        setIsAuthenticated(false);
+        // Optional: Redirect to login
+        // router.push('/login'); 
+        return [];
+      }
+
       if (!res.ok) {
         throw new Error(`Failed to fetch businesses: ${res.status}`);
       }

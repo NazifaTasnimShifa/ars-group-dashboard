@@ -209,7 +209,7 @@ export default function CreditSalesPage() {
                           {new Date(sale.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {sale.customerName || 'Unknown'}
+                          {sale.customer || sale.customerName || 'Unknown'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {sale.vehicleNumber || '-'}

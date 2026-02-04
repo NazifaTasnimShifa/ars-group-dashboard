@@ -1,8 +1,9 @@
 // src/pages/pump/cylinder-operations.js
 // ARS Corporation - Gas Cylinder Operations Page
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
+import { withAuth } from '@/lib/middleware';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Modal from '@/components/ui/Modal';
 import {
@@ -28,13 +29,14 @@ const INITIAL_STOCK = {
   'LPG-45': { filled: 6, empty: 4 },
 };
 
-export default function CylinderOperationsPage() {
-  const { formatCurrency } = useAppContext();
+function CylinderOperationsPage() {
+  const { formatCurrency, authFetch, isAuthenticated } = useAppContext();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [stock, setStock] = useState(INITIAL_STOCK);
   const [transactions, setTransactions] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('receive'); // receive, issue, swap
+
 
   // Calculate totals
   const totalFilled = Object.values(stock).reduce((sum, s) => sum + s.filled, 0);
@@ -51,27 +53,63 @@ export default function CylinderOperationsPage() {
     }));
   };
 
-  // Record transaction
-  const recordTransaction = (type, cylinderId, qty, notes) => {
-    const newTx = {
-      id: Date.now(),
-      time: new Date().toLocaleTimeString('en-BD', { hour: '2-digit', minute: '2-digit' }),
-      type,
-      cylinderId,
-      cylinderName: CYLINDER_TYPES.find(c => c.id === cylinderId)?.name,
-      qty,
-      notes
-    };
-    setTransactions(prev => [newTx, ...prev]);
+  // Fetch data
+  const fetchData = async () => {
+      try {
+        const res = await authFetch('/api/pump/cylinders');
+        const result = await res.json();
+        if (result.success && result.data?.stocks) {
+            // Map API stock to local format
+            const newStock = { ...stock };
+            result.data.stocks.forEach(item => {
+                newStock[item.cylinderTypeId] = {
+                    filled: item.filledQty,
+                    empty: item.emptyQty
+                };
+            });
+            setStock(newStock);
+        }
+      } catch (err) {
+        console.error("Failed to fetch cylinder data", err);
+      }
+  };
 
-    // Update stock based on transaction type
-    if (type === 'receive') {
-      handleStockChange(cylinderId, 'filled', qty);
-    } else if (type === 'issue') {
-      handleStockChange(cylinderId, 'filled', -qty);
-      handleStockChange(cylinderId, 'empty', qty);
-    } else if (type === 'return') {
-      handleStockChange(cylinderId, 'empty', -qty);
+  useEffect(() => {
+    if (isAuthenticated) {
+        fetchData();
+    }
+  }, [isAuthenticated]);
+
+  // Record transaction
+  const recordTransaction = async (type, cylinderId, qty, notes) => {
+    try {
+        const res = await authFetch('/api/pump/cylinders', {
+            method: 'POST',
+            body: JSON.stringify({ type, cylinderId, quantity: qty, notes })
+        });
+        const result = await res.json();
+        
+        if (result.success) {
+            // Update local UI
+            const newTx = {
+              id: Date.now(),
+              time: new Date().toLocaleTimeString('en-BD', { hour: '2-digit', minute: '2-digit' }),
+              type,
+              cylinderId,
+              cylinderName: CYLINDER_TYPES.find(c => c.id === cylinderId)?.name,
+              qty,
+              notes
+            };
+            setTransactions(prev => [newTx, ...prev]);
+
+            // Refresh stock from server to be sure
+            fetchData();
+        } else {
+            alert(result.message || "Failed to record transaction");
+        }
+    } catch (err) {
+        console.error("Transaction failed", err);
+        alert("Transaction failed");
     }
   };
 
@@ -344,4 +382,5 @@ export default function CylinderOperationsPage() {
       </Modal>
     </DashboardLayout>
   );
-}
+
+export default withAuth(CylinderOperationsPage, ['MANAGER', 'PUMP_ATTENDANT', 'ADMIN']);
