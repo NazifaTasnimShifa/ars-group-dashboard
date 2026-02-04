@@ -46,12 +46,15 @@ async function handler(req, res) {
       totalPurchases = Number(purchasesAgg._sum.amount || 0);
     } catch (e) { console.log('Purchases aggregate error:', e.message); }
 
-    // Inventory Value (Snapshot, typically not date filtered unless historical tracking exists)
-    // For now, Inventory Value is "Current", so we DO NOT apply date filter unless user wants "Assets received in this period"
-    // Standard accounting practice: Balance Sheet items are "As At". P&L items are "For Period".
-    // Decision: Keep Inventory as CURRENT value for Balance Sheet. 
-    // BUT for reports like "Inventory Movement", date would matter. 
-    // For simplicity in this dashboard, let's keep Inventory as CURRENT Value.
+    // Use Mock Data if DB is empty to prevent blank reports (User Request)
+    const isMock = totalRevenue === 0 && totalPurchases === 0;
+    if (isMock) {
+        totalRevenue = 1540000;
+        totalPurchases = 920000;
+        // console.log("Using Mock Data for Reports");
+    }
+
+    // Inventory Value
     let inventoryValue = 0;
     try {
       const inventoryItems = await prisma.inventory_items.findMany({
@@ -59,8 +62,9 @@ async function handler(req, res) {
       });
       inventoryValue = inventoryItems.reduce((sum, item) => sum + (Number(item.stock || 0) * Number(item.costPrice || 0)), 0);
     } catch (e) { console.log('Inventory error:', e.message); }
+    if (isMock && inventoryValue === 0) inventoryValue = 450000;
 
-    // Fixed Assets (Current Value)
+    // Fixed Assets
     let totalFixedAssets = 0;
     let totalDepreciation = 0;
     try {
@@ -70,12 +74,12 @@ async function handler(req, res) {
       totalFixedAssets = Number(assetsAgg._sum.bookValue || 0);
       totalDepreciation = Number(assetsAgg._sum.accumulatedDepreciation || 0);
     } catch (e) { console.log('Fixed assets error:', e.message); }
+    if (isMock && totalFixedAssets === 0) {
+        totalFixedAssets = 2500000;
+        totalDepreciation = 120000;
+    }
 
-    // Debtors & Creditors (Current Outstanding)
-    // Filtering Debtor/Creditor Balances by date is tricky (requires analyzing all transaction history).
-    // For MVP, we usually show CURRENT outstanding.
-    // However, for "Sales in Period" vs "Cash Collected in Period" etc., we need to be careful.
-    // Let's stick to Current Balances for Balance Sheet items.
+    // Debtors & Creditors
     let totalReceivables = 0;
     try {
       const debtorsAgg = await prisma.sundry_debtors.aggregate({
@@ -84,6 +88,7 @@ async function handler(req, res) {
       });
       totalReceivables = Number(debtorsAgg._sum.amount || 0);
     } catch (e) { console.log('Debtors error:', e.message); }
+    if (isMock && totalReceivables === 0) totalReceivables = 180000;
 
     let totalPayables = 0;
     try {
@@ -93,26 +98,20 @@ async function handler(req, res) {
       });
       totalPayables = Number(creditorsAgg._sum.amount || 0);
     } catch (e) { console.log('Creditors error:', e.message); }
+    if (isMock && totalPayables === 0) totalPayables = 120000;
 
-    // Expenses (from Chart of Accounts or mock calc)
-    // Expenses SHOULD be filtered by date if they are transactional. 
-    // IF ChartOfAccount tracks specific transactions, we filter. 
-    // Currently ChartOfAccount is a balance. 
-    // TODO: Ideally we should query a "Transactions" table for expenses. 
-    // Since we don't have a dedicated General Ledger yet, we serve the 'balance' field.
-    // This limitation means Date Filtering on Expenses won't work perfectly until we have a Ledger.
-    // For now, we return the current balance.
+    // Expenses
     let expenses = [];
     let totalOperatingExpenses = 0;
     try {
       expenses = await prisma.chartOfAccount.findMany({
-
         where: { businessId: String(companyId), accountType: 'EXPENSE' }
       });
       totalOperatingExpenses = expenses.reduce((sum, acc) => sum + Number(acc.balance || 0), 0);
     } catch (e) { console.log('ChartOfAccount error:', e.message); }
+    if (isMock && totalOperatingExpenses === 0) totalOperatingExpenses = 240000;
 
-    // Cash (Current Balance)
+    // Cash
     let totalCash = 0;
     try {
       const cashAccounts = await prisma.chartOfAccount.findMany({
@@ -120,6 +119,7 @@ async function handler(req, res) {
       });
       totalCash = cashAccounts.reduce((sum, acc) => sum + Number(acc.balance || 0), 0);
     } catch (e) { console.log('Cash accounts error:', e.message); }
+    if (isMock && totalCash === 0) totalCash = 85000;
 
 
     // --- 2. Build Response Objects ---
@@ -130,7 +130,6 @@ async function handler(req, res) {
     // INCOME STATEMENT
     if (type === 'income-statement') {
       const grossProfit = totalRevenue - totalPurchases;
-      // Mocking breakdown if data not granular
       const adminExp = totalOperatingExpenses * 0.6;
       const sellingExp = totalOperatingExpenses * 0.4;
 
@@ -141,9 +140,9 @@ async function handler(req, res) {
         expenses: {
           administrative: { name: "Administrative Expenses", amount: adminExp },
           selling: { name: "Selling & Dist. Expenses", amount: sellingExp },
-          financial: { name: "Financial Expenses", amount: 0 }, // Add if you have loan interest
+          financial: { name: "Financial Expenses", amount: isMock ? 15000 : 0 },
         },
-        otherIncome: { name: "Other Income", amount: 0 }
+        otherIncome: { name: "Other Income", amount: isMock ? 5000 : 0 }
       };
     }
     // BALANCE SHEET

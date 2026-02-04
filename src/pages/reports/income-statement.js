@@ -72,6 +72,20 @@ export default function IncomeStatementPage() {
      return <DashboardLayout><div className="p-8 text-center">Loading report data...</div></DashboardLayout>;
   }
 
+  if (error) {
+     return (
+        <DashboardLayout>
+            <div className="p-8 text-center text-red-600">
+                {error}
+            </div>
+        </DashboardLayout>
+    );
+  }
+
+  if (!data) {
+      return <DashboardLayout><div className="p-8 text-center text-gray-500">Initializing report...</div></DashboardLayout>;
+  }
+
   if (error || !data || !data.revenue) {
      return (
         <DashboardLayout>

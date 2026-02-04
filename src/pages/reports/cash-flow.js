@@ -83,14 +83,18 @@ export default function CashFlowPage() {
      return <DashboardLayout><div className="p-8 text-center">Loading report data...</div></DashboardLayout>;
   }
 
-  if (error || !data || !data.operating) {
+  if (error) {
      return (
         <DashboardLayout>
             <div className="p-8 text-center text-red-600">
-                {error || 'No data available for this report.'}
+                {error}
             </div>
         </DashboardLayout>
     );
+  }
+
+  if (!data) {
+      return <DashboardLayout><div className="p-8 text-center text-gray-500">Initializing report...</div></DashboardLayout>;
   }
 
   const totalOperating = data.operating.reduce((sum, item) => sum + item.amount, 0);

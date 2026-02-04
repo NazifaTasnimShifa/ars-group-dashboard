@@ -57,14 +57,18 @@ export default function TrialBalancePage() {
      return <DashboardLayout><div className="p-8 text-center">Loading report data...</div></DashboardLayout>;
   }
 
-  if (error || !data || !data.accounts) {
+  if (error) {
      return (
         <DashboardLayout>
             <div className="p-8 text-center text-red-600">
-                {error || 'No data available for this report.'}
+                {error}
             </div>
         </DashboardLayout>
     );
+  }
+
+  if (!data) {
+      return <DashboardLayout><div className="p-8 text-center text-gray-500">Initializing report...</div></DashboardLayout>;
   }
 
   const totalDebits = data.accounts.reduce((sum, acc) => sum + acc.debit, 0);
