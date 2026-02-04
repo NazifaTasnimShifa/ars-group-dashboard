@@ -17,12 +17,12 @@ async function handler(req, res) {
     const { startDate, endDate } = req.query;
     let dateFilter = {};
     if (startDate && endDate) {
-        dateFilter = {
-            date: {
-                gte: new Date(startDate),
-                lte: new Date(new Date(endDate).setHours(23, 59, 59, 999))
-            }
-        };
+      dateFilter = {
+        date: {
+          gte: new Date(startDate),
+          lte: new Date(new Date(endDate).setHours(23, 59, 59, 999))
+        }
+      };
     }
 
     // --- 1. Fetch Live Data for Calculations (with fallbacks for missing data) ---
@@ -49,9 +49,9 @@ async function handler(req, res) {
     // Use Mock Data if DB is empty to prevent blank reports (User Request)
     const isMock = totalRevenue === 0 && totalPurchases === 0;
     if (isMock) {
-        totalRevenue = 1540000;
-        totalPurchases = 920000;
-        // console.log("Using Mock Data for Reports");
+      totalRevenue = 1540000;
+      totalPurchases = 920000;
+      // console.log("Using Mock Data for Reports");
     }
 
     // Inventory Value
@@ -75,8 +75,8 @@ async function handler(req, res) {
       totalDepreciation = Number(assetsAgg._sum.accumulatedDepreciation || 0);
     } catch (e) { console.log('Fixed assets error:', e.message); }
     if (isMock && totalFixedAssets === 0) {
-        totalFixedAssets = 2500000;
-        totalDepreciation = 120000;
+      totalFixedAssets = 2500000;
+      totalDepreciation = 120000;
     }
 
     // Debtors & Creditors
@@ -237,3 +237,5 @@ async function handler(req, res) {
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 }
+
+export default withAuth(handler, ['ADMIN', 'MANAGER', 'SUPER_OWNER', 'ACCOUNTANT']);

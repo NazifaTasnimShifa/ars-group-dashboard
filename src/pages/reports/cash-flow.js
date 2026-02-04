@@ -87,80 +87,88 @@ export default function CashFlowPage() {
     }
   }, [currentBusiness, dateRange, fetchData]);
 
-  if (loading) {
-    return <DashboardLayout><div className="p-8 text-center">Loading report data...</div></DashboardLayout>;
-  }
+  // Compute values only if data exists
+  const totalOperating = data?.operating?.reduce((sum, item) => sum + item.amount, 0) || 0;
+  const totalInvesting = data?.investing?.reduce((sum, item) => sum + item.amount, 0) || 0;
+  const totalFinancing = data?.financing?.reduce((sum, item) => sum + item.amount, 0) || 0;
+  const netChangeInCash = totalOperating + totalInvesting + totalFinancing;
+  const closingCash = (data?.openingCash || 0) + netChangeInCash;
 
-  if (error) {
-    return (
-      <DashboardLayout>
-        <div className="p-8 text-center text-red-600">
-          {error}
-          <button onClick={() => fetchData(dateRange)} className="ml-4 underline">Retry</button>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (!data) {
-    return (
-      <DashboardLayout>
+  // Render content based on state
+  const renderContent = () => {
+    if (loading) {
+      return (
         <div className="p-8 text-center text-gray-500">
-          Initializing report...
-          {!currentBusiness ? ' (Waiting for Business Context)' : ''}
-          {!dateRange.startDate ? ' (Waiting for Dates)' : ''}
-          <br />
-          <button onClick={() => fetchData(dateRange)} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          Loading report data...
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="p-8 text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button onClick={() => fetchData(dateRange)} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+            Retry
+          </button>
+        </div>
+      );
+    }
+
+    if (!data || !data.operating) {
+      return (
+        <div className="p-8 text-center text-gray-500">
+          <p className="mb-4">Select a date range and click Load Report to view the Cash Flow Statement.</p>
+          <button onClick={() => fetchData(dateRange)} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
             Load Report
           </button>
         </div>
-      </DashboardLayout>
-    );
-  }
+      );
+    }
 
-  const totalOperating = data.operating.reduce((sum, item) => sum + item.amount, 0);
-  const totalInvesting = data.investing.reduce((sum, item) => sum + item.amount, 0);
-  const totalFinancing = data.financing.reduce((sum, item) => sum + item.amount, 0);
-  const netChangeInCash = totalOperating + totalInvesting + totalFinancing;
-  const closingCash = data.openingCash + netChangeInCash;
+    return (
+      <div className="rounded-lg bg-white p-6 shadow">
+        <div className="text-center mb-4">
+          <h2 className="text-lg font-bold text-gray-900">{currentBusiness?.name || 'Company'}</h2>
+          <p className="text-sm text-gray-500">Cash Flow Statement</p>
+          <p className="text-sm text-gray-500">
+            {dateRange.startDate && dateRange.endDate ?
+              `${new Date(dateRange.startDate).toLocaleDateString()} - ${new Date(dateRange.endDate).toLocaleDateString()}`
+              : data.date}
+          </p>
+        </div>
+
+        <div className="space-y-6">
+          <CashFlowSection title="Operating Activities" items={data.operating} />
+          <CashFlowSection title="Investing Activities" items={data.investing} />
+          <CashFlowSection title="Financing Activities" items={data.financing} />
+
+          <div className="mt-6 pt-4 border-t-2 border-gray-400">
+            <CashFlowRow name="Net Increase/(Decrease) in Cash" amount={netChangeInCash} isSubtotal />
+            <CashFlowRow name="Opening Cash & Equivalents" amount={data.openingCash} />
+          </div>
+
+          <div className="mt-4 pt-4 border-t-2 border-gray-800">
+            <CashFlowRow name="Closing Cash & Equivalents" amount={closingCash} isTotal />
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <DashboardLayout>
       <PageHeader
         title="Cash Flow Statement"
-        description={`A summary of cash inflows and outflows for ${currentBusiness.name}.`}
+        description={`A summary of cash inflows and outflows for ${currentBusiness?.name || 'your company'}.`}
       />
 
       <div className="max-w-4xl mx-auto">
-        <div className="mb-4 flex justify-end">
-          <DateRangeFilter onFilterChange={handleFilterChange} />
+        <div className="mb-6 flex justify-end">
+          <DateRangeFilter onFilterChange={handleFilterChange} initialRange={dateRange} />
         </div>
-        <div className="rounded-lg bg-white p-6 shadow">
-          <div className="text-center mb-4">
-            <h2 className="text-lg font-bold text-gray-900">{currentBusiness.name}</h2>
-            <p className="text-sm text-gray-500">Cash Flow Statement</p>
-            <p className="text-sm text-gray-500">
-              {dateRange.startDate && dateRange.endDate ?
-                `${new Date(dateRange.startDate).toLocaleDateString()} - ${new Date(dateRange.endDate).toLocaleDateString()}`
-                : data.date}
-            </p>
-          </div>
-
-          <div className="space-y-6">
-            <CashFlowSection title="Operating Activities" items={data.operating} />
-            <CashFlowSection title="Investing Activities" items={data.investing} />
-            <CashFlowSection title="Financing Activities" items={data.financing} />
-
-            <div className="mt-6 pt-4 border-t-2 border-gray-400">
-              <CashFlowRow name="Net Increase/(Decrease) in Cash" amount={netChangeInCash} isSubtotal />
-              <CashFlowRow name="Opening Cash & Equivalents" amount={data.openingCash} />
-            </div>
-
-            <div className="mt-4 pt-4 border-t-2 border-gray-800">
-              <CashFlowRow name="Closing Cash & Equivalents" amount={closingCash} isTotal />
-            </div>
-          </div>
-        </div>
+        {renderContent()}
       </div>
     </DashboardLayout>
   );

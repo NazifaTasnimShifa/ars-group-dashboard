@@ -3,10 +3,9 @@
 
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { withAuth } from '@/lib/middleware';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { 
-  CalendarDaysIcon, 
+import {
+  CalendarDaysIcon,
   BeakerIcon,
   ArrowDownIcon,
   ArrowUpIcon,
@@ -40,7 +39,7 @@ function DipStockPage() {
     const reading = readings[tankId];
     const currentLevel = reading.closingDip || reading.openingDip;
     const percentage = (currentLevel / tank.capacity) * 100;
-    
+
     if (percentage < 20) return { status: 'critical', label: 'Critical' };
     if (percentage < 40) return { status: 'low', label: 'Low' };
     if (percentage > 80) return { status: 'full', label: 'Full' };
@@ -118,14 +117,14 @@ function DipStockPage() {
             const currentLevel = reading.closingDip || reading.openingDip;
             const percentage = (currentLevel / tank.capacity) * 100;
             const { status, label } = getTankStatus(tank.id);
-            
+
             const colorMap = {
               amber: { bg: 'bg-amber-500', light: 'bg-amber-100', text: 'text-amber-700' },
               blue: { bg: 'bg-blue-500', light: 'bg-blue-100', text: 'text-blue-700' },
               purple: { bg: 'bg-purple-500', light: 'bg-purple-100', text: 'text-purple-700' },
             };
             const colors = colorMap[tank.color];
-            
+
             return (
               <div key={tank.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                 <div className="flex items-center justify-between mb-4">
@@ -140,12 +139,11 @@ function DipStockPage() {
                       </span>
                     </div>
                   </div>
-                  <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
-                    status === 'critical' ? 'bg-red-100 text-red-700' :
+                  <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${status === 'critical' ? 'bg-red-100 text-red-700' :
                     status === 'low' ? 'bg-yellow-100 text-yellow-700' :
-                    status === 'full' ? 'bg-green-100 text-green-700' :
-                    'bg-gray-100 text-gray-700'
-                  }`}>
+                      status === 'full' ? 'bg-green-100 text-green-700' :
+                        'bg-gray-100 text-gray-700'
+                    }`}>
                     {status === 'critical' && <ExclamationTriangleIcon className="h-3 w-3 mr-1" />}
                     {label}
                   </span>
@@ -158,7 +156,7 @@ function DipStockPage() {
                     <span>{percentage.toFixed(0)}%</span>
                   </div>
                   <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
-                    <div 
+                    <div
                       className={`h-full ${colors.bg} transition-all duration-300`}
                       style={{ width: `${percentage}%` }}
                     />
@@ -219,4 +217,4 @@ function DipStockPage() {
 
 }
 
-export default withAuth(DipStockPage, ['MANAGER', 'PUMP_ATTENDANT', 'ADMIN']);
+export default DipStockPage;

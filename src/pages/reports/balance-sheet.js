@@ -85,59 +85,52 @@ export default function BalanceSheetPage() {
     }
   }, [currentBusiness, dateRange, fetchData]);
 
-  if (loading) {
-    return <DashboardLayout><div className="p-8 text-center">Loading report data...</div></DashboardLayout>;
-  }
+  // Compute totals only if data exists
+  const totalNonCurrentAssets = data?.assets?.nonCurrent?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
+  const totalCurrentAssets = data?.assets?.current?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
+  const totalAssets = totalNonCurrentAssets + totalCurrentAssets;
 
-  if (error) {
-    return (
-      <DashboardLayout>
-        <div className="p-8 text-center text-red-600">
-          {error}
-          <button onClick={() => fetchData(dateRange)} className="ml-4 underline">Retry</button>
-        </div>
-      </DashboardLayout>
-    );
-  }
+  const totalNonCurrentLiabilities = data?.liabilities?.nonCurrent?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
+  const totalCurrentLiabilities = data?.liabilities?.current?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
+  const totalLiabilities = totalNonCurrentLiabilities + totalCurrentLiabilities;
 
-  if (!data) {
-    return (
-      <DashboardLayout>
+  const totalEquity = data?.equity?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
+  const totalLiabilitiesAndEquity = totalLiabilities + totalEquity;
+
+  // Render content based on state
+  const renderContent = () => {
+    if (loading) {
+      return (
         <div className="p-8 text-center text-gray-500">
-          Initializing report...
-          {!currentBusiness ? ' (Waiting for Business Context)' : ''}
-          {!dateRange.startDate ? ' (Waiting for Dates)' : ''}
-          <br />
-          <button onClick={() => fetchData(dateRange)} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          Loading report data...
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="p-8 text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button onClick={() => fetchData(dateRange)} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+            Retry
+          </button>
+        </div>
+      );
+    }
+
+    if (!data) {
+      return (
+        <div className="p-8 text-center text-gray-500">
+          <p className="mb-4">Select a date range and click Load Report to view the Balance Sheet.</p>
+          <button onClick={() => fetchData(dateRange)} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
             Load Report
           </button>
         </div>
-      </DashboardLayout>
-    );
-  }
+      );
+    }
 
-  const totalNonCurrentAssets = data.assets?.nonCurrent?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
-  const totalCurrentAssets = data.assets?.current?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
-  const totalAssets = totalNonCurrentAssets + totalCurrentAssets;
-
-  const totalNonCurrentLiabilities = data.liabilities?.nonCurrent?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
-  const totalCurrentLiabilities = data.liabilities?.current?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
-  const totalLiabilities = totalNonCurrentLiabilities + totalCurrentLiabilities;
-
-  const totalEquity = data.equity?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
-  const totalLiabilitiesAndEquity = totalLiabilities + totalEquity;
-
-  return (
-    <DashboardLayout>
-      <PageHeader
-        title="Balance Sheet"
-        description={`A statement of the financial position of ${currentBusiness?.name} as at ${data.date}.`}
-      />
-
-      <div className="mb-4 flex justify-end">
-        <DateRangeFilter onFilterChange={handleFilterChange} />
-      </div>
-
+    return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* ASSETS Column */}
         <div className="rounded-lg bg-white p-6 shadow">
@@ -159,6 +152,22 @@ export default function BalanceSheetPage() {
             <ReportRow name="TOTAL LIABILITIES & EQUITY" amount={totalLiabilitiesAndEquity} isTotal />
           </div>
         </div>
+      </div>
+    );
+  };
+
+  return (
+    <DashboardLayout>
+      <PageHeader
+        title="Balance Sheet"
+        description={`A statement of the financial position of ${currentBusiness?.name || 'your company'}.`}
+      />
+
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-6 flex justify-end">
+          <DateRangeFilter onFilterChange={handleFilterChange} initialRange={dateRange} />
+        </div>
+        {renderContent()}
       </div>
     </DashboardLayout>
   );

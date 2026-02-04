@@ -76,98 +76,100 @@ export default function IncomeStatementPage() {
         }
     }, [currentBusiness, dateRange, fetchData]);
 
-    if (loading) {
-        return <DashboardLayout><div className="p-8 text-center">Loading report data...</div></DashboardLayout>;
-    }
+    // Compute values only if data exists
+    const grossProfit = data?.revenue?.amount && data?.costOfGoodsSold?.amount
+        ? data.revenue.amount - data.costOfGoodsSold.amount
+        : 0;
+    const totalExpenses = data?.expenses
+        ? (data.expenses.administrative?.amount || 0) + (data.expenses.selling?.amount || 0) + (data.expenses.financial?.amount || 0)
+        : 0;
+    const profitBeforeTax = grossProfit - totalExpenses + (data?.otherIncome?.amount || 0);
 
-    if (error) {
-        return (
-            <DashboardLayout>
-                <div className="p-8 text-center text-red-600">
-                    {error}
-                    <button onClick={() => fetchData(dateRange)} className="ml-4 underline">Retry</button>
-                </div>
-            </DashboardLayout>
-        );
-    }
-
-    if (!data) {
-        return (
-            <DashboardLayout>
+    // Render content based on state
+    const renderContent = () => {
+        if (loading) {
+            return (
                 <div className="p-8 text-center text-gray-500">
-                    Initializing report...
-                    {!currentBusiness ? ' (Waiting for Business Context)' : ''}
-                    {!dateRange.startDate ? ' (Waiting for Dates)' : ''}
-                    <br />
-                    <button onClick={() => fetchData(dateRange)} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                    Loading report data...
+                </div>
+            );
+        }
+
+        if (error) {
+            return (
+                <div className="p-8 text-center">
+                    <p className="text-red-600 mb-4">{error}</p>
+                    <button onClick={() => fetchData(dateRange)} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+                        Retry
+                    </button>
+                </div>
+            );
+        }
+
+        if (!data || !data.revenue) {
+            return (
+                <div className="p-8 text-center text-gray-500">
+                    <p className="mb-4">Select a date range and click Load Report to view the Income Statement.</p>
+                    <button onClick={() => fetchData(dateRange)} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
                         Load Report
                     </button>
                 </div>
-            </DashboardLayout>
-        );
-    }
+            );
+        }
 
-    if (error || !data || !data.revenue) {
         return (
-            <DashboardLayout>
-                <div className="p-8 text-center text-red-600">
-                    {error || 'No data available for this report.'}
+            <div className="rounded-lg bg-white p-6 shadow">
+                <div className="text-center mb-4">
+                    <h2 className="text-lg font-bold text-gray-900">{currentBusiness?.name || 'Company'}</h2>
+                    <p className="text-sm text-gray-500">Income Statement</p>
+                    <p className="text-sm text-gray-500">
+                        {dateRange.startDate && dateRange.endDate ?
+                            `${new Date(dateRange.startDate).toLocaleDateString()} - ${new Date(dateRange.endDate).toLocaleDateString()}`
+                            : data?.date}
+                    </p>
                 </div>
-            </DashboardLayout>
-        );
-    }
 
-    const grossProfit = data.revenue.amount - data.costOfGoodsSold.amount;
-    const totalExpenses = data.expenses.administrative.amount + data.expenses.selling.amount + data.expenses.financial.amount;
-    const profitBeforeTax = grossProfit - totalExpenses + data.otherIncome.amount;
+                <div className="space-y-4">
+                    <StatementRow name={data.revenue.name} amount={data.revenue.amount} />
+                    <StatementRow name={`Less: ${data.costOfGoodsSold.name}`} amount={data.costOfGoodsSold.amount} />
+
+                    <div className="pt-2 border-t-2 border-gray-400">
+                        <StatementRow name="Gross Profit" amount={grossProfit} isSubtotal isLoss={grossProfit < 0} />
+                    </div>
+
+                    <div className="pt-4">
+                        <p className="text-sm font-semibold text-gray-600">Less: Operating Expenses</p>
+                        <div className="mt-2 space-y-2 border-l-2 border-gray-200 pl-2">
+                            <StatementRow name={data.expenses.administrative.name} amount={data.expenses.administrative.amount} indent />
+                            <StatementRow name={data.expenses.selling.name} amount={data.expenses.selling.amount} indent />
+                            <StatementRow name={data.expenses.financial.name} amount={data.expenses.financial.amount} indent />
+                            <StatementRow name="Total Operating Expenses" amount={totalExpenses} isSubtotal indent />
+                        </div>
+                    </div>
+
+                    <StatementRow name={`Add: ${data.otherIncome.name}`} amount={data.otherIncome.amount} />
+
+                    <div className="mt-4 pt-4 border-t-2 border-gray-800">
+                        <StatementRow name="Net Profit / (Loss) Before Tax" amount={profitBeforeTax} isTotal isLoss={profitBeforeTax < 0} />
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <DashboardLayout>
             <PageHeader
                 title="Income Statement"
-                description={`A summary of revenues, costs, and expenses for ${currentBusiness.name}.`}
+                description={`A summary of revenues, costs, and expenses for ${currentBusiness?.name || 'your company'}.`}
             />
 
             <div className="max-w-4xl mx-auto">
-                <div className="mb-4 flex justify-end">
-                    <DateRangeFilter onFilterChange={handleFilterChange} />
+                <div className="mb-6 flex justify-end">
+                    <DateRangeFilter onFilterChange={handleFilterChange} initialRange={dateRange} />
                 </div>
-                <div className="rounded-lg bg-white p-6 shadow">
-                    <div className="text-center mb-4">
-                        <h2 className="text-lg font-bold text-gray-900">{currentBusiness.name}</h2>
-                        <p className="text-sm text-gray-500">Income Statement</p>
-                        <p className="text-sm text-gray-500">
-                            {dateRange.startDate && dateRange.endDate ?
-                                `${new Date(dateRange.startDate).toLocaleDateString()} - ${new Date(dateRange.endDate).toLocaleDateString()}`
-                                : data?.date}
-                        </p>
-                    </div>
-
-                    <div className="space-y-4">
-                        <StatementRow name={data.revenue.name} amount={data.revenue.amount} />
-                        <StatementRow name={`Less: ${data.costOfGoodsSold.name}`} amount={data.costOfGoodsSold.amount} />
-
-                        <div className="pt-2 border-t-2 border-gray-400">
-                            <StatementRow name="Gross Profit" amount={grossProfit} isSubtotal isLoss={grossProfit < 0} />
-                        </div>
-
-                        <div className="pt-4">
-                            <p className="text-sm font-semibold text-gray-600">Less: Operating Expenses</p>
-                            <div className="mt-2 space-y-2 border-l-2 border-gray-200 pl-2">
-                                <StatementRow name={data.expenses.administrative.name} amount={data.expenses.administrative.amount} indent />
-                                <StatementRow name={data.expenses.selling.name} amount={data.expenses.selling.amount} indent />
-                                <StatementRow name={data.expenses.financial.name} amount={data.expenses.financial.amount} indent />
-                                <StatementRow name="Total Operating Expenses" amount={totalExpenses} isSubtotal indent />
-                            </div>
-                        </div>
-
-                        <StatementRow name={`Add: ${data.otherIncome.name}`} amount={data.otherIncome.amount} />
-
-                        <div className="mt-4 pt-4 border-t-2 border-gray-800">
-                            <StatementRow name="Net Profit / (Loss) Before Tax" amount={profitBeforeTax} isTotal isLoss={profitBeforeTax < 0} />
-                        </div>
-                    </div>
-                </div>
+                {renderContent()}
             </div>
         </DashboardLayout>
     );
