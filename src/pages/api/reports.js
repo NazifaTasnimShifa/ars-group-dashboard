@@ -1,7 +1,8 @@
 // src/pages/api/reports.js
 import prisma from '@/lib/prisma';
+import { withAuth } from '@/lib/middleware';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const { companyId, type } = req.query;
 
   if (!companyId || !type) {
@@ -15,7 +16,6 @@ export default async function handler(req, res) {
     // Date Filtering Logic
     const { startDate, endDate } = req.query;
     let dateFilter = {};
-    
     if (startDate && endDate) {
         dateFilter = {
             date: {
@@ -26,7 +26,6 @@ export default async function handler(req, res) {
     }
 
     // --- 1. Fetch Live Data for Calculations (with fallbacks for missing data) ---
-    
     // Revenue (Sum of Sales)
     let totalRevenue = 0;
     try {
@@ -107,7 +106,8 @@ export default async function handler(req, res) {
     let totalOperatingExpenses = 0;
     try {
       expenses = await prisma.chartOfAccount.findMany({
-          where: { businessId: String(companyId), accountType: 'EXPENSE' }
+
+        where: { businessId: String(companyId), accountType: 'EXPENSE' }
       });
       totalOperatingExpenses = expenses.reduce((sum, acc) => sum + Number(acc.balance || 0), 0);
     } catch (e) { console.log('ChartOfAccount error:', e.message); }
@@ -116,7 +116,7 @@ export default async function handler(req, res) {
     let totalCash = 0;
     try {
       const cashAccounts = await prisma.chartOfAccount.findMany({
-          where: { businessId: String(companyId), accountType: 'ASSET', name: { contains: 'Cash' } }
+        where: { businessId: String(companyId), accountType: 'ASSET', name: { contains: 'Cash' } }
       });
       totalCash = cashAccounts.reduce((sum, acc) => sum + Number(acc.balance || 0), 0);
     } catch (e) { console.log('Cash accounts error:', e.message); }
@@ -129,106 +129,106 @@ export default async function handler(req, res) {
 
     // INCOME STATEMENT
     if (type === 'income-statement') {
-        const grossProfit = totalRevenue - totalPurchases;
-        // Mocking breakdown if data not granular
-        const adminExp = totalOperatingExpenses * 0.6; 
-        const sellingExp = totalOperatingExpenses * 0.4;
-        
-        reportData = {
-            date: dateStr,
-            revenue: { name: "Sales Revenue", amount: totalRevenue },
-            costOfGoodsSold: { name: "Cost of Goods Sold", amount: totalPurchases },
-            expenses: {
-                administrative: { name: "Administrative Expenses", amount: adminExp },
-                selling: { name: "Selling & Dist. Expenses", amount: sellingExp },
-                financial: { name: "Financial Expenses", amount: 0 }, // Add if you have loan interest
-            },
-            otherIncome: { name: "Other Income", amount: 0 }
-        };
-    } 
+      const grossProfit = totalRevenue - totalPurchases;
+      // Mocking breakdown if data not granular
+      const adminExp = totalOperatingExpenses * 0.6;
+      const sellingExp = totalOperatingExpenses * 0.4;
+
+      reportData = {
+        date: dateStr,
+        revenue: { name: "Sales Revenue", amount: totalRevenue },
+        costOfGoodsSold: { name: "Cost of Goods Sold", amount: totalPurchases },
+        expenses: {
+          administrative: { name: "Administrative Expenses", amount: adminExp },
+          selling: { name: "Selling & Dist. Expenses", amount: sellingExp },
+          financial: { name: "Financial Expenses", amount: 0 }, // Add if you have loan interest
+        },
+        otherIncome: { name: "Other Income", amount: 0 }
+      };
+    }
     // BALANCE SHEET
     else if (type === 'balance-sheet') {
-        // Equity = Assets - Liabilities
-        const totalAssets = totalFixedAssets + inventoryValue + totalReceivables + totalCash;
-        const totalLiabilities = totalPayables; 
-        const equity = totalAssets - totalLiabilities;
+      // Equity = Assets - Liabilities
+      const totalAssets = totalFixedAssets + inventoryValue + totalReceivables + totalCash;
+      const totalLiabilities = totalPayables;
+      const equity = totalAssets - totalLiabilities;
 
-        reportData = {
-            date: dateStr,
-            assets: {
-                nonCurrent: [
-                    { name: "Property, Plant & Equipment", amount: totalFixedAssets }
-                ],
-                current: [
-                    { name: "Inventories", amount: inventoryValue },
-                    { name: "Accounts Receivable", amount: totalReceivables },
-                    { name: "Cash & Cash Equivalents", amount: totalCash || 50000 }, // Fallback if 0
-                ]
-            },
-            liabilities: {
-                nonCurrent: [
-                    { name: "Long Term Loans", amount: 0 } 
-                ],
-                current: [
-                    { name: "Accounts Payable", amount: totalPayables }
-                ]
-            },
-            equity: [
-                { name: "Owner's Equity", amount: equity }
-            ]
-        };
+      reportData = {
+        date: dateStr,
+        assets: {
+          nonCurrent: [
+            { name: "Property, Plant & Equipment", amount: totalFixedAssets }
+          ],
+          current: [
+            { name: "Inventories", amount: inventoryValue },
+            { name: "Accounts Receivable", amount: totalReceivables },
+            { name: "Cash & Cash Equivalents", amount: totalCash || 50000 }, // Fallback if 0
+          ]
+        },
+        liabilities: {
+          nonCurrent: [
+            { name: "Long Term Loans", amount: 0 }
+          ],
+          current: [
+            { name: "Accounts Payable", amount: totalPayables }
+          ]
+        },
+        equity: [
+          { name: "Owner's Equity", amount: equity }
+        ]
+      };
     }
     // CASH FLOW
     else if (type === 'cash-flow') {
-        const netProfit = (totalRevenue - totalPurchases) - totalOperatingExpenses;
-        
-        reportData = {
-            date: dateStr,
-            openingCash: 100000, // Mock opening
-            operating: [
-                { name: "Net Profit before Tax", amount: netProfit },
-                { name: "Depreciation", amount: totalDepreciation },
-                { name: "(Increase)/Decrease in Inventory", amount: -(inventoryValue * 0.1) }, // Mock change
-                { name: "(Increase)/Decrease in Receivables", amount: -(totalReceivables * 0.05) },
-                { name: "Increase/(Decrease) in Payables", amount: (totalPayables * 0.05) }
-            ],
-            investing: [
-                { name: "Purchase of Fixed Assets", amount: -50000 } // Mock
-            ],
-            financing: [
-                { name: "Loan Repayment", amount: 0 }
-            ]
-        };
+      const netProfit = (totalRevenue - totalPurchases) - totalOperatingExpenses;
+
+      reportData = {
+        date: dateStr,
+        openingCash: 100000, // Mock opening
+        operating: [
+          { name: "Net Profit before Tax", amount: netProfit },
+          { name: "Depreciation", amount: totalDepreciation },
+          { name: "(Increase)/Decrease in Inventory", amount: -(inventoryValue * 0.1) }, // Mock change
+          { name: "(Increase)/Decrease in Receivables", amount: -(totalReceivables * 0.05) },
+          { name: "Increase/(Decrease) in Payables", amount: (totalPayables * 0.05) }
+        ],
+        investing: [
+          { name: "Purchase of Fixed Assets", amount: -50000 } // Mock
+        ],
+        financing: [
+          { name: "Loan Repayment", amount: 0 }
+        ]
+      };
     }
     // TRIAL BALANCE
     else if (type === 'trial-balance') {
-        const accounts = [];
-        
-        // Add dynamic accounts
-        accounts.push({ name: 'Sales Revenue', debit: 0, credit: totalRevenue });
-        accounts.push({ name: 'Purchases (COGS)', debit: totalPurchases, credit: 0 });
-        accounts.push({ name: 'Inventory', debit: inventoryValue, credit: 0 });
-        accounts.push({ name: 'Accounts Receivable', debit: totalReceivables, credit: 0 });
-        accounts.push({ name: 'Accounts Payable', debit: 0, credit: totalPayables });
-        accounts.push({ name: 'Fixed Assets', debit: totalFixedAssets, credit: 0 });
-        accounts.push({ name: 'Cash & Bank', debit: totalCash, credit: 0 });
-        
-        // Add expenses
-        expenses.forEach(exp => {
-            accounts.push({ name: exp.name, debit: Number(exp.balance), credit: 0 });
-        });
+      const accounts = [];
 
-        // Balancing figure (Equity)
-        const totalDebits = accounts.reduce((sum, a) => sum + a.debit, 0);
-        const totalCredits = accounts.reduce((sum, a) => sum + a.credit, 0);
-        const equity = totalDebits - totalCredits;
-        
-        accounts.push({ name: "Capital / Retained Earnings", debit: 0, credit: equity });
+      // Add dynamic accounts
+      accounts.push({ name: 'Sales Revenue', debit: 0, credit: totalRevenue });
+      accounts.push({ name: 'Purchases (COGS)', debit: totalPurchases, credit: 0 });
+      accounts.push({ name: 'Inventory', debit: inventoryValue, credit: 0 });
+      accounts.push({ name: 'Accounts Receivable', debit: totalReceivables, credit: 0 });
+      accounts.push({ name: 'Accounts Payable', debit: 0, credit: totalPayables });
+      accounts.push({ name: 'Fixed Assets', debit: totalFixedAssets, credit: 0 });
+      accounts.push({ name: 'Cash & Bank', debit: totalCash, credit: 0 });
 
-        reportData = {
-            date: dateStr,
-            accounts: accounts
-        };
+      // Add expenses
+      expenses.forEach(exp => {
+        accounts.push({ name: exp.name, debit: Number(exp.balance), credit: 0 });
+      });
+
+      // Balancing figure (Equity)
+      const totalDebits = accounts.reduce((sum, a) => sum + a.debit, 0);
+      const totalCredits = accounts.reduce((sum, a) => sum + a.credit, 0);
+      const equity = totalDebits - totalCredits;
+
+      accounts.push({ name: "Capital / Retained Earnings", debit: 0, credit: equity });
+
+      reportData = {
+        date: dateStr,
+        accounts: accounts
+      };
     }
 
     return res.status(200).json(reportData);

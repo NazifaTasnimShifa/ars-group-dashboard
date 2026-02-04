@@ -6,10 +6,13 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useAppContext } from '@/contexts/AppContext';
 import { salesData } from '@/data/mockData';
 import { PlusCircleIcon } from '@heroicons/react/24/outline';
+import Modal from '@/components/ui/Modal';
+import SaleForm from '@/components/forms/SaleForm';
 
 export default function LubeSalesOrdersPage() {
-    const { currentBusiness, formatCurrency, formatDate, isSuperOwner } = useAppContext();
+    const { currentBusiness, formatCurrency, formatDate, isSuperOwner, authFetch } = useAppContext();
     const [sales, setSales] = useState([]);
+    const [modalOpen, setModalOpen] = useState(false);
 
     useEffect(() => {
         // Use mock data for now, keyed by business
@@ -17,6 +20,28 @@ export default function LubeSalesOrdersPage() {
         setSales(salesData[businessKey] || salesData.ars_lube);
     }, [currentBusiness]);
 
+    const handleSave = async (data) => {
+        try {
+            const res = await authFetch('/api/sales', {
+                method: 'POST',
+                body: JSON.stringify({
+                    ...data,
+                    company_id: currentBusiness?.id
+                })
+            });
+            const result = await res.json();
+            if (result.success) {
+                alert('Sale recorded successfully!');
+                setModalOpen(false);
+                // TODO: Refresh data
+            } else {
+                alert(result.message || 'Failed to save');
+            }
+        } catch (err) {
+            console.error('Save error:', err);
+            alert('Failed to save. Please try again.');
+        }
+    };
     const getStatusBadge = (status) => {
         const styles = {
             Paid: 'bg-green-100 text-green-800',
@@ -38,7 +63,10 @@ export default function LubeSalesOrdersPage() {
                         <h1 className="text-2xl font-bold text-gray-900">Sales Orders</h1>
                         <p className="mt-1 text-sm text-gray-500">Manage lubricant and fuel sales invoices</p>
                     </div>
-                    <button className="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                    <button
+                        onClick={() => setModalOpen(true)}
+                        className="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                    >
                         <PlusCircleIcon className="h-5 w-5" />
                         New Sale
                     </button>
@@ -69,6 +97,10 @@ export default function LubeSalesOrdersPage() {
                     </table>
                 </div>
             </div>
+            {/* Modal for Sale Form */}
+            <Modal open={modalOpen} setOpen={setModalOpen} title="New Sale Order">
+                <SaleForm onSave={handleSave} onCancel={() => setModalOpen(false)} />
+            </Modal>
         </DashboardLayout>
     );
 }

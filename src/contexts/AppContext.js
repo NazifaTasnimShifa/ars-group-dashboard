@@ -16,9 +16,25 @@ export function AppProvider({ children }) {
   const router = useRouter();
 
   // Fetch all businesses (for Super Owner company switching)
-  const fetchBusinesses = async () => {
+  const fetchBusinesses = async (authToken = null) => {
     try {
-      const res = await fetch('/api/businesses');
+      // Use provided token or fall back to state/session
+      const tokenToUse = authToken || token || sessionStorage.getItem('ars_token');
+
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+
+      if (tokenToUse) {
+        headers['Authorization'] = `Bearer ${tokenToUse}`;
+      }
+
+      const res = await fetch('/api/businesses', { headers });
+
+      if (!res.ok) {
+        throw new Error(`Failed to fetch businesses: ${res.status}`);
+      }
+
       const data = await res.json();
       if (Array.isArray(data)) {
         setBusinesses(data);
@@ -47,7 +63,7 @@ export function AppProvider({ children }) {
 
           // Fetch businesses for Super Owner
           if (parsedUser.isSuperOwner) {
-            await fetchBusinesses();
+            await fetchBusinesses(storedToken);
           }
 
           if (storedBusiness) {
@@ -91,7 +107,7 @@ export function AppProvider({ children }) {
         // Role-based redirect logic
         if (loggedInUser.isSuperOwner) {
           // Super Owner: Fetch all businesses and go to Business Selection
-          const allBusinesses = await fetchBusinesses();
+          const allBusinesses = await fetchBusinesses(authToken);
           setBusinesses(allBusinesses);
 
           // Force business selection - redirect to selection page

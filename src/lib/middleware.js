@@ -23,16 +23,18 @@ export function withAuth(handler, allowedRoles = []) {
         // Attach user to request
         req.user = decoded;
 
-        // Check Role
+        // SUPER_OWNER always has access to everything
+        const userRole = decoded.role?.toUpperCase();
+        if (userRole === 'SUPER_OWNER') {
+            return handler(req, res);
+        }
+
+        // Check Role for non-super users
         if (allowedRoles.length > 0) {
             // Normalize role checking - convert to uppercase for comparison
-            const userRole = (decoded.role || '').toUpperCase();
             const normalizedAllowedRoles = allowedRoles.map(r => r.toUpperCase());
             
-            // Also check for super_owner which has all access
-            if (userRole === 'SUPER_OWNER') {
-                // Super owner bypasses role checks
-            } else if (!normalizedAllowedRoles.includes(userRole)) {
+            if (!normalizedAllowedRoles.includes(userRole)) {
                 return res.status(403).json({ success: false, message: `Forbidden: Requires one of [${allowedRoles.join(', ')}]` });
             }
         }

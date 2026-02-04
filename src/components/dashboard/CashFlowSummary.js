@@ -1,9 +1,11 @@
 // src/components/dashboard/CashFlowSummary.js
 
 import { ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/solid';
+import { useAppContext } from '@/contexts/AppContext';
 
 // Mock data based on your financial statements
 export default function CashFlowSummary({ data }) {
+  const { formatCurrency } = useAppContext();
   const { operating = 0, investing = 0, financing = 0 } = data || {};
 
   const cashFlowItems = [

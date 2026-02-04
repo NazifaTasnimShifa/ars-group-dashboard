@@ -6,16 +6,41 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useAppContext } from '@/contexts/AppContext';
 import { inventoryData } from '@/data/mockData';
 import { PlusCircleIcon } from '@heroicons/react/24/outline';
+import Modal from '@/components/ui/Modal';
+import InventoryItemForm from '@/components/forms/InventoryItemForm';
 
 export default function LubeInventoryPage() {
-    const { currentBusiness, formatCurrency } = useAppContext();
+    const { currentBusiness, formatCurrency, authFetch } = useAppContext();
     const [inventory, setInventory] = useState([]);
+    const [modalOpen, setModalOpen] = useState(false);
 
     useEffect(() => {
         const businessKey = currentBusiness?.code === 'ARS-LUBE' ? 'ars_lube' : 'ars_lube';
         setInventory(inventoryData[businessKey] || inventoryData.ars_lube);
     }, [currentBusiness]);
 
+    const handleSave = async (data) => {
+        try {
+            const res = await authFetch('/api/inventory', {
+                method: 'POST',
+                body: JSON.stringify({
+                    ...data,
+                    company_id: currentBusiness?.id
+                })
+            });
+            const result = await res.json();
+            if (result.success) {
+                alert('Product added successfully!');
+                setModalOpen(false);
+                // TODO: Refresh data
+            } else {
+                alert(result.message || 'Failed to save');
+            }
+        } catch (err) {
+            console.error('Save error:', err);
+            alert('Failed to save. Please try again.');
+        }
+    };
     const getStatusBadge = (status) => {
         const styles = {
             'In Stock': 'bg-green-100 text-green-800',
@@ -37,7 +62,11 @@ export default function LubeInventoryPage() {
                         <h1 className="text-2xl font-bold text-gray-900">Lube Inventory</h1>
                         <p className="mt-1 text-sm text-gray-500">View and manage lubricant stock levels</p>
                     </div>
-                    <button className="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+
+                    <button
+                        onClick={() => setModalOpen(true)}
+                        className="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                    >
                         <PlusCircleIcon className="h-5 w-5" />
                         Add Product
                     </button>
@@ -72,6 +101,10 @@ export default function LubeInventoryPage() {
                     </table>
                 </div>
             </div>
+            {/* Modal for Inventory Item Form */}
+            <Modal open={modalOpen} setOpen={setModalOpen} title="Add Inventory Product">
+                <InventoryItemForm onSave={handleSave} onCancel={() => setModalOpen(false)} />
+            </Modal>
         </DashboardLayout>
     );
 }
