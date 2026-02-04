@@ -144,7 +144,7 @@ function classNames(...classes) {
 export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { currentBusiness, logout, user, isSuperOwner, isViewingAllBusinesses } = useAppContext();
+  const { currentBusiness, logout, user, isSuperOwner, isViewingAllBusinesses, businesses, switchBusiness } = useAppContext();
   const router = useRouter();
 
   // Get navigation based on current context and user role
@@ -322,8 +322,34 @@ export default function DashboardLayout({ children }) {
             <button type="button" className="-m-2.5 p-2.5 text-gray-700 lg:hidden" onClick={() => setSidebarOpen(true)}>
               <Bars3Icon className="h-6 w-6" />
             </button>
-            <div className="flex-1 text-lg font-semibold leading-6 text-gray-900">
-              {getDisplayName()}
+            <div className="flex-1 flex items-center gap-x-4">
+              <span className="text-lg font-semibold leading-6 text-gray-900">
+                {getDisplayName()}
+              </span>
+              
+              {/* Business Selector for Super Owner */}
+              {isSuperOwner && (
+                <select
+                  value={currentBusiness?.id || 'all'}
+                  onChange={(e) => {
+                    if (e.target.value === 'all') {
+                      switchBusiness(null);
+                      router.push('/dashboard');
+                    } else {
+                      switchBusiness(e.target.value);
+                      router.push('/dashboard');
+                    }
+                  }}
+                  className="rounded-md border-gray-300 text-sm py-1 px-3 border focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600"
+                >
+                  <option value="all">All Companies</option>
+                  {businesses && businesses.map(business => (
+                    <option key={business.id} value={business.id}>
+                      {business.shortName || business.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <div className="flex items-center gap-x-4 lg:gap-x-6">
               <span className="text-sm text-gray-500">
