@@ -217,4 +217,6 @@ function DipStockPage() {
     </DashboardLayout>
   );
 
+}
+
 export default withAuth(DipStockPage, ['MANAGER', 'PUMP_ATTENDANT', 'ADMIN']);

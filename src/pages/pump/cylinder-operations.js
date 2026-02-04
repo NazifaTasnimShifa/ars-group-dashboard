@@ -383,4 +383,6 @@ function CylinderOperationsPage() {
     </DashboardLayout>
   );
 
+}
+
 export default withAuth(CylinderOperationsPage, ['MANAGER', 'PUMP_ATTENDANT', 'ADMIN']);
