@@ -7,6 +7,12 @@ import { verifyToken } from './auth';
  */
 export function withAuth(handler, allowedRoles = []) {
     return async (req, res) => {
+        // Defensive check: ensure req exists
+        if (!req || !req.headers) {
+             console.error("Middleware Error: Request object invalid", req);
+             return res?.status(500)?.json({ success: false, message: 'Internal Server Error: Invalid Request' });
+        }
+
         // Get token from Authorization header
         const authHeader = req.headers.authorization;
         const token = authHeader && authHeader.split(' ')[1];
