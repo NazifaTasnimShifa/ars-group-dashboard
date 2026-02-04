@@ -61,6 +61,25 @@ export default function SalesPage() {
   };
   
   // ... (rest of logic) ...
+  const filteredSales = useMemo(() => {
+    if (!searchQuery) return sales;
+    const lower = searchQuery.toLowerCase();
+    return sales.filter(s => 
+       s.id?.toLowerCase().includes(lower) || 
+       s.customer?.toLowerCase().includes(lower) ||
+       s.status?.toLowerCase().includes(lower)
+    );
+  }, [sales, searchQuery]);
+
+  const handleRemove = async (sale) => {
+    if (!confirm('Are you sure you want to delete this sale?')) return;
+    try {
+        const res = await authFetch(`/api/sales/${sale.id}`, { method: 'DELETE' });
+        if (res.ok) {
+            setSales(prev => prev.filter(s => s.id !== sale.id));
+        }
+    } catch (e) { console.error("Delete failed", e); }
+  };
 
   return (
     <DashboardLayout>
