@@ -30,14 +30,14 @@ export default function PurchasesPage() {
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
 
   const formatCurrency = (value) => `৳${Number(value || 0).toLocaleString('en-IN')}`;
-  
+
   const fetchData = useCallback(async (range) => {
     if (!currentBusiness) return;
-    
+
     // key fix: use provided range or fallback to state
     const start = range?.startDate || dateRange.startDate;
     const end = range?.endDate || dateRange.endDate;
-    
+
     if (!start || !end) return;
 
     setIsLoading(true);
@@ -54,16 +54,31 @@ export default function PurchasesPage() {
   // useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleFilterChange = (range) => {
-      setDateRange(range);
-      fetchData(range);
+    setDateRange(range);
+    fetchData(range);
   };
- 
-  // ... (rest)
+
+  const handleRemove = async (purchase) => {
+    if (!confirm(`Remove purchase ${purchase.id}?`)) return;
+    try {
+      const res = await authFetch(`/api/purchases/${purchase.id}`, { method: 'DELETE' });
+      if (res.ok) fetchData(dateRange);
+    } catch (e) { console.error(e); }
+  };
+
+  const filteredPurchases = useMemo(() => {
+    if (!searchQuery) return purchases;
+    return purchases.filter(p =>
+      (p.id && p.id.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (p.supplier && p.supplier.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }, [purchases, searchQuery]);
+
 
   return (
     <DashboardLayout>
       {/* ... */}
-      
+
       {/* ... */}
 
       <div className="rounded-lg bg-white p-6 shadow">
@@ -73,7 +88,7 @@ export default function PurchasesPage() {
             <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full rounded-md border-0 bg-white py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm" placeholder="Filter by PO# or Supplier..." type="search" />
           </div>
           <div className="mt-4 sm:mt-0">
-               <DateRangeFilter onFilterChange={handleFilterChange} />
+            <DateRangeFilter onFilterChange={handleFilterChange} />
           </div>
         </div>
 

@@ -181,21 +181,36 @@ async function handler(req, res) {
     else if (type === 'cash-flow') {
       const netProfit = (totalRevenue - totalPurchases) - totalOperatingExpenses;
 
+      // Use mock values if data is empty
+      const mockNetProfit = isMock ? 380000 : netProfit;
+      const mockDepreciation = isMock || totalDepreciation === 0 ? 45000 : totalDepreciation;
+      const mockInventoryChange = isMock ? -35000 : -(inventoryValue * 0.1);
+      const mockReceivablesChange = isMock ? -25000 : -(totalReceivables * 0.05);
+      const mockPayablesChange = isMock ? 18000 : (totalPayables * 0.05);
+
       reportData = {
         date: dateStr,
-        openingCash: 100000, // Mock opening
+        openingCash: isMock ? 150000 : 100000,
         operating: [
-          { name: "Net Profit before Tax", amount: netProfit },
-          { name: "Depreciation", amount: totalDepreciation },
-          { name: "(Increase)/Decrease in Inventory", amount: -(inventoryValue * 0.1) }, // Mock change
-          { name: "(Increase)/Decrease in Receivables", amount: -(totalReceivables * 0.05) },
-          { name: "Increase/(Decrease) in Payables", amount: (totalPayables * 0.05) }
+          { name: "Net Profit before Tax", amount: mockNetProfit },
+          { name: "Add: Depreciation", amount: mockDepreciation },
+          { name: "Add: Amortization", amount: isMock ? 8500 : 0 },
+          { name: "(Increase)/Decrease in Inventory", amount: mockInventoryChange },
+          { name: "(Increase)/Decrease in Trade Receivables", amount: mockReceivablesChange },
+          { name: "(Increase)/Decrease in Prepaid Expenses", amount: isMock ? -5000 : 0 },
+          { name: "Increase/(Decrease) in Trade Payables", amount: mockPayablesChange },
+          { name: "Increase/(Decrease) in Accrued Expenses", amount: isMock ? 12000 : 0 }
         ],
         investing: [
-          { name: "Purchase of Fixed Assets", amount: -50000 } // Mock
+          { name: "Purchase of Property, Plant & Equipment", amount: isMock ? -120000 : -50000 },
+          { name: "Sale of Equipment", amount: isMock ? 15000 : 0 },
+          { name: "Purchase of Investments", amount: isMock ? -30000 : 0 }
         ],
         financing: [
-          { name: "Loan Repayment", amount: 0 }
+          { name: "Proceeds from Bank Loan", amount: isMock ? 100000 : 0 },
+          { name: "Loan Repayment", amount: isMock ? -25000 : 0 },
+          { name: "Dividends Paid", amount: isMock ? -50000 : 0 },
+          { name: "Owner's Drawings", amount: isMock ? -20000 : 0 }
         ]
       };
     }
