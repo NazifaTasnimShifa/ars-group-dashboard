@@ -181,20 +181,18 @@ export default function DashboardLayout({ children }) {
               {navigation.map((item) => (
                 <li key={item.name}>
                   {!item.children ? (
-                    <Link href={item.href} legacyBehavior>
-                      <a
-                        className={classNames(
-                          router.pathname === item.href
-                            ? 'bg-gray-800 text-white'
-                            : 'text-gray-400 hover:text-white hover:bg-gray-800',
-                          'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold'
-                        )}
-                      >
-                        <item.icon className="h-6 w-6 shrink-0" />
-                        <span className={classNames(isCollapsed && 'lg:hidden')}>
-                          {item.name}
-                        </span>
-                      </a>
+                    <Link href={item.href} className={classNames(
+                      router.pathname === item.href
+                        ? 'bg-gray-800 text-white'
+                        : 'text-gray-400 hover:text-white hover:bg-gray-800',
+                      'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold'
+                    )}>
+
+                      <item.icon className="h-6 w-6 shrink-0" />
+                      <span className={classNames(isCollapsed && 'lg:hidden')}>
+                        {item.name}
+                      </span>
+
                     </Link>
                   ) : (
                     <Disclosure as="div" defaultOpen={item.children.some(child => router.pathname.startsWith(child.href))}>
@@ -223,17 +221,15 @@ export default function DashboardLayout({ children }) {
                           <Disclosure.Panel as="ul" className={classNames(isCollapsed && 'lg:hidden', 'mt-1 px-2')}>
                             {item.children.map((subItem) => (
                               <li key={subItem.name}>
-                                <Link href={subItem.href} legacyBehavior>
-                                  <a
-                                    className={classNames(
-                                      router.pathname === subItem.href
-                                        ? 'bg-gray-800 text-white'
-                                        : 'text-gray-400 hover:bg-gray-800',
-                                      'block rounded-md py-2 pr-2 pl-9 text-sm leading-6'
-                                    )}
-                                  >
-                                    {subItem.name}
-                                  </a>
+                                <Link href={subItem.href} className={classNames(
+                                  router.pathname === subItem.href
+                                    ? 'bg-gray-800 text-white'
+                                    : 'text-gray-400 hover:bg-gray-800',
+                                  'block rounded-md py-2 pr-2 pl-9 text-sm leading-6'
+                                )}>
+
+                                  {subItem.name}
+
                                 </Link>
                               </li>
                             ))}
