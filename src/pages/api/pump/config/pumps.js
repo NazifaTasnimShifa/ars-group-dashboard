@@ -124,9 +124,10 @@ async function handler(req, res) {
             });
         }
 
-        // PUT - Update pump or add/update nozzle
+
+        // PUT - Update pump or add/update nozzles
         if (req.method === 'PUT') {
-            const { id, pumpNumber, make, model, isMpu, isActive, nozzle } = req.body;
+            const { id, pumpNumber, make, model, isMpu, isActive, nozzles } = req.body;
 
             if (!id) {
                 return res.status(400).json({ success: false, message: 'id is required' });
@@ -147,32 +148,37 @@ async function handler(req, res) {
                 });
             }
 
-            // Handle nozzle update (add or update)
-            if (nozzle) {
-                if (nozzle.id) {
-                    // Update existing nozzle
-                    const nozzleUpdateData = {};
-                    if (nozzle.nozzleNumber !== undefined) nozzleUpdateData.nozzleNumber = nozzle.nozzleNumber;
-                    if (nozzle.fuelTypeId !== undefined) nozzleUpdateData.fuelTypeId = nozzle.fuelTypeId;
-                    if (nozzle.tankId !== undefined) nozzleUpdateData.tankId = nozzle.tankId;
-                    if (nozzle.currentMeterReading !== undefined) nozzleUpdateData.currentMeterReading = nozzle.currentMeterReading;
-                    if (nozzle.isActive !== undefined) nozzleUpdateData.isActive = nozzle.isActive;
+            // Handle nozzles update (add or update multiple)
+            if (nozzles && Array.isArray(nozzles)) {
+                for (const nozzle of nozzles) {
+                    if (nozzle.id) {
+                        // Update existing nozzle
+                        const nozzleUpdateData = {};
+                        if (nozzle.nozzleNumber !== undefined) nozzleUpdateData.nozzleNumber = nozzle.nozzleNumber;
+                        if (nozzle.fuelTypeId !== undefined) nozzleUpdateData.fuelTypeId = nozzle.fuelTypeId;
+                        if (nozzle.tankId !== undefined) nozzleUpdateData.tankId = nozzle.tankId;
+                        if (nozzle.openingReading !== undefined) nozzleUpdateData.currentMeterReading = nozzle.openingReading;
+                        if (nozzle.currentMeterReading !== undefined) nozzleUpdateData.currentMeterReading = nozzle.currentMeterReading;
+                        if (nozzle.isActive !== undefined) nozzleUpdateData.isActive = nozzle.isActive;
 
-                    await prisma.nozzle.update({
-                        where: { id: nozzle.id },
-                        data: nozzleUpdateData
-                    });
-                } else {
-                    // Add new nozzle
-                    await prisma.nozzle.create({
-                        data: {
-                            pumpId: id,
-                            nozzleNumber: nozzle.nozzleNumber,
-                            fuelTypeId: nozzle.fuelTypeId,
-                            tankId: nozzle.tankId,
-                            currentMeterReading: nozzle.openingReading || 0
+                        if (Object.keys(nozzleUpdateData).length > 0) {
+                            await prisma.nozzle.update({
+                                where: { id: nozzle.id },
+                                data: nozzleUpdateData
+                            });
                         }
-                    });
+                    } else if (nozzle.nozzleNumber && nozzle.fuelTypeId && nozzle.tankId) {
+                        // Add new nozzle (only if required fields are present)
+                        await prisma.nozzle.create({
+                            data: {
+                                pumpId: id,
+                                nozzleNumber: nozzle.nozzleNumber,
+                                fuelTypeId: nozzle.fuelTypeId,
+                                tankId: nozzle.tankId,
+                                currentMeterReading: nozzle.openingReading || 0
+                            }
+                        });
+                    }
                 }
             }
 

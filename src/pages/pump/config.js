@@ -755,74 +755,117 @@ export default function PumpConfigPage() {
             <label htmlFor="isMpu" className="text-sm text-gray-700">Multi-Product Unit (MPU)</label>
           </div>
           
-          {!editItem && (
-            <div className="border-t pt-4 mt-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-3">Add Nozzle</h4>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Nozzle Number</label>
-                  <input
-                    type="text"
-                    value={formData.nozzles?.[0]?.nozzleNumber || ''}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      nozzles: [{ ...formData.nozzles?.[0], nozzleNumber: e.target.value }]
-                    })}
-                    className="w-full rounded-md border-gray-300 text-sm"
-                    placeholder="e.g., N1"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Fuel Type</label>
-                    <select
-                      value={formData.nozzles?.[0]?.fuelTypeId || ''}
-                      onChange={(e) => setFormData({ 
-                        ...formData, 
-                        nozzles: [{ ...formData.nozzles?.[0], fuelTypeId: e.target.value }]
-                      })}
-                      className="w-full rounded-md border-gray-300 text-sm"
-                    >
-                      <option value="">Select</option>
-                      {fuelTypes.filter(ft => ft.isActive).map(ft => (
-                        <option key={ft.id} value={ft.id}>{ft.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Tank</label>
-                    <select
-                      value={formData.nozzles?.[0]?.tankId || ''}
-                      onChange={(e) => setFormData({ 
-                        ...formData, 
-                        nozzles: [{ ...formData.nozzles?.[0], tankId: e.target.value }]
-                      })}
-                      className="w-full rounded-md border-gray-300 text-sm"
-                    >
-                      <option value="">Select</option>
-                      {tanks.filter(t => t.branchId === formData.branchId).map(t => (
-                        <option key={t.id} value={t.id}>{t.tankNumber} ({t.fuelTypeName})</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Opening Reading</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.nozzles?.[0]?.openingReading || ''}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      nozzles: [{ ...formData.nozzles?.[0], openingReading: parseFloat(e.target.value) }]
-                    })}
-                    className="w-full rounded-md border-gray-300 text-sm"
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
+          {/* Nozzles Section */}
+          <div className="border-t pt-4 mt-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-medium text-gray-700">
+                {editItem ? 'Manage Nozzles' : 'Add Nozzles'}
+              </h4>
+              <button
+                type="button"
+                onClick={() => {
+                  const currentNozzles = formData.nozzles || [];
+                  setFormData({
+                    ...formData,
+                    nozzles: [...currentNozzles, { nozzleNumber: '', fuelTypeId: '', tankId: '', openingReading: 0 }]
+                  });
+                }}
+                className="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200"
+              >
+                + Add Nozzle
+              </button>
             </div>
-          )}
+            
+            {(!formData.nozzles || formData.nozzles.length === 0) ? (
+              <p className="text-sm text-gray-500 text-center py-4">
+                No nozzles added. Click &quot;+ Add Nozzle&quot; to add one.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {formData.nozzles.map((nozzle, index) => (
+                  <div key={index} className="bg-gray-50 rounded-lg p-3 relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updatedNozzles = formData.nozzles.filter((_, i) => i !== index);
+                        setFormData({ ...formData, nozzles: updatedNozzles });
+                      }}
+                      className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xs"
+                    >
+                      Remove
+                    </button>
+                    <div className="grid grid-cols-2 gap-3 mb-2">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Nozzle #</label>
+                        <input
+                          type="text"
+                          value={nozzle.nozzleNumber || ''}
+                          onChange={(e) => {
+                            const updatedNozzles = [...formData.nozzles];
+                            updatedNozzles[index] = { ...updatedNozzles[index], nozzleNumber: e.target.value };
+                            setFormData({ ...formData, nozzles: updatedNozzles });
+                          }}
+                          className="w-full rounded-md border-gray-300 text-sm"
+                          placeholder="N1"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Reading</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={nozzle.openingReading || nozzle.currentMeterReading || ''}
+                          onChange={(e) => {
+                            const updatedNozzles = [...formData.nozzles];
+                            updatedNozzles[index] = { ...updatedNozzles[index], openingReading: parseFloat(e.target.value) || 0 };
+                            setFormData({ ...formData, nozzles: updatedNozzles });
+                          }}
+                          className="w-full rounded-md border-gray-300 text-sm"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Fuel Type</label>
+                        <select
+                          value={nozzle.fuelTypeId || ''}
+                          onChange={(e) => {
+                            const updatedNozzles = [...formData.nozzles];
+                            updatedNozzles[index] = { ...updatedNozzles[index], fuelTypeId: e.target.value };
+                            setFormData({ ...formData, nozzles: updatedNozzles });
+                          }}
+                          className="w-full rounded-md border-gray-300 text-sm"
+                        >
+                          <option value="">Select</option>
+                          {fuelTypes.filter(ft => ft.isActive).map(ft => (
+                            <option key={ft.id} value={ft.id}>{ft.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Tank</label>
+                        <select
+                          value={nozzle.tankId || ''}
+                          onChange={(e) => {
+                            const updatedNozzles = [...formData.nozzles];
+                            updatedNozzles[index] = { ...updatedNozzles[index], tankId: e.target.value };
+                            setFormData({ ...formData, nozzles: updatedNozzles });
+                          }}
+                          className="w-full rounded-md border-gray-300 text-sm"
+                        >
+                          <option value="">Select</option>
+                          {tanks.filter(t => t.branchId === formData.branchId).map(t => (
+                            <option key={t.id} value={t.id}>{t.tankNumber} ({t.fuelTypeName})</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           
           <div className="flex justify-end gap-3 pt-4">
             <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-gray-700 border rounded-md hover:bg-gray-50">
