@@ -10,9 +10,7 @@ import {
   ArrowDownTrayIcon,
   ArrowUpTrayIcon,
   ArrowPathIcon,
-  CubeIcon,
-  PlusIcon,
-  MinusIcon
+  CubeIcon
 } from '@heroicons/react/24/outline';
 
 // Cylinder types and initial stock
@@ -41,15 +39,32 @@ function CylinderOperationsPage() {
   const totalFilled = Object.values(stock).reduce((sum, s) => sum + s.filled, 0);
   const totalEmpty = Object.values(stock).reduce((sum, s) => sum + s.empty, 0);
 
-  // Handle stock adjustment
-  const handleStockChange = (cylinderId, type, delta) => {
-    setStock(prev => ({
-      ...prev,
+  // Handle stock adjustment - set value directly and save to database
+  const handleStockChange = async (cylinderId, type, newValue) => {
+    // Update local state immediately
+    const updatedStock = {
+      ...stock,
       [cylinderId]: {
-        ...prev[cylinderId],
-        [type]: Math.max(0, prev[cylinderId][type] + delta)
+        ...stock[cylinderId],
+        [type]: Math.max(0, newValue)
       }
-    }));
+    };
+    setStock(updatedStock);
+
+    // Save to database
+    try {
+      await authFetch('/api/pump/cylinders', {
+        method: 'POST',
+        body: JSON.stringify({ 
+          action: 'set_stock',
+          cylinderId, 
+          type,
+          quantity: Math.max(0, newValue)
+        })
+      });
+    } catch (err) {
+      console.error('Failed to save stock change:', err);
+    }
   };
 
   // Fetch data
@@ -230,38 +245,22 @@ function CylinderOperationsPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleStockChange(cylinder.id, 'filled', -1)}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded"
-                          >
-                            <MinusIcon className="h-4 w-4" />
-                          </button>
-                          <span className="text-lg font-bold text-green-600 w-12">{cylStock.filled}</span>
-                          <button
-                            onClick={() => handleStockChange(cylinder.id, 'filled', 1)}
-                            className="p-1 text-green-600 hover:bg-green-50 rounded"
-                          >
-                            <PlusIcon className="h-4 w-4" />
-                          </button>
-                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          value={cylStock.filled}
+                          onChange={(e) => handleStockChange(cylinder.id, 'filled', parseInt(e.target.value) || 0)}
+                          className="w-20 text-center text-lg font-bold text-green-600 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleStockChange(cylinder.id, 'empty', -1)}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded"
-                          >
-                            <MinusIcon className="h-4 w-4" />
-                          </button>
-                          <span className="text-lg font-bold text-gray-600 w-12">{cylStock.empty}</span>
-                          <button
-                            onClick={() => handleStockChange(cylinder.id, 'empty', 1)}
-                            className="p-1 text-green-600 hover:bg-green-50 rounded"
-                          >
-                            <PlusIcon className="h-4 w-4" />
-                          </button>
-                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          value={cylStock.empty}
+                          onChange={(e) => handleStockChange(cylinder.id, 'empty', parseInt(e.target.value) || 0)}
+                          className="w-20 text-center text-lg font-bold text-gray-600 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                        />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <span className="text-lg font-bold text-gray-900">

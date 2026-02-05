@@ -2,6 +2,7 @@
 // ARS Corporation - Underground Tank Dip Stock Tracking
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import {

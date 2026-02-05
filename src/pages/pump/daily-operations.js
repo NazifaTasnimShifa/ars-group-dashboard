@@ -2,6 +2,7 @@
 // ARS Corporation - Daily Pump Operations Page
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import {
@@ -216,6 +217,12 @@ export default function DailyOperationsPage() {
             <ExclamationTriangleIcon className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900">No Pumps Found</h3>
             <p className="text-gray-500 mt-2">Please configure pumps and nozzles for this business first.</p>
+            <Link 
+              href="/pump/config" 
+              className="mt-4 inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+            >
+              Go to Configuration
+            </Link>
           </div>
         ) : (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">

@@ -49,7 +49,7 @@ async function handler(req, res) {
       });
 
     } else if (method === 'POST') {
-      const { type, cylinderId, quantity, notes } = req.body;
+      const { action, type, cylinderId, quantity, notes } = req.body;
       let { branchId } = req.body;
 
       if (!branchId && user.businessId) {
@@ -61,6 +61,44 @@ async function handler(req, res) {
 
       if (!branchId) return res.status(400).json({ success: false, message: 'Branch ID missing' });
 
+      // Handle direct stock setting (for owner to set initial/current values)
+      if (action === 'set_stock') {
+        const { type: stockType } = req.body;
+        
+        // Ensure stock record exists
+        let stock = await prisma.cylinderStock.findUnique({
+          where: {
+            branchId_cylinderTypeId: {
+              branchId: branchId,
+              cylinderTypeId: cylinderId
+            }
+          }
+        });
+
+        if (!stock) {
+          stock = await prisma.cylinderStock.create({
+            data: {
+              branchId,
+              cylinderTypeId: cylinderId,
+              filledQty: stockType === 'filled' ? quantity : 0,
+              emptyQty: stockType === 'empty' ? quantity : 0
+            }
+          });
+        } else {
+          const updateData = stockType === 'filled' 
+            ? { filledQty: quantity }
+            : { emptyQty: quantity };
+
+          await prisma.cylinderStock.update({
+            where: { id: stock.id },
+            data: updateData
+          });
+        }
+
+        return res.status(200).json({ success: true, message: 'Stock updated' });
+      }
+
+      // Handle transaction-based updates (receive, issue, return)
       await prisma.$transaction(async (tx) => {
         // Ensure stock record exists
         let stock = await tx.cylinderStock.findUnique({
@@ -126,4 +164,4 @@ async function handler(req, res) {
   }
 }
 
-export default withAuth(handler, ['MANAGER', 'PUMP_ATTENDANT', 'ADMIN', 'SUPER_OWNER']);
+export default withAuth(handler, ['MANAGER', 'PUMP_ATTENDANT', 'ADMIN', 'SUPER_OWNER', 'CASHIER']);

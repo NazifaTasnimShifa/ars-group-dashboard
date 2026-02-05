@@ -51,6 +51,7 @@ const getNavigation = (currentBusiness, isSuperOwner, userRole) => {
       { name: 'Dip Stock', href: '/pump/dip-stock' },
       { name: 'Gas Cylinders', href: '/pump/cylinder-operations' },
       { name: 'Credit Sales', href: '/pump/credit-sales' },
+      { name: 'Configuration', href: '/pump/config' },
     ],
   };
 
