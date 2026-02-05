@@ -78,14 +78,18 @@ export default function CashFlowPage() {
 
   const handleFilterChange = (range) => {
     setDateRange(range);
-    fetchData(range);
+    // Only fetch if we have currentBusiness, otherwise useEffect will handle it
+    if (currentBusiness?.id) {
+      fetchData(range);
+    }
   };
 
+  // Auto-fetch when currentBusiness becomes available and we have valid dates
   useEffect(() => {
-    if (currentBusiness?.id && dateRange.startDate && dateRange.endDate) {
+    if (currentBusiness?.id && dateRange.startDate && dateRange.endDate && !data && !loading) {
       fetchData(dateRange);
     }
-  }, [currentBusiness, dateRange, fetchData]);
+  }, [currentBusiness?.id, dateRange.startDate, dateRange.endDate]);
 
   // Compute values only if data exists
   const totalOperating = data?.operating?.reduce((sum, item) => sum + item.amount, 0) || 0;

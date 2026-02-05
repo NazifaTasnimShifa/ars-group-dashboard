@@ -67,14 +67,17 @@ export default function IncomeStatementPage() {
 
     const handleFilterChange = (range) => {
         setDateRange(range);
-        fetchData(range);
+        if (currentBusiness?.id) {
+            fetchData(range);
+        }
     };
 
+    // Auto-fetch when currentBusiness becomes available and we have valid dates
     useEffect(() => {
-        if (currentBusiness?.id && dateRange.startDate && dateRange.endDate) {
+        if (currentBusiness?.id && dateRange.startDate && dateRange.endDate && !data && !loading) {
             fetchData(dateRange);
         }
-    }, [currentBusiness, dateRange, fetchData]);
+    }, [currentBusiness?.id, dateRange.startDate, dateRange.endDate]);
 
     // Compute values only if data exists
     const grossProfit = data?.revenue?.amount && data?.costOfGoodsSold?.amount
