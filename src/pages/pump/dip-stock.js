@@ -119,6 +119,18 @@ function DipStockPage() {
             notes: null
           });
         }
+
+        // Save lifting (fuel received) reading if it exists
+        if (reading.liftingToday !== null && reading.liftingToday !== undefined && reading.liftingToday > 0) {
+          readingsToSave.push({
+            tankId,
+            readingType: 'RECEIPT',
+            dipMm: 0,
+            calculatedStock: reading.liftingToday,
+            temperature: null,
+            notes: 'Fuel received/lifting'
+          });
+        }
       });
 
       const res = await authFetch(`/api/pump/dip-readings?company_id=${currentBusiness.id}`, {

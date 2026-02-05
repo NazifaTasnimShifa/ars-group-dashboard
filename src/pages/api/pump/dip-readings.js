@@ -58,6 +58,9 @@ async function handler(req, res) {
                 const closingReading = dipReadings.find(
                     r => r.tankId === tank.id && r.readingType === 'CLOSING'
                 );
+                const receiptReading = dipReadings.find(
+                    r => r.tankId === tank.id && r.readingType === 'RECEIPT'
+                );
 
                 return {
                     id: tank.id,
@@ -68,9 +71,10 @@ async function handler(req, res) {
                     currentStock: Number(tank.currentStock),
                     openingDip: openingReading ? Number(openingReading.calculatedStock) : Number(tank.currentStock),
                     closingDip: closingReading ? Number(closingReading.calculatedStock) : null,
-                    liftingToday: 0, // This should be calculated from fuel receipts
+                    liftingToday: receiptReading ? Number(receiptReading.calculatedStock) : 0,
                     openingReadingId: openingReading?.id,
-                    closingReadingId: closingReading?.id
+                    closingReadingId: closingReading?.id,
+                    receiptReadingId: receiptReading?.id
                 };
             });
 
