@@ -1,43 +1,70 @@
 // src/pages/pump/dip-stock.js
 // ARS Corporation - Underground Tank Dip Stock Tracking
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import {
   CalendarDaysIcon,
   BeakerIcon,
-  ArrowDownIcon,
-  ArrowUpIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
-// Tank configuration
-const TANKS = [
-  { id: 'T1', name: 'Tank 1', fuelType: 'Petrol', capacity: 25000, color: 'amber' },
-  { id: 'T2', name: 'Tank 2', fuelType: 'Diesel', capacity: 30000, color: 'blue' },
-  { id: 'T3', name: 'Tank 3', fuelType: 'Diesel', capacity: 25000, color: 'blue' },
-  { id: 'T4', name: 'Tank 4', fuelType: 'Octane', capacity: 15000, color: 'purple' },
-];
-
-// Initial dip readings
-const INITIAL_READINGS = {
-  'T1': { openingDip: 18500, closingDip: null, liftingToday: 5000 },
-  'T2': { openingDip: 22000, closingDip: null, liftingToday: 8000 },
-  'T3': { openingDip: 15000, closingDip: null, liftingToday: 0 },
-  'T4': { openingDip: 8500, closingDip: null, liftingToday: 0 },
-};
-
 function DipStockPage() {
-  const { formatCurrency } = useAppContext();
+  const { formatCurrency, authFetch, currentBusiness } = useAppContext();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [readings, setReadings] = useState(INITIAL_READINGS);
+  const [tanks, setTanks] = useState([]);
+  const [readings, setReadings] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState(null);
+
+  // Fetch tank data and readings
+  const fetchData = async () => {
+    if (!currentBusiness?.id) return;
+
+    try {
+      setLoading(true);
+      const res = await authFetch(`/api/pump/dip-readings?company_id=${currentBusiness.id}&date=${selectedDate}`);
+      const result = await res.json();
+
+      if (result.success && result.data) {
+        setTanks(result.data.tanks || []);
+        
+        // Build readings state from fetched data
+        const readingsState = {};
+        result.data.tanks.forEach(tank => {
+          readingsState[tank.id] = {
+            openingDip: tank.openingDip,
+            closingDip: tank.closingDip,
+            liftingToday: tank.liftingToday || 0
+          };
+        });
+        setReadings(readingsState);
+      }
+    } catch (err) {
+      console.error("Failed to fetch dip readings", err);
+      setMessage({ type: 'error', text: 'Failed to load dip readings' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch data when component mounts or date changes
+  useEffect(() => {
+    fetchData();
+  }, [currentBusiness?.id, selectedDate]);
 
   // Calculate tank status
   const getTankStatus = (tankId) => {
-    const tank = TANKS.find(t => t.id === tankId);
+    const tank = tanks.find(t => t.id === tankId);
+    if (!tank) return { status: 'normal', label: 'Normal' };
+    
     const reading = readings[tankId];
-    const currentLevel = reading.closingDip || reading.openingDip;
+    if (!reading) return { status: 'normal', label: 'Normal' };
+    
+    const currentLevel = reading.closingDip || reading.openingDip || 0;
     const percentage = (currentLevel / tank.capacity) * 100;
 
     if (percentage < 20) return { status: 'critical', label: 'Critical' };
@@ -57,14 +84,93 @@ function DipStockPage() {
     }));
   };
 
+  // Save dip readings
+  const handleSave = async () => {
+    if (!currentBusiness?.id) return;
+
+    try {
+      setSaving(true);
+      setMessage(null);
+
+      // Prepare readings array for API
+      const readingsToSave = [];
+      
+      Object.entries(readings).forEach(([tankId, reading]) => {
+        // Save opening reading if it exists
+        if (reading.openingDip !== null && reading.openingDip !== undefined) {
+          readingsToSave.push({
+            tankId,
+            readingType: 'OPENING',
+            dipMm: 0, // You may want to add actual dip mm measurement
+            calculatedStock: reading.openingDip,
+            temperature: null,
+            notes: null
+          });
+        }
+
+        // Save closing reading if it exists
+        if (reading.closingDip !== null && reading.closingDip !== undefined) {
+          readingsToSave.push({
+            tankId,
+            readingType: 'CLOSING',
+            dipMm: 0,
+            calculatedStock: reading.closingDip,
+            temperature: null,
+            notes: null
+          });
+        }
+      });
+
+      const res = await authFetch(`/api/pump/dip-readings?company_id=${currentBusiness.id}`, {
+        method: 'POST',
+        body: JSON.stringify({ readings: readingsToSave })
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Dip readings saved successfully!' });
+        // Refresh data to get latest values
+        setTimeout(() => {
+          fetchData();
+          setMessage(null);
+        }, 2000);
+      } else {
+        setMessage({ type: 'error', text: result.message || 'Failed to save readings' });
+      }
+    } catch (err) {
+      console.error("Failed to save dip readings", err);
+      setMessage({ type: 'error', text: 'Failed to save dip readings' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Calculate totals
-  const totals = TANKS.reduce((acc, tank) => {
-    const reading = readings[tank.id];
+  const totals = tanks.reduce((acc, tank) => {
+    const reading = readings[tank.id] || {};
     acc.opening += reading.openingDip || 0;
     acc.closing += reading.closingDip || reading.openingDip || 0;
     acc.lifting += reading.liftingToday || 0;
     return acc;
   }, { opening: 0, closing: 0, lifting: 0 });
+
+  const getFuelTypeColor = (fuelType) => {
+    const type = fuelType?.toLowerCase() || '';
+    if (type.includes('petrol') || type.includes('octane')) return 'amber';
+    if (type.includes('diesel')) return 'blue';
+    return 'purple';
+  };
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-gray-500">Loading dip stock data...</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -90,6 +196,22 @@ function DipStockPage() {
           </div>
         </div>
 
+        {/* Success/Error Message */}
+        {message && (
+          <div className={`rounded-md p-4 ${message.type === 'success' ? 'bg-green-50' : 'bg-red-50'}`}>
+            <div className="flex">
+              {message.type === 'success' ? (
+                <CheckCircleIcon className="h-5 w-5 text-green-400" />
+              ) : (
+                <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
+              )}
+              <p className={`ml-3 text-sm font-medium ${message.type === 'success' ? 'text-green-800' : 'text-red-800'}`}>
+                {message.text}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <div className="bg-gradient-to-br from-slate-600 to-slate-700 rounded-xl p-5 text-white">
@@ -106,24 +228,25 @@ function DipStockPage() {
           </div>
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white">
             <p className="text-blue-100 text-sm">Total Capacity</p>
-            <p className="text-2xl font-bold mt-1">{(TANKS.reduce((s, t) => s + t.capacity, 0) / 1000).toFixed(0)}K L</p>
+            <p className="text-2xl font-bold mt-1">{(tanks.reduce((s, t) => s + t.capacity, 0) / 1000).toFixed(0)}K L</p>
           </div>
         </div>
 
         {/* Tank Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {TANKS.map((tank) => {
-            const reading = readings[tank.id];
-            const currentLevel = reading.closingDip || reading.openingDip;
+          {tanks.map((tank) => {
+            const reading = readings[tank.id] || {};
+            const currentLevel = reading.closingDip || reading.openingDip || 0;
             const percentage = (currentLevel / tank.capacity) * 100;
             const { status, label } = getTankStatus(tank.id);
 
+            const color = getFuelTypeColor(tank.fuelType);
             const colorMap = {
               amber: { bg: 'bg-amber-500', light: 'bg-amber-100', text: 'text-amber-700' },
               blue: { bg: 'bg-blue-500', light: 'bg-blue-100', text: 'text-blue-700' },
               purple: { bg: 'bg-purple-500', light: 'bg-purple-100', text: 'text-purple-700' },
             };
-            const colors = colorMap[tank.color];
+            const colors = colorMap[color];
 
             return (
               <div key={tank.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
@@ -133,7 +256,7 @@ function DipStockPage() {
                       <BeakerIcon className={`h-6 w-6 ${colors.text}`} />
                     </div>
                     <div>
-                      <h3 className="font-bold text-gray-900">{tank.name}</h3>
+                      <h3 className="font-bold text-gray-900">Tank {tank.tankNumber}</h3>
                       <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${colors.light} ${colors.text}`}>
                         {tank.fuelType}
                       </span>
@@ -158,7 +281,7 @@ function DipStockPage() {
                   <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
                     <div
                       className={`h-full ${colors.bg} transition-all duration-300`}
-                      style={{ width: `${percentage}%` }}
+                      style={{ width: `${Math.min(percentage, 100)}%` }}
                     />
                   </div>
                   <div className="flex justify-between text-xs text-gray-400 mt-1">
@@ -206,9 +329,11 @@ function DipStockPage() {
         {/* Save Button */}
         <div className="flex justify-end">
           <button
-            className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700 shadow-sm"
+            onClick={handleSave}
+            disabled={saving}
+            className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save Dip Readings
+            {saving ? 'Saving...' : 'Save Dip Readings'}
           </button>
         </div>
       </div>
