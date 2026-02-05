@@ -46,7 +46,7 @@ async function main() {
       description: 'Limited access for pump operations only',
       permissions: { 
         dashboard: ['view'], 
-        pump: ['daily_operations', 'credit_sales'],
+        pump: ['daily_operations', 'credit_sales', 'dip_stock', 'cylinder_operations'],
         sales: ['read', 'write']
       },
       isSystem: true
