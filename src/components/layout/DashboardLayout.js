@@ -43,6 +43,8 @@ const getNavigation = (currentBusiness, isSuperOwner, userRole) => {
     icon: BeakerIcon,
     children: isCashier ? [
       { name: 'Daily Operations', href: '/pump/daily-operations' },
+      { name: 'Dip Stock', href: '/pump/dip-stock' },
+      { name: 'Gas Cylinders', href: '/pump/cylinder-operations' },
       { name: 'Credit Sales', href: '/pump/credit-sales' },
     ] : [
       { name: 'Daily Operations', href: '/pump/daily-operations' },
