@@ -27,7 +27,7 @@ const INITIAL_STOCK = {
 };
 
 function CylinderOperationsPage() {
-  const { formatCurrency, authFetch, isAuthenticated } = useAppContext();
+  const { formatCurrency, authFetch, isAuthenticated, user, isSuperOwner } = useAppContext();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [stock, setStock] = useState(INITIAL_STOCK);
   const [transactions, setTransactions] = useState([]);
@@ -38,6 +38,9 @@ function CylinderOperationsPage() {
   // Calculate totals
   const totalFilled = Object.values(stock).reduce((sum, s) => sum + s.filled, 0);
   const totalEmpty = Object.values(stock).reduce((sum, s) => sum + s.empty, 0);
+
+  // Role-based access: Only owners/admins can directly edit stock
+  const canEditStock = isSuperOwner || ['ADMIN', 'SUPER_OWNER'].includes(user?.role?.name?.toUpperCase());
 
   // Handle stock adjustment - set value directly and save to database
   const handleStockChange = async (cylinderId, type, newValue) => {
@@ -250,22 +253,30 @@ function CylinderOperationsPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <input
-                          type="number"
-                          min="0"
-                          value={cylStock.filled}
-                          onChange={(e) => handleStockChange(cylinder.id, 'filled', parseInt(e.target.value) || 0)}
-                          className="w-20 text-center text-lg font-bold text-green-600 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        />
+                        {canEditStock ? (
+                          <input
+                            type="number"
+                            min="0"
+                            value={cylStock.filled}
+                            onChange={(e) => handleStockChange(cylinder.id, 'filled', parseInt(e.target.value) || 0)}
+                            className="w-20 text-center text-lg font-bold text-green-600 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          />
+                        ) : (
+                          <span className="text-lg font-bold text-green-600">{cylStock.filled}</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <input
-                          type="number"
-                          min="0"
-                          value={cylStock.empty}
-                          onChange={(e) => handleStockChange(cylinder.id, 'empty', parseInt(e.target.value) || 0)}
-                          className="w-20 text-center text-lg font-bold text-gray-600 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
-                        />
+                        {canEditStock ? (
+                          <input
+                            type="number"
+                            min="0"
+                            value={cylStock.empty}
+                            onChange={(e) => handleStockChange(cylinder.id, 'empty', parseInt(e.target.value) || 0)}
+                            className="w-20 text-center text-lg font-bold text-gray-600 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                          />
+                        ) : (
+                          <span className="text-lg font-bold text-gray-600">{cylStock.empty}</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <span className="text-lg font-bold text-gray-900">
