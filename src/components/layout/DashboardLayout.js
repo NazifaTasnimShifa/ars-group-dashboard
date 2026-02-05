@@ -96,6 +96,7 @@ const getNavigation = (currentBusiness, isSuperOwner, userRole) => {
       href: '/accounts',
       icon: UsersIcon,
       children: [
+        { name: 'Expenses', href: '/accounts/expenses' },
         { name: 'Sundry Debtors', href: '/accounts/debtors' },
         { name: 'Sundry Creditors', href: '/accounts/creditors' },
         { name: 'Chart of Accounts', href: '/accounts/chart-of-accounts' },

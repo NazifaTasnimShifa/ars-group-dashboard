@@ -1179,17 +1179,23 @@ model purchase_items {
 model expenses {
   id             String            @id @default(cuid())
   company_id     String
-  category       String
-  description    String?
+  category       String            @db.VarChar(100)
+  description    String?           @db.Text
   amount         Decimal           @db.Decimal(15, 2)
   date           DateTime          @default(now())
-  status         String?
-  payeeName      String?
-  paymentMethod  String?
+  status         String            @default("Paid") @db.VarChar(20) // Paid, Accrued, Pending
+  payeeName      String?           @db.VarChar(255)
+  paymentMethod  String?           @default("Cash") @db.VarChar(50)
+  receiptNumber  String?           @db.VarChar(100)
   notes          String?           @db.Text
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
+  createdBy      String?
   creditor_entry sundry_creditors?
+
+  @@index([company_id])
+  @@index([date])
+  @@index([category])
 }
 
 model inventory_items {
