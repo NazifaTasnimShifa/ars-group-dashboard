@@ -256,7 +256,7 @@ export default function PumpConfigPage() {
             {fuelTypes.length === 0 ? (
               <tr>
                 <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
-                  No fuel types configured. Click "Add Fuel Type" to create one.
+                  No fuel types configured. Click &quot;Add Fuel Type&quot; to create one.
                 </td>
               </tr>
             ) : (
@@ -316,7 +316,7 @@ export default function PumpConfigPage() {
             {branches.length === 0 ? (
               <tr>
                 <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
-                  No branches configured. Click "Add Branch" to create one.
+                  No branches configured. Click &quot;Add Branch&quot; to create one.
                 </td>
               </tr>
             ) : (
@@ -396,7 +396,7 @@ export default function PumpConfigPage() {
                       ? 'Please add a branch first before adding tanks.'
                       : fuelTypes.length === 0
                         ? 'Please add fuel types first before adding tanks.'
-                        : 'No tanks configured. Click "Add Tank" to create one.'}
+                        : 'No tanks configured. Click Add Tank to create one.'}
                   </td>
                 </tr>
               ) : (
@@ -464,7 +464,7 @@ export default function PumpConfigPage() {
               ? 'Please add a branch first.'
               : tanks.length === 0
                 ? 'Please add storage tanks first.'
-                : 'No pumps configured. Click "Add Pump" to create one.'}
+                : 'No pumps configured. Click Add Pump to create one.'}
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
