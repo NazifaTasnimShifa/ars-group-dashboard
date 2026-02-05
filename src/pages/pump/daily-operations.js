@@ -21,6 +21,7 @@ export default function DailyOperationsPage() {
   const [shiftId, setShiftId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [creditSales, setCreditSales] = useState(0);
 
   // Fetch data from API
   const fetchData = useCallback(async () => {
@@ -35,6 +36,7 @@ export default function DailyOperationsPage() {
         setPumps(result.data.pumps || []);
         setShiftId(result.data.shiftId);
         setDayStatus(result.data.status || 'OPEN');
+        setCreditSales(result.data.creditSalesTotal || 0);
       } else {
         console.error('Failed to fetch data:', result.message);
       }
@@ -206,8 +208,8 @@ export default function DailyOperationsPage() {
           </div>
           <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 text-white">
             <p className="text-purple-100 text-sm">Cash Collection</p>
-            <p className="text-2xl font-bold mt-1">{formatCurrency(totals.amount * 0.85)}</p>
-            <p className="text-purple-200 text-xs">Est. after credit</p>
+            <p className="text-2xl font-bold mt-1">{formatCurrency(totals.amount - creditSales)}</p>
+            <p className="text-purple-200 text-xs">Total - {formatCurrency(creditSales)} Credit</p>
           </div>
         </div>
 

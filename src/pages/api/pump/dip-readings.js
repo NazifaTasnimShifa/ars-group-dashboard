@@ -50,6 +50,36 @@ async function handler(req, res) {
                 }
             });
 
+            // Fetch shift and meter readings for sales calculation
+            const shift = await prisma.shiftInstance.findFirst({
+                where: {
+                    date: targetDate,
+                    shift: { branch: { businessId: company_id } }
+                },
+                include: {
+                    meterReadings: {
+                        include: { nozzle: true }
+                    }
+                }
+            });
+
+            const salesPerTank = {};
+            if (shift?.meterReadings) {
+                const nozzleMap = {};
+                shift.meterReadings.forEach(r => {
+                    if (!nozzleMap[r.nozzleId]) nozzleMap[r.nozzleId] = {};
+                    nozzleMap[r.nozzleId][r.readingType] = Number(r.readingValue);
+                    nozzleMap[r.nozzleId].tankId = r.nozzle.tankId;
+                });
+
+                Object.values(nozzleMap).forEach(n => {
+                    if (n.CLOSING !== undefined && n.OPENING !== undefined) {
+                         const qty = n.CLOSING - n.OPENING;
+                         if (qty > 0) salesPerTank[n.tankId] = (salesPerTank[n.tankId] || 0) + qty;
+                    }
+                });
+            }
+
             // Build response with tanks and their readings
             const tanksData = tanks.map(tank => {
                 const openingReading = dipReadings.find(
@@ -72,6 +102,7 @@ async function handler(req, res) {
                     openingDip: openingReading ? Number(openingReading.calculatedStock) : Number(tank.currentStock),
                     closingDip: closingReading ? Number(closingReading.calculatedStock) : null,
                     liftingToday: receiptReading ? Number(receiptReading.calculatedStock) : 0,
+                    salesToday: salesPerTank[tank.id] || 0,
                     openingReadingId: openingReading?.id,
                     closingReadingId: closingReading?.id,
                     receiptReadingId: receiptReading?.id

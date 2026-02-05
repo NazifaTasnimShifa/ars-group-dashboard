@@ -6,37 +6,30 @@ import { useAppContext } from '@/contexts/AppContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Modal from '@/components/ui/Modal';
 import SaleForm from '@/components/forms/SaleForm';
+import PaymentForm from '@/components/forms/PaymentForm';
 import {
   CalendarDaysIcon,
   UserGroupIcon,
   PlusIcon,
   BanknotesIcon,
   ClockIcon,
-  CheckCircleIcon
+  ExclamationCircleIcon
 } from '@heroicons/react/24/outline';
-
-// Demo credit customers (TODO: fetch from API)
-const CREDIT_CUSTOMERS = [
-  { id: 'C1', name: 'Bangladesh Army Camp', limit: 500000, used: 325000, lastPayment: '10/12/2024' },
-  { id: 'C2', name: 'Dhaka Transport Co.', limit: 300000, used: 280000, lastPayment: '05/12/2024' },
-  { id: 'C3', name: 'City Bus Service', limit: 250000, used: 120000, lastPayment: '12/12/2024' },
-  { id: 'C4', name: 'Metro Construction Ltd', limit: 400000, used: 150000, lastPayment: '08/12/2024' },
-  { id: 'C5', name: 'ABC Logistics', limit: 200000, used: 195000, lastPayment: '01/12/2024' },
-];
 
 export default function CreditSalesPage() {
   const { formatCurrency, authFetch, currentBusiness } = useAppContext();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [activeTab, setActiveTab] = useState('sales');
-  const [modalState, setModalState] = useState({ open: false, title: '', type: null });
+  // Modal state: type can be 'creditSale' or 'receivePayment'
+  const [modalState, setModalState] = useState({ open: false, title: '', type: null, data: null });
   const [salesData, setSalesData] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch credit sales from API
   const fetchSales = useCallback(async () => {
     if (!currentBusiness?.id) return;
 
-    setLoading(true);
     try {
       // Fetch sales with Credit payment method
       const res = await authFetch(`/api/sales?company_id=${currentBusiness.id}&date=${selectedDate}&paymentMethod=Credit`);
@@ -47,30 +40,53 @@ export default function CreditSalesPage() {
       }
     } catch (err) {
       console.error('Failed to fetch sales:', err);
-    } finally {
-      setLoading(false);
     }
   }, [authFetch, currentBusiness?.id, selectedDate]);
 
+  // Fetch Credit Customers (Debtors)
+  const fetchCustomers = useCallback(async () => {
+    if (!currentBusiness?.id) return;
+
+    try {
+      const res = await authFetch(`/api/debtors?company_id=${currentBusiness.id}`);
+      const result = await res.json();
+
+      if (result.success) {
+        setCustomers(result.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch customers:', err);
+    }
+  }, [authFetch, currentBusiness?.id]);
+
+  const fetchAllData = useCallback(async () => {
+    setLoading(true);
+    await Promise.all([fetchSales(), fetchCustomers()]);
+    setLoading(false);
+  }, [fetchSales, fetchCustomers]);
+
   useEffect(() => {
-    fetchSales();
-  }, [fetchSales]);
+    fetchAllData();
+  }, [fetchAllData]);
 
   // Calculate totals
   const todayTotal = salesData.reduce((sum, s) => sum + Number(s.totalAmount || 0), 0);
-  const totalOutstanding = CREDIT_CUSTOMERS.reduce((sum, c) => sum + c.used, 0);
-  const totalLimit = CREDIT_CUSTOMERS.reduce((sum, c) => sum + c.limit, 0);
+  // Total Outstanding from DB (sum of all debtors' current amount)
+  const totalOutstanding = customers.reduce((sum, c) => sum + Number(c.amount || 0), 0);
+  
+  // Default limit assumption for UI visualization (per customer)
+  const VISUAL_LIMIT_THRESHOLD = 500000; 
 
   // Modal handlers
-  const openModal = (type, title) => {
-    setModalState({ open: true, title, type });
+  const openModal = (type, title, data = null) => {
+    setModalState({ open: true, title, type, data });
   };
 
   const closeModal = () => {
-    setModalState({ open: false, title: '', type: null });
+    setModalState({ open: false, title: '', type: null, data: null });
   };
 
-  const handleSave = async (data) => {
+  const handleSaleSave = async (data) => {
     try {
       const res = await authFetch('/api/sales', {
         method: 'POST',
@@ -84,13 +100,36 @@ export default function CreditSalesPage() {
       if (result.success) {
         alert('Credit sale recorded successfully!');
         closeModal();
-        fetchSales(); // Refresh data
+        fetchAllData(); // Refresh data
       } else {
         alert(result.message || 'Failed to save');
       }
     } catch (err) {
       console.error('Save error:', err);
       alert('Failed to save. Please try again.');
+    }
+  };
+
+  const handlePaymentSave = async (data) => {
+    try {
+      const res = await authFetch('/api/sales/payment', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...data,
+          companyId: currentBusiness?.id
+        })
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert('Payment recorded successfully!');
+        closeModal();
+        fetchAllData(); // Refresh all data (sales might be affected if we log it, and customer balance definitely)
+      } else {
+        alert(result.message || 'Failed to save payment');
+      }
+    } catch (err) {
+      console.error('Payment Save error:', err);
+      alert('Failed to save payment. Please try again.');
     }
   };
 
@@ -138,14 +177,18 @@ export default function CreditSalesPage() {
             <p className="text-red-200 text-xs">All customers</p>
           </div>
           <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl p-5 text-white">
-            <p className="text-amber-100 text-sm">Credit Utilization</p>
-            <p className="text-2xl font-bold mt-1">{((totalOutstanding / totalLimit) * 100).toFixed(0)}%</p>
-            <p className="text-amber-200 text-xs">of total limit</p>
+            <p className="text-amber-100 text-sm">Active Customers</p>
+            <p className="text-2xl font-bold mt-1">{customers.length}</p>
+            <p className="text-amber-200 text-xs">With credit facility</p>
           </div>
-          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white">
-            <p className="text-green-100 text-sm">Active Customers</p>
-            <p className="text-2xl font-bold mt-1">{CREDIT_CUSTOMERS.length}</p>
-            <p className="text-green-200 text-xs">With credit facility</p>
+           {/* Placeholder for future stat */}
+           <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white">
+            <p className="text-green-100 text-sm">Collections Today</p>
+            <p className="text-2xl font-bold mt-1">
+                 {/* TODO: Add Logic to fetch today's collections */}
+                 --
+            </p>
+            <p className="text-green-200 text-xs">To be implemented</p>
           </div>
         </div>
 
@@ -248,12 +291,13 @@ export default function CreditSalesPage() {
         {/* Customers Tab */}
         {activeTab === 'customers' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {CREDIT_CUSTOMERS.map((customer) => {
-              const utilization = (customer.used / customer.limit) * 100;
-              const isNearLimit = utilization > 80;
+            {customers.map((customer) => {
+              const outstanding = Number(customer.amount || 0);
+              const utilization = Math.min((outstanding / VISUAL_LIMIT_THRESHOLD) * 100, 100);
+              const isHigh = utilization > 80;
 
               return (
-                <div key={customer.id} className={`bg-white rounded-xl shadow-sm border p-5 ${isNearLimit ? 'border-red-200' : 'border-gray-200'
+                <div key={customer.id} className={`bg-white rounded-xl shadow-sm border p-5 ${isHigh ? 'border-red-200' : 'border-gray-200'
                   }`}>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
@@ -262,51 +306,57 @@ export default function CreditSalesPage() {
                       </div>
                       <div>
                         <h3 className="font-bold text-gray-900">{customer.name}</h3>
-                        <p className="text-xs text-gray-500">Last payment: {customer.lastPayment}</p>
+                        <p className="text-xs text-gray-500">
+                          {customer.phone ? customer.phone : 'No Phone'}
+                        </p>
                       </div>
                     </div>
-                    {isNearLimit && (
+                    {isHigh && (
                       <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-red-100 text-red-700 rounded-full">
-                        Near Limit
+                        <ExclamationCircleIcon className="h-3 w-3 mr-1" />
+                        High Due
                       </span>
                     )}
                   </div>
 
                   <div className="mb-3">
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-500">Credit Used</span>
+                      <span className="text-gray-500">Estimated Limit Usage</span>
                       <span className="font-medium text-gray-900">{utilization.toFixed(0)}%</span>
                     </div>
                     <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
                       <div
-                        className={`h-full transition-all ${isNearLimit ? 'bg-red-500' : 'bg-blue-500'}`}
+                        className={`h-full transition-all ${isHigh ? 'bg-red-500' : 'bg-blue-500'}`}
                         style={{ width: `${utilization}%` }}
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-2 gap-4 text-sm mb-4">
                     <div>
                       <p className="text-gray-500">Outstanding</p>
-                      <p className="font-bold text-red-600">{formatCurrency(customer.used)}</p>
+                      <p className="font-bold text-red-600 text-lg">{formatCurrency(outstanding)}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Credit Limit</p>
-                      <p className="font-bold text-gray-900">{formatCurrency(customer.limit)}</p>
+                      <p className="text-gray-500">Last Payment</p>
+                      <p className="font-medium text-gray-900">
+                        {/* If we had last payment date in API, we'd show it here. For now, showing 'Paid Amount' or similar might be useful, or just N/A */}
+                        {customer.updatedAt ? new Date(customer.updatedAt).toLocaleDateString() : '-'}
+                      </p>
                     </div>
                   </div>
 
-                  <div className="mt-4 flex gap-2">
+                  <div className="flex gap-2">
                     <button
-                      onClick={() => alert('Receive Payment feature coming soon.')}
-                      className="flex-1 px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700"
+                      onClick={() => openModal('receivePayment', 'Receive Payment', customer)}
+                      className="flex-1 px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 shadow-sm"
                     >
                       <BanknotesIcon className="h-4 w-4 inline mr-1" />
-                      Receive Payment
+                      Receive
                     </button>
                     <button
-                      onClick={() => openModal('creditSale', 'New Sale for ' + customer.name)}
-                      className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
+                      onClick={() => openModal('creditSale', 'New Sale for ' + customer.name, customer)}
+                      className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 shadow-sm"
                     >
                       <PlusIcon className="h-4 w-4 inline mr-1" />
                       New Sale
@@ -315,14 +365,30 @@ export default function CreditSalesPage() {
                 </div>
               );
             })}
+             {customers.length === 0 && !loading && (
+              <div className="col-span-full py-10 text-center text-gray-500">
+                No credit customers found. Add them in the Accounts section.
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Modal for Credit Sale Form */}
+      {/* Modal Handling */}
       <Modal open={modalState.open} setOpen={closeModal} title={modalState.title}>
         {modalState.type === 'creditSale' && (
-          <SaleForm onSave={handleSave} onCancel={closeModal} />
+          <SaleForm 
+            onSave={handleSaleSave} 
+            onCancel={closeModal} 
+            initialCustomer={modalState.data} // Pre-fill customer if available
+          />
+        )}
+        {modalState.type === 'receivePayment' && (
+          <PaymentForm 
+            customer={modalState.data}
+            onSave={handlePaymentSave}
+            onCancel={closeModal}
+          />
         )}
       </Modal>
     </DashboardLayout>

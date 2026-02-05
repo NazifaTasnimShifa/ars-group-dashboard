@@ -39,7 +39,8 @@ function DipStockPage() {
           readingsState[tank.id] = {
             openingDip: tank.openingDip,
             closingDip: tank.closingDip,
-            liftingToday: tank.liftingToday || 0
+            liftingToday: tank.liftingToday || 0,
+            salesToday: tank.salesToday || 0
           };
         });
         setReadings(readingsState);
@@ -165,8 +166,9 @@ function DipStockPage() {
     acc.opening += reading.openingDip || 0;
     acc.closing += reading.closingDip || reading.openingDip || 0;
     acc.lifting += reading.liftingToday || 0;
+    acc.sales += reading.salesToday || 0;
     return acc;
-  }, { opening: 0, closing: 0, lifting: 0 });
+  }, { opening: 0, closing: 0, lifting: 0, sales: 0 });
 
   const getFuelTypeColor = (fuelType) => {
     const type = fuelType?.toLowerCase() || '';
@@ -237,7 +239,7 @@ function DipStockPage() {
           </div>
           <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl p-5 text-white">
             <p className="text-amber-100 text-sm">Expected Closing</p>
-            <p className="text-2xl font-bold mt-1">{((totals.opening + totals.lifting) / 1000).toFixed(1)}K L</p>
+            <p className="text-2xl font-bold mt-1">{((totals.opening + totals.lifting - totals.sales) / 1000).toFixed(1)}K L</p>
           </div>
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white">
             <p className="text-blue-100 text-sm">Total Capacity</p>

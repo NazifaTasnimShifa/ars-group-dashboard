@@ -81,13 +81,31 @@ async function handler(req, res) {
                 };
             });
 
+
+            // Calculate Total Credit Sales for the day
+            const creditSales = await prisma.sales.aggregate({
+                _sum: {
+                    totalAmount: true
+                },
+                where: {
+                    company_id: company_id,
+                    paymentMethod: 'Credit',
+                    date: {
+                        gte: targetDate,
+                        lt: new Date(targetDate.getTime() + 24 * 60 * 60 * 1000)
+                    }
+                }
+            });
+            const creditSalesTotal = Number(creditSales._sum.totalAmount || 0);
+
             return res.status(200).json({
                 success: true,
                 data: {
                     shiftId: shift?.id || null,
                     date: targetDate.toISOString().split('T')[0],
                     status: shift?.status || 'OPEN',
-                    pumps: pumpsData
+                    pumps: pumpsData,
+                    creditSalesTotal
                 }
             });
         }
@@ -129,6 +147,26 @@ async function handler(req, res) {
                         openingCash: 0
                     }
                 });
+
+                // Snapshot Opening Readings for all active nozzles
+                const activeNozzles = await prisma.nozzle.findMany({
+                    where: { 
+                        isActive: true,
+                        pump: { branch: { businessId: company_id } }
+                    }
+                });
+
+                if (activeNozzles.length > 0) {
+                    await prisma.meterReading.createMany({
+                        data: activeNozzles.map(n => ({
+                            shiftInstanceId: shift.id,
+                            nozzleId: n.id,
+                            readingType: 'OPENING',
+                            readingValue: n.currentMeterReading,
+                            readingTime: new Date()
+                        }))
+                    });
+                }
             }
 
             // Upsert meter readings

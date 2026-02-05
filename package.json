@@ -22,13 +22,13 @@
   "dependencies": {
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
-    "@prisma/client": "^6.19.0",
+    "@prisma/client": "^7.2.0",
     "bcryptjs": "^3.0.3",
     "chart.js": "^4.5.0",
     "flowbite": "^3.1.2",
     "flowbite-react": "^0.12.9",
     "jsonwebtoken": "^9.0.3",
-    "next": "15.5.7",
+    "next": "^15.5.9",
     "react": "19.1.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "19.1.0"

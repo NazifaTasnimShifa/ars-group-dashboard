@@ -82,6 +82,11 @@ function CylinderOperationsPage() {
           };
         });
         setStock(newStock);
+        
+        // Update transactions list from server
+        if (result.data.transactions) {
+          setTransactions(result.data.transactions);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch cylinder data", err);
