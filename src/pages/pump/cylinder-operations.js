@@ -25,61 +25,97 @@ function CylinderOperationsPage() {
   const { formatCurrency, authFetch, isAuthenticated, user, isSuperOwner } = useAppContext();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [cylinderTypes, setCylinderTypes] = useState([]);
+  const [originalStock, setOriginalStock] = useState({});
   const [stock, setStock] = useState({});
   const [transactions, setTransactions] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('receive'); // receive, issue, swap
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
-
-  // Calculate totals
-  const totalFilled = Object.values(stock).reduce((sum, s) => sum + s.filled, 0);
-  const totalEmpty = Object.values(stock).reduce((sum, s) => sum + s.empty, 0);
+  // Calculate totals - ensuring we handle NaN/undefined
+  const totalFilled = Object.values(stock).reduce((sum, s) => sum + (Number(s?.filled) || 0), 0);
+  const totalEmpty = Object.values(stock).reduce((sum, s) => sum + (Number(s?.empty) || 0), 0);
+  
+  // Check if there are unsaved changes
+  const hasChanges = JSON.stringify(stock) !== JSON.stringify(originalStock);
 
   // Role-based access: Only owners/admins can directly edit stock
   const canEditStock = isSuperOwner || ['ADMIN', 'SUPER_OWNER'].includes(user?.role?.name?.toUpperCase());
 
-  // Handle stock adjustment - set value directly and save to database
-  const [savingStatus, setSavingStatus] = useState({}); // { cylinderId_type: boolean }
-
-  const handleStockChange = async (cylinderId, type, newValue) => {
-    const key = `${cylinderId}_${type}`;
+  const handleStockChange = (cylinderId, type, rawValue) => {
+    const val = rawValue === '' ? 0 : parseInt(rawValue);
+    const newValue = isNaN(val) ? 0 : Math.max(0, val);
+    
     // Update local state immediately
-    const updatedStock = {
-      ...stock,
+    setStock(prev => ({
+      ...prev,
       [cylinderId]: {
-        ...stock[cylinderId],
-        [type]: Math.max(0, newValue)
+        ...(prev[cylinderId] || { filled: 0, empty: 0 }),
+        [type]: newValue
       }
-    };
-    setStock(updatedStock);
-    setSavingStatus(prev => ({ ...prev, [key]: true }));
+    }));
+    
+    // Clear any previous save error when user makes a new change
+    if (saveError) setSaveError(null);
+  };
 
-    // Save to database
+  // Bulk save changes to the database
+  const saveChanges = async () => {
+    if (!hasChanges || isSaving) return;
+    
+    setIsSaving(true);
+    setSaveError(null);
+    
     try {
-      // Use currentBusiness.id as a hint for the API to find the correct branch
-      const res = await authFetch('/api/pump/cylinders', {
-        method: 'POST',
-        body: JSON.stringify({ 
-          action: 'set_stock',
-          cylinderId, 
-          type,
-          quantity: Math.max(0, newValue),
-          businessId: currentBusiness?.id // Pass businessId if branchId not directly known
-        })
-      });
-      
-      if (!res.ok) {
-        throw new Error('Failed to save');
+      // Find what changed
+      const changes = [];
+      for (const id in stock) {
+        if (stock[id].filled !== originalStock[id]?.filled) {
+          changes.push({ cylinderId: id, type: 'filled', quantity: stock[id].filled });
+        }
+        if (stock[id].empty !== originalStock[id]?.empty) {
+          changes.push({ cylinderId: id, type: 'empty', quantity: stock[id].empty });
+        }
       }
+
+      if (changes.length === 0) {
+        setOriginalStock({ ...stock });
+        setIsSaving(false);
+        return;
+      }
+
+      // We'll perform individual updates for now (or could add a bulk endpoint)
+      // Since it's usually just a few rows, this is fine.
+      const savePromises = changes.map(change => 
+        authFetch('/api/pump/cylinders', {
+          method: 'POST',
+          body: JSON.stringify({ 
+            action: 'set_stock',
+            cylinderId: change.cylinderId, 
+            type: change.type,
+            quantity: change.quantity,
+            businessId: currentBusiness?.id 
+          })
+        })
+      );
+
+      const results = await Promise.all(savePromises);
+      const failed = results.filter(r => !r.ok);
+      
+      if (failed.length > 0) {
+        throw new Error('Some changes failed to save');
+      }
+
+      // Success - update original stock to match current
+      setOriginalStock({ ...stock });
+      // Small visual feedback could be added here (toast)
     } catch (err) {
-      console.error('Failed to save stock change:', err);
-      // Optional: show error message
+      console.error('Failed to save changes:', err);
+      setSaveError("Failed to save some changes. Please try again.");
     } finally {
-      // Small delay just for visual feedback
-      setTimeout(() => {
-        setSavingStatus(prev => ({ ...prev, [key]: false }));
-      }, 500);
+      setIsSaving(false);
     }
   };
 
@@ -105,11 +141,12 @@ function CylinderOperationsPage() {
         const newStock = {};
         result.data.stocks.forEach(item => {
           newStock[item.cylinderTypeId] = {
-            filled: item.filledQty,
-            empty: item.emptyQty
+            filled: Number(item.filledQty) || 0,
+            empty: Number(item.emptyQty) || 0
           };
         });
         setStock(newStock);
+        setOriginalStock(JSON.parse(JSON.stringify(newStock))); // Deep copy for comparison
         
         // Update transactions list from server
         if (result.data.transactions) {
@@ -174,6 +211,29 @@ function CylinderOperationsPage() {
             </p>
           </div>
           <div className="mt-4 sm:mt-0 flex items-center gap-3">
+            {hasChanges && (
+              <button
+                onClick={saveChanges}
+                disabled={isSaving}
+                className={`flex items-center px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-all ${
+                  isSaving 
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'
+                }`}
+              >
+                {isSaving ? (
+                  <>
+                    <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
+              </button>
+            )}
             <div className="flex items-center bg-white rounded-lg border border-gray-300 px-3 py-2 shadow-sm">
               <CalendarDaysIcon className="h-5 w-5 text-gray-400 mr-2" />
               <input
@@ -185,6 +245,16 @@ function CylinderOperationsPage() {
             </div>
           </div>
         </div>
+        
+        {saveError && (
+          <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-md">
+            <div className="flex">
+              <div className="ml-3 text-sm text-red-700">
+                {saveError}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -303,17 +373,11 @@ function CylinderOperationsPage() {
                               type="number"
                               min="0"
                               value={cylStock.filled}
-                              onChange={(e) => handleStockChange(cylinder.id, 'filled', parseInt(e.target.value) || 0)}
-                              className={`w-20 text-center text-lg font-bold text-green-600 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${savingStatus[`${cylinder.id}_filled`] ? 'bg-yellow-50 border-yellow-300' : ''}`}
+                              onChange={(e) => handleStockChange(cylinder.id, 'filled', e.target.value)}
+                              className={`w-20 text-center text-lg font-bold text-green-600 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${
+                                stock[cylinder.id]?.filled !== originalStock[cylinder.id]?.filled ? 'bg-yellow-50 border-yellow-300' : ''
+                              }`}
                             />
-                            {savingStatus[`${cylinder.id}_filled`] && (
-                              <div className="absolute -top-1 right-2">
-                                <span className="flex h-2 w-2">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
-                                </span>
-                              </div>
-                            )}
                           </div>
                         ) : (
                           <span className="text-lg font-bold text-green-600">{cylStock.filled}</span>
@@ -326,17 +390,11 @@ function CylinderOperationsPage() {
                               type="number"
                               min="0"
                               value={cylStock.empty}
-                              onChange={(e) => handleStockChange(cylinder.id, 'empty', parseInt(e.target.value) || 0)}
-                              className={`w-20 text-center text-lg font-bold text-gray-600 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition-colors ${savingStatus[`${cylinder.id}_empty`] ? 'bg-yellow-50 border-yellow-300' : ''}`}
+                              onChange={(e) => handleStockChange(cylinder.id, 'empty', e.target.value)}
+                              className={`w-20 text-center text-lg font-bold text-gray-600 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition-colors ${
+                                stock[cylinder.id]?.empty !== originalStock[cylinder.id]?.empty ? 'bg-yellow-50 border-yellow-300' : ''
+                              }`}
                             />
-                            {savingStatus[`${cylinder.id}_empty`] && (
-                              <div className="absolute -top-1 right-2">
-                                <span className="flex h-2 w-2">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
-                                </span>
-                              </div>
-                            )}
                           </div>
                         ) : (
                           <span className="text-lg font-bold text-gray-600">{cylStock.empty}</span>
@@ -344,7 +402,7 @@ function CylinderOperationsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <span className="text-lg font-bold text-gray-900">
-                          {cylStock.filled + cylStock.empty}
+                          {(Number(cylStock.filled) || 0) + (Number(cylStock.empty) || 0)}
                         </span>
                       </td>
                     </tr>
@@ -356,9 +414,9 @@ function CylinderOperationsPage() {
                   <td colSpan="3" className="px-6 py-4 text-right font-semibold text-gray-700">
                     Total:
                   </td>
-                  <td className="px-6 py-4 text-center font-bold text-green-600">{totalFilled}</td>
-                  <td className="px-6 py-4 text-center font-bold text-gray-600">{totalEmpty}</td>
-                  <td className="px-6 py-4 text-center font-bold text-gray-900">{totalFilled + totalEmpty}</td>
+                  <td className="px-6 py-4 text-center font-bold text-green-600">{Number(totalFilled) || 0}</td>
+                  <td className="px-6 py-4 text-center font-bold text-gray-600">{Number(totalEmpty) || 0}</td>
+                  <td className="px-6 py-4 text-center font-bold text-gray-900">{(Number(totalFilled) || 0) + (Number(totalEmpty) || 0)}</td>
                 </tr>
               </tfoot>
             </table>
