@@ -391,8 +391,8 @@ export default function ExpensesPage() {
 
       {/* Modal */}
       <Modal
-        isOpen={modalState.open}
-        onClose={() => setModalState({ open: false, mode: 'add', expense: null })}
+        open={modalState.open}
+        setOpen={(val) => setModalState({ open: val, mode: 'add', expense: null })}
         title={modalState.mode === 'add' ? 'Record New Expense' : 'Edit Expense'}
       >
         <ExpenseForm
