@@ -136,23 +136,23 @@ export default function ExpenseForm({ expense, onSave, onCancel }) {
                     </div>
                 </div>
 
-                {/* Payee Name (shown for Accrued expenses) */}
-                {formData.status === 'Accrued' && (
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Payee Name</label>
-                        <input
-                            type="text"
-                            name="payeeName"
-                            value={formData.payeeName}
-                            onChange={handleChange}
-                            placeholder="e.g., Electricity Company Ltd"
-                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                        />
+                {/* Payee Name */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Payee Name</label>
+                    <input
+                        type="text"
+                        name="payeeName"
+                        value={formData.payeeName}
+                        onChange={handleChange}
+                        placeholder="e.g., Electricity Company Ltd"
+                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                    {formData.status === 'Accrued' && (
                         <p className="mt-1 text-sm text-gray-500">
                             A creditor entry will be created for this payee
                         </p>
-                    </div>
-                )}
+                    )}
+                </div>
 
                 {/* Payment Method (shown for Paid expenses) */}
                 {formData.status === 'Paid' && (
