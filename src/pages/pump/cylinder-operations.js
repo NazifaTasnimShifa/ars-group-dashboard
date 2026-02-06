@@ -22,7 +22,7 @@ function getCylinderCategory(weight) {
 }
 
 function CylinderOperationsPage() {
-  const { formatCurrency, authFetch, isAuthenticated, user, isSuperOwner } = useAppContext();
+  const { formatCurrency, authFetch, isAuthenticated, user, isSuperOwner, currentBusiness } = useAppContext();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [cylinderTypes, setCylinderTypes] = useState([]);
   const [originalStock, setOriginalStock] = useState({});
