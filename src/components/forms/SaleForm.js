@@ -15,7 +15,8 @@ export default function SaleForm({ sale, onSave, onCancel }) {
     date: new Date().toISOString().split('T')[0],
     paymentMethod: 'Cash',
     status: 'Paid',
-    notes: ''
+    notes: '',
+    paidAmount: '' // Add paid amount field
   });
 
   const [lineItems, setLineItems] = useState([
@@ -62,6 +63,10 @@ export default function SaleForm({ sale, onSave, onCancel }) {
 
   // Calculate grand total
   const grandTotal = lineItems.reduce((sum, item) => sum + (item.total || 0), 0);
+  
+  // Calculate paid amount and remaining
+  const paidAmt = formData.paidAmount !== '' ? parseFloat(formData.paidAmount) || 0 : grandTotal;
+  const remainingAmount = grandTotal - paidAmt;
 
   // Handle form field changes
   const handleChange = (e) => {
@@ -137,7 +142,8 @@ export default function SaleForm({ sale, onSave, onCancel }) {
     onSave({
       ...formData,
       items: formattedItems,
-      totalAmount: grandTotal
+      totalAmount: grandTotal,
+      paidAmount: paidAmt // Include paid amount in submission
     });
   };
 
@@ -265,36 +271,65 @@ export default function SaleForm({ sale, onSave, onCancel }) {
           </div>
         </div>
 
-        {/* Payment Method & Status */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Payment Method</label>
-            <select
-              name="paymentMethod"
-              value={formData.paymentMethod}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            >
-              <option value="Cash">Cash</option>
-              <option value="Card">Card</option>
-              <option value="bKash">bKash</option>
-              <option value="Nagad">Nagad</option>
-              <option value="Bank Transfer">Bank Transfer</option>
-              <option value="Credit">Credit (Due)</option>
-            </select>
+        {/* Payment Details */}
+        <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
+          <h4 className="text-sm font-medium text-gray-700">Payment Details</h4>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Payment Method</label>
+              <select
+                name="paymentMethod"
+                value={formData.paymentMethod}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              >
+                <option value="Cash">Cash</option>
+                <option value="Card">Card</option>
+                <option value="bKash">bKash</option>
+                <option value="Nagad">Nagad</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+                <option value="Credit">Credit (Due)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Paid Amount</label>
+              <input
+                type="number"
+                name="paidAmount"
+                min="0"
+                max={grandTotal}
+                step="0.01"
+                value={formData.paidAmount}
+                onChange={handleChange}
+                placeholder={`৳${grandTotal.toLocaleString()} (Full Amount)`}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              />
+              <p className="mt-1 text-xs text-gray-500">Leave empty for full payment</p>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Status</label>
-            <select
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            >
-              <option value="Paid">Paid</option>
-              <option value="Unpaid">Unpaid</option>
-              <option value="Partial">Partial</option>
-            </select>
+
+          {/* Payment Summary */}
+          <div className="bg-white rounded-md p-3 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Total Amount:</span>
+              <span className="font-semibold">৳{grandTotal.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Paid Amount:</span>
+              <span className="font-semibold text-green-600">৳{paidAmt.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between text-sm pt-2 border-t">
+              <span className="text-gray-600">Remaining:</span>
+              <span className={`font-bold ${remainingAmount > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                ৳{remainingAmount.toLocaleString()}
+              </span>
+            </div>
+            {remainingAmount > 0 && (
+              <p className="text-xs text-amber-600 mt-2">
+                ⓘ A debtor entry will be created for the remaining amount
+              </p>
+            )}
           </div>
         </div>
 
