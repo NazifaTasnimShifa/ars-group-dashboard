@@ -197,7 +197,7 @@ export default function ExpensesPage() {
         {/* Stats */}
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-4">
           {stats.map((item) => (
-            <PageStat key={item.name} name={item.name} stat={item.stat} color={item.color} />
+            <PageStat key={item.name} item={item} />
           ))}
         </div>
 
