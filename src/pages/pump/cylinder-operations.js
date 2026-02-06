@@ -13,26 +13,23 @@ import {
   CubeIcon
 } from '@heroicons/react/24/outline';
 
-// Cylinder types and initial stock
-const CYLINDER_TYPES = [
-  { id: 'LPG-12', name: '12 KG Domestic', category: 'domestic', weight: 12 },
-  { id: 'LPG-35', name: '35 KG Commercial', category: 'commercial', weight: 35 },
-  { id: 'LPG-45', name: '45 KG Industrial', category: 'industrial', weight: 45 },
-];
-
-const INITIAL_STOCK = {
-  'LPG-12': { filled: 45, empty: 20 },
-  'LPG-35': { filled: 12, empty: 8 },
-  'LPG-45': { filled: 6, empty: 4 },
-};
+// Helper function to determine category based on weight
+function getCylinderCategory(weight) {
+  const w = parseFloat(weight);
+  if (w <= 15) return 'domestic';
+  if (w <= 40) return 'commercial';
+  return 'industrial';
+}
 
 function CylinderOperationsPage() {
   const { formatCurrency, authFetch, isAuthenticated, user, isSuperOwner } = useAppContext();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [stock, setStock] = useState(INITIAL_STOCK);
+  const [cylinderTypes, setCylinderTypes] = useState([]);
+  const [stock, setStock] = useState({});
   const [transactions, setTransactions] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('receive'); // receive, issue, swap
+  const [loading, setLoading] = useState(true);
 
 
   // Calculate totals
@@ -72,12 +69,23 @@ function CylinderOperationsPage() {
 
   // Fetch data
   const fetchData = async () => {
+    setLoading(true);
     try {
       const res = await authFetch('/api/pump/cylinders');
       const result = await res.json();
-      if (result.success && result.data?.stocks) {
+      if (result.success && result.data) {
+        // Set cylinder types from database
+        if (result.data.cylinderTypes && result.data.cylinderTypes.length > 0) {
+          setCylinderTypes(result.data.cylinderTypes.map(ct => ({
+            id: ct.id,
+            name: ct.name,
+            weight: parseFloat(ct.weight),
+            category: getCylinderCategory(ct.weight)
+          })));
+        }
+
         // Map API stock to local format
-        const newStock = { ...stock };
+        const newStock = {};
         result.data.stocks.forEach(item => {
           newStock[item.cylinderTypeId] = {
             filled: item.filledQty,
@@ -93,6 +101,8 @@ function CylinderOperationsPage() {
       }
     } catch (err) {
       console.error("Failed to fetch cylinder data", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -118,7 +128,7 @@ function CylinderOperationsPage() {
           time: new Date().toLocaleTimeString('en-BD', { hour: '2-digit', minute: '2-digit' }),
           type,
           cylinderId,
-          cylinderName: CYLINDER_TYPES.find(c => c.id === cylinderId)?.name,
+          cylinderName: cylinderTypes.find(c => c.id === cylinderId)?.name,
           qty,
           notes
         };
@@ -229,7 +239,19 @@ function CylinderOperationsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {CYLINDER_TYPES.map((cylinder) => {
+                {loading ? (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                      Loading cylinder data...
+                    </td>
+                  </tr>
+                ) : cylinderTypes.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                      No cylinder types configured. Please add cylinder types in the system settings.
+                    </td>
+                  </tr>
+                ) : cylinderTypes.map((cylinder) => {
                   const cylStock = stock[cylinder.id] || { filled: 0, empty: 0 };
                   return (
                     <tr key={cylinder.id}>
@@ -354,7 +376,7 @@ function CylinderOperationsPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700">Cylinder Type</label>
             <select name="cylinderId" required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-              {CYLINDER_TYPES.map(type => (
+              {cylinderTypes.map(type => (
                 <option key={type.id} value={type.id}>{type.name}</option>
               ))}
             </select>

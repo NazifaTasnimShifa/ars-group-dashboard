@@ -339,6 +339,7 @@ model FuelSale {
 model CylinderType {
   id                   String                @id @default(cuid())
   name                 String                @db.VarChar(100)
+  brand                String?               @db.VarChar(50)
   weight               Decimal               @db.Decimal(6, 2)
   depositAmount        Decimal               @db.Decimal(10, 2)
   currentPrice         Decimal               @db.Decimal(10, 2)

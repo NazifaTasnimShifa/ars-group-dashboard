@@ -6,65 +6,49 @@ async function handler(req, res) {
   const user = req.user;
 
   try {
-    // Determine Branch ID
-    let branchId = req.query.branchId || req.body.branchId;
-    if (!branchId && user.businessId) {
+    // Determine Branch ID (optional for GET, required for POST)
+    let branchId = req.query.branchId || req.body?.branchId;
+    if (!branchId && user?.businessId) {
        const branch = await prisma.branch.findFirst({
           where: { businessId: user.businessId }
        });
        branchId = branch?.id;
     }
 
-    if (!branchId) {
-      return res.status(400).json({ success: false, message: 'Branch ID required (or Business context)' });
-    }
-
     if (method === 'GET') {
-      // 1. Get Stock
-      const stocks = await prisma.cylinderStock.findMany({
-        where: { branchId },
-        include: { cylinderType: true }
+      // 1. Get all Cylinder Types (these are global, not per-branch)
+      const cylinderTypes = await prisma.cylinderType.findMany({
+        where: { isActive: true },
+        orderBy: { weight: 'asc' }
       });
 
-      // 2. Get Today's Transactions (Issues/Returns)
-      // We start of day
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
+      // 2. Get Stock (requires branchId)
+      let stocks = [];
+      let mappedTransactions = [];
 
-      const transactions = await prisma.cylinderTransaction.findMany({
-        where: {
-          transactionDate: { gte: startOfDay },
-          // We might want to filter by branch? 
-          // CylinderTransaction links to Customer, not Branch directly.
-          // However, we can infer relevant transactions or just show all for the business/customer context.
-          // For now, fetch all associated with this system's customers? 
-          // Or just recently created ones?
-          // Simplest: Fetch all recent.
-        },
-        include: {
-          customer: true,
-          // We need cylinder name, but schema doesn't link Transaction -> CylinderType directly?
-          // Wait, 'cylinderTypeId' is in CylinderTransaction.
-        },
-        orderBy: { transactionDate: 'desc' }
-      });
-      
-      // We need to fetch CylinderTypes to map names if not included
-      // (Prisma doesn't auto-include based on ID unless relation exists)
-      // Schema: `cylinderTypeId String`. Relation?
-      // `model CylinderTransaction { ... cylinderTypeId String ... }`
-      // It DOES NOT seem to have a @relation to CylinderType in the schema I found earlier?
-      // Wait, let me check schema again.
-      // Line 349: `cylinderTransactions CylinderTransaction[]` in `CylinderType` model.
-      // So there IS a relation.
-      
-      // Let's retry the include with correct relation name if possible, or just map manually.
-      // Since I can't confirm the relation name on `CylinderTransaction` side (I didn't see it),
-      // I'll manually map names from `stocks` (which has cylinderType).
+      if (branchId) {
+        stocks = await prisma.cylinderStock.findMany({
+          where: { branchId },
+          include: { cylinderType: true }
+        });
 
-      const mappedTransactions = transactions.map(tx => {
-         const stockItem = stocks.find(s => s.cylinderTypeId === tx.cylinderTypeId);
-         return {
+        // 3. Get Today's Transactions (Issues/Returns)
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const transactions = await prisma.cylinderTransaction.findMany({
+          where: {
+            transactionDate: { gte: startOfDay },
+          },
+          include: {
+            customer: true,
+          },
+          orderBy: { transactionDate: 'desc' }
+        });
+
+        mappedTransactions = transactions.map(tx => {
+          const stockItem = stocks.find(s => s.cylinderTypeId === tx.cylinderTypeId);
+          return {
             id: tx.id,
             time: new Date(tx.transactionDate).toLocaleTimeString('en-BD', { hour: '2-digit', minute: '2-digit' }),
             type: tx.transactionType === 'ISSUE_NEW' ? 'issue' : 
@@ -73,15 +57,21 @@ async function handler(req, res) {
             cylinderName: stockItem?.cylinderType?.name || 'Unknown Cylinder',
             qty: tx.quantity,
             notes: tx.notes
-         };
-      });
+          };
+        });
+      }
 
       return res.status(200).json({ 
         success: true, 
-        data: { stocks, transactions: mappedTransactions } 
+        data: { cylinderTypes, stocks, transactions: mappedTransactions } 
       });
 
     } else if (method === 'POST') {
+      // POST operations require branchId
+      if (!branchId) {
+        return res.status(400).json({ success: false, message: 'Branch ID required for stock operations' });
+      }
+
       const { action, type, cylinderId, quantity, notes } = req.body;
 
       // Handle direct stock setting (Owner Override) - No transaction log
