@@ -182,17 +182,16 @@ export default function ExpensesPage() {
         {/* Header */}
         <PageHeader
           title="Expense Management"
-          subtitle="Track utility bills, wages, and operational costs"
-          action={
-            <button
-              onClick={() => setModalState({ open: true, mode: 'add', expense: null })}
-              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
-            >
-              <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
-              Record Expense
-            </button>
-          }
-        />
+          description="Track utility bills, wages, and operational costs"
+        >
+          <button
+            onClick={() => setModalState({ open: true, mode: 'add', expense: null })}
+            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+          >
+            <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
+            Record Expense
+          </button>
+        </PageHeader>
 
         {/* Stats */}
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-4">
