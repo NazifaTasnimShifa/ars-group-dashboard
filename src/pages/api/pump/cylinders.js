@@ -8,11 +8,11 @@ async function handler(req, res) {
   try {
     // Determine Branch ID (optional for GET, required for POST)
     let branchId = req.query.branchId || req.body?.branchId;
-    const businessId = req.query.businessId || req.body?.businessId || user?.businessId;
+    const businessId = req.query.businessId || req.body?.businessId || user?.businessId || user?.company_id;
 
-    if (!branchId && businessId) {
+    if (!branchId && businessId && businessId !== 'all') {
        const branch = await prisma.branch.findFirst({
-          where: { businessId: businessId }
+          where: { businessId: String(businessId) }
        });
        branchId = branch?.id;
     }
@@ -74,25 +74,40 @@ async function handler(req, res) {
         return res.status(400).json({ success: false, message: 'Branch ID required for stock operations' });
       }
 
-      const { action, type, cylinderId, quantity, notes } = req.body;
+      const action = req.body?.action;
+      const stockType = req.body?.type; // 'filled' or 'empty'
+      const cylinderId = req.body?.cylinderId;
+      const quantity = parseInt(req.body?.quantity);
+      const notes = req.body?.notes || '';
+
+      if (isNaN(quantity)) {
+        return res.status(400).json({ success: false, message: 'Invalid quantity' });
+      }
+
+      if (!cylinderId) {
+        return res.status(400).json({ success: false, message: 'Cylinder ID required' });
+      }
 
       // Handle direct stock setting (Owner Override) - No transaction log
       if (action === 'set_stock') {
-        const { type: stockType } = req.body; // 'filled' or 'empty'
-        
-        // Find or Create Stock
-        let stock = await prisma.cylinderStock.findUnique({
-          where: { branchId_cylinderTypeId: { branchId, cylinderTypeId: cylinderId } }
-        });
-
-        if (!stock) {
-          stock = await prisma.cylinderStock.create({
-            data: { branchId, cylinderTypeId: cylinderId, filledQty: 0, emptyQty: 0 }
-          });
-        }
-
         const updateData = stockType === 'filled' ? { filledQty: quantity } : { emptyQty: quantity };
-        await prisma.cylinderStock.update({ where: { id: stock.id }, data: updateData });
+        
+        await prisma.cylinderStock.upsert({
+          where: { 
+            branchId_cylinderTypeId: { 
+              branchId: String(branchId), 
+              cylinderTypeId: String(cylinderId) 
+            } 
+          },
+          update: updateData,
+          create: {
+            branchId: String(branchId),
+            cylinderTypeId: String(cylinderId),
+            filledQty: stockType === 'filled' ? quantity : 0,
+            emptyQty: stockType === 'empty' ? quantity : 0,
+            damagedQty: 0
+          }
+        });
 
         return res.status(200).json({ success: true, message: 'Stock updated' });
       }
@@ -185,8 +200,18 @@ async function handler(req, res) {
       return res.status(405).end(`Method ${method} Not Allowed`);
     }
   } catch (error) {
-    console.error("Cylinder API Error:", error);
-    return res.status(500).json({ success: false, message: error.message });
+    console.error("Cylinder API Error:", {
+      message: error.message,
+      stack: error.stack,
+      body: req.body,
+      query: req.query,
+      user: user?.id
+    });
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined 
+    });
   }
 }
 
