@@ -33,7 +33,7 @@ async function handler(req, res) {
         break;
 
       case 'POST':
-        const { items, supplier, date, amount, status, notes } = req.body;
+        const { items, supplier, date, amount, status, notes, paidAmount } = req.body;
         const targetCompanyId = req.body.company_id || company_id;
 
         if (!items || !Array.isArray(items) || items.length === 0) {
@@ -42,14 +42,31 @@ async function handler(req, res) {
 
         try {
           const result = await prisma.$transaction(async (tx) => {
+            const totalAmount = parseFloat(amount);
+            const paidAmt = paidAmount !== undefined ? parseFloat(paidAmount) : 0;
+            const remainingAmount = totalAmount - paidAmt;
+            
+            // Determine status based on payment
+            let purchaseStatus = status;
+            if (!purchaseStatus) {
+              if (paidAmt >= totalAmount) {
+                purchaseStatus = 'Paid';
+              } else if (paidAmt > 0) {
+                purchaseStatus = 'Partial';
+              } else {
+                purchaseStatus = 'Unpaid';
+              }
+            }
+            
             // 1. Create Purchase Record
             const purchase = await tx.purchases.create({
               data: {
                 company_id: String(targetCompanyId),
                 supplier: supplier,
                 date: date ? new Date(date) : new Date(),
-                amount: parseFloat(amount),
-                status: status || 'Unpaid',
+                amount: totalAmount,
+                paidAmount: paidAmt,
+                status: purchaseStatus,
                 notes: notes
               }
             });
@@ -76,9 +93,8 @@ async function handler(req, res) {
               });
             }
 
-            // 3. Create Creditor Entry if Unpaid/Partial
-            if ((status === 'Unpaid' || status === 'Partial') && supplier) {
-              // Determine due date (default 30 days)
+            // 3. Create Creditor Entry if there's an outstanding balance
+            if (remainingAmount > 0 && supplier) {
               const dueDate = new Date();
               dueDate.setDate(dueDate.getDate() + 30);
 
@@ -87,9 +103,9 @@ async function handler(req, res) {
                   company_id: String(targetCompanyId),
                   name: supplier,
                   purchase_id: purchase.id,
-                  amount: parseFloat(amount), // Track total amount as payable
-                  originalAmount: parseFloat(amount),
-                  paidAmount: 0,
+                  amount: remainingAmount, // Only track the remaining unpaid amount
+                  originalAmount: totalAmount,
+                  paidAmount: paidAmt,
                   due: dueDate,
                   status: 'Pending'
                 }
