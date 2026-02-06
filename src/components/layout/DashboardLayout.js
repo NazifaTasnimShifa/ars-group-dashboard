@@ -23,7 +23,9 @@ import {
   ClipboardDocumentListIcon,
   Cog6ToothIcon,
   UserGroupIcon,
+  UserCircleIcon,
 } from '@heroicons/react/24/outline';
+import { Menu } from '@headlessui/react';
 import { useAppContext } from '@/contexts/AppContext';
 
 // Navigation structure - conditionally show items based on business type AND user role
@@ -356,13 +358,43 @@ export default function DashboardLayout({ children }) {
               )}
             </div>
             <div className="flex items-center gap-x-4 lg:gap-x-6">
-              <span className="text-sm text-gray-500">
-                {user?.name}
-              </span>
-              <span className={`text-xs px-2 py-1 rounded-full ${isSuperOwner ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-700'
-                }`}>
-                {user?.role?.displayName || 'User'}
-              </span>
+              <Menu as="div" className="relative">
+                <Menu.Button className="flex items-center gap-x-2 text-sm focus:outline-none">
+                  <UserCircleIcon className="h-8 w-8 text-gray-400" />
+                  <div className="hidden md:block text-left">
+                    <div className="text-sm font-medium text-gray-900">{user?.name}</div>
+                    <div className="text-xs text-gray-500">{user?.role?.displayName || 'User'}</div>
+                  </div>
+                </Menu.Button>
+                <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                  <Menu.Item>
+                    {({ active }) => (
+                      <Link
+                        href="/profile"
+                        className={classNames(
+                          active ? 'bg-gray-100' : '',
+                          'block px-4 py-2 text-sm text-gray-700'
+                        )}
+                      >
+                        Profile Settings
+                      </Link>
+                    )}
+                  </Menu.Item>
+                  <Menu.Item>
+                    {({ active }) => (
+                      <button
+                        onClick={logout}
+                        className={classNames(
+                          active ? 'bg-gray-100' : '',
+                          'block w-full text-left px-4 py-2 text-sm text-red-600'
+                        )}
+                      >
+                        Sign out
+                      </button>
+                    )}
+                  </Menu.Item>
+                </Menu.Items>
+              </Menu>
             </div>
           </div>
           <main className="py-10">
