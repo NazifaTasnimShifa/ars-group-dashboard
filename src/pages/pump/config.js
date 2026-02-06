@@ -940,8 +940,8 @@ export default function PumpConfigPage() {
 
         {/* Modal */}
         <Modal
-          isOpen={modalOpen}
-          onClose={() => setModalOpen(false)}
+          open={modalOpen}
+          setOpen={(val) => setModalOpen(val)}
           title={
             modalType === 'fuel-type' ? (editItem ? 'Edit Fuel Type' : 'Add Fuel Type') :
             modalType === 'branch' ? (editItem ? 'Edit Branch' : 'Add Branch') :
