@@ -15,6 +15,11 @@ export default function ProfilePage() {
     const [emailLoading, setEmailLoading] = useState(false);
     const [emailMessage, setEmailMessage] = useState({ type: '', text: '' });
     
+    // Name form state
+    const [nameForm, setNameForm] = useState({ newName: '' });
+    const [nameLoading, setNameLoading] = useState(false);
+    const [nameMessage, setNameMessage] = useState({ type: '', text: '' });
+    
     // Password form state
     const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
     const [passwordLoading, setPasswordLoading] = useState(false);
@@ -61,6 +66,32 @@ export default function ProfilePage() {
             setEmailMessage({ type: 'error', text: 'An error occurred while updating email' });
         } finally {
             setEmailLoading(false);
+        }
+    };
+
+    const handleNameUpdate = async (e) => {
+        e.preventDefault();
+        setNameLoading(true);
+        setNameMessage({ type: '', text: '' });
+
+        try {
+            const res = await authFetch('/api/user/update-name', {
+                method: 'POST',
+                body: JSON.stringify({ name: nameForm.newName })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                setNameMessage({ type: 'success', text: 'Name updated successfully!' });
+                setNameForm({ newName: '' });
+                fetchProfile();
+            } else {
+                setNameMessage({ type: 'error', text: data.message || 'Failed to update name' });
+            }
+        } catch (error) {
+            setNameMessage({ type: 'error', text: 'An error occurred while updating name' });
+        } finally {
+            setNameLoading(false);
         }
     };
 
@@ -129,6 +160,49 @@ export default function ProfilePage() {
                             )}
                         </div>
                     </div>
+                </div>
+
+                {/* Name Update Section */}
+                <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-6">
+                    <div className="flex items-center mb-4">
+                        <UserCircleIcon className="h-6 w-6 text-gray-400 mr-2" />
+                        <h3 className="text-lg font-medium text-gray-900">Name</h3>
+                    </div>
+                    
+                    <p className="text-sm text-gray-500 mb-4">Current name: <span className="font-medium text-gray-900">{profile?.name}</span></p>
+
+                    <form onSubmit={handleNameUpdate} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">New Name</label>
+                            <input
+                                type="text"
+                                value={nameForm.newName}
+                                onChange={(e) => setNameForm({ newName: e.target.value })}
+                                required
+                                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                placeholder="Enter your new name"
+                            />
+                        </div>
+
+                        {nameMessage.text && (
+                            <div className={`flex items-center gap-2 p-3 rounded-md ${nameMessage.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+                                {nameMessage.type === 'success' ? (
+                                    <CheckCircleIcon className="h-5 w-5" />
+                                ) : (
+                                    <XCircleIcon className="h-5 w-5" />
+                                )}
+                                <span className="text-sm">{nameMessage.text}</span>
+                            </div>
+                        )}
+
+                        <button
+                            type="submit"
+                            disabled={nameLoading}
+                            className="inline-flex justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {nameLoading ? 'Updating...' : 'Update Name'}
+                        </button>
+                    </form>
                 </div>
 
                 {/* Email Update Section */}
