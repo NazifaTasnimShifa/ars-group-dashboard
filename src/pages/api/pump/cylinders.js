@@ -8,9 +8,11 @@ async function handler(req, res) {
   try {
     // Determine Branch ID (optional for GET, required for POST)
     let branchId = req.query.branchId || req.body?.branchId;
-    if (!branchId && user?.businessId) {
+    const businessId = req.query.businessId || req.body?.businessId || user?.businessId;
+
+    if (!branchId && businessId) {
        const branch = await prisma.branch.findFirst({
-          where: { businessId: user.businessId }
+          where: { businessId: businessId }
        });
        branchId = branch?.id;
     }

@@ -109,9 +109,11 @@ async function main() {
   console.log('⛽ Creating Cylinder Types...');
 
   const cylinderTypesData = [
-    { name: '12 KG Domestic', weight: 12, depositAmount: 1500, currentPrice: 1400 },
-    { name: '35 KG Commercial', weight: 35, depositAmount: 3500, currentPrice: 3800 },
-    { name: '45 KG Industrial', weight: 45, depositAmount: 4500, currentPrice: 4800 },
+    { name: 'Sena 12 KG', brand: 'Sena', weight: 12, depositAmount: 1500, currentPrice: 1400 },
+    { name: 'Sena 35 KG', brand: 'Sena', weight: 35, depositAmount: 3500, currentPrice: 3800 },
+    { name: 'Beximco 12 KG', brand: 'Beximco', weight: 12, depositAmount: 1500, currentPrice: 1450 },
+    { name: 'Jamuna 12 KG', brand: 'Jamuna', weight: 12, depositAmount: 1500, currentPrice: 1400 },
+    { name: 'Bashundhara 12 KG', brand: 'Bashundhara', weight: 12, depositAmount: 1500, currentPrice: 1420 },
   ];
 
   for (const ct of cylinderTypesData) {

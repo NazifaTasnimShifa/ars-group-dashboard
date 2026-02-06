@@ -40,7 +40,10 @@ function CylinderOperationsPage() {
   const canEditStock = isSuperOwner || ['ADMIN', 'SUPER_OWNER'].includes(user?.role?.name?.toUpperCase());
 
   // Handle stock adjustment - set value directly and save to database
+  const [savingStatus, setSavingStatus] = useState({}); // { cylinderId_type: boolean }
+
   const handleStockChange = async (cylinderId, type, newValue) => {
+    const key = `${cylinderId}_${type}`;
     // Update local state immediately
     const updatedStock = {
       ...stock,
@@ -50,20 +53,33 @@ function CylinderOperationsPage() {
       }
     };
     setStock(updatedStock);
+    setSavingStatus(prev => ({ ...prev, [key]: true }));
 
     // Save to database
     try {
-      await authFetch('/api/pump/cylinders', {
+      // Use currentBusiness.id as a hint for the API to find the correct branch
+      const res = await authFetch('/api/pump/cylinders', {
         method: 'POST',
         body: JSON.stringify({ 
           action: 'set_stock',
           cylinderId, 
           type,
-          quantity: Math.max(0, newValue)
+          quantity: Math.max(0, newValue),
+          businessId: currentBusiness?.id // Pass businessId if branchId not directly known
         })
       });
+      
+      if (!res.ok) {
+        throw new Error('Failed to save');
+      }
     } catch (err) {
       console.error('Failed to save stock change:', err);
+      // Optional: show error message
+    } finally {
+      // Small delay just for visual feedback
+      setTimeout(() => {
+        setSavingStatus(prev => ({ ...prev, [key]: false }));
+      }, 500);
     }
   };
 
@@ -79,6 +95,7 @@ function CylinderOperationsPage() {
           setCylinderTypes(result.data.cylinderTypes.map(ct => ({
             id: ct.id,
             name: ct.name,
+            brand: ct.brand,
             weight: parseFloat(ct.weight),
             category: getCylinderCategory(ct.weight)
           })));
@@ -260,7 +277,12 @@ function CylinderOperationsPage() {
                           <div className="h-10 w-10 rounded-lg bg-cyan-100 flex items-center justify-center text-cyan-700">
                             <CubeIcon className="h-6 w-6" />
                           </div>
-                          <span className="ml-3 font-medium text-gray-900">{cylinder.name}</span>
+                          <div className="ml-3">
+                            <div className="text-sm font-medium text-gray-900">{cylinder.name}</div>
+                            {cylinder.brand && (
+                              <div className="text-xs text-indigo-600 font-semibold uppercase tracking-wider">{cylinder.brand}</div>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -274,28 +296,48 @@ function CylinderOperationsPage() {
                           {cylinder.category}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <td className="px-6 py-4 whitespace-nowrap text-center relative group">
                         {canEditStock ? (
-                          <input
-                            type="number"
-                            min="0"
-                            value={cylStock.filled}
-                            onChange={(e) => handleStockChange(cylinder.id, 'filled', parseInt(e.target.value) || 0)}
-                            className="w-20 text-center text-lg font-bold text-green-600 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                          />
+                          <div className="flex items-center justify-center">
+                            <input
+                              type="number"
+                              min="0"
+                              value={cylStock.filled}
+                              onChange={(e) => handleStockChange(cylinder.id, 'filled', parseInt(e.target.value) || 0)}
+                              className={`w-20 text-center text-lg font-bold text-green-600 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${savingStatus[`${cylinder.id}_filled`] ? 'bg-yellow-50 border-yellow-300' : ''}`}
+                            />
+                            {savingStatus[`${cylinder.id}_filled`] && (
+                              <div className="absolute -top-1 right-2">
+                                <span className="flex h-2 w-2">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-lg font-bold text-green-600">{cylStock.filled}</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <td className="px-6 py-4 whitespace-nowrap text-center relative">
                         {canEditStock ? (
-                          <input
-                            type="number"
-                            min="0"
-                            value={cylStock.empty}
-                            onChange={(e) => handleStockChange(cylinder.id, 'empty', parseInt(e.target.value) || 0)}
-                            className="w-20 text-center text-lg font-bold text-gray-600 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
-                          />
+                          <div className="flex items-center justify-center">
+                            <input
+                              type="number"
+                              min="0"
+                              value={cylStock.empty}
+                              onChange={(e) => handleStockChange(cylinder.id, 'empty', parseInt(e.target.value) || 0)}
+                              className={`w-20 text-center text-lg font-bold text-gray-600 border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition-colors ${savingStatus[`${cylinder.id}_empty`] ? 'bg-yellow-50 border-yellow-300' : ''}`}
+                            />
+                            {savingStatus[`${cylinder.id}_empty`] && (
+                              <div className="absolute -top-1 right-2">
+                                <span className="flex h-2 w-2">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-lg font-bold text-gray-600">{cylStock.empty}</span>
                         )}
@@ -377,7 +419,9 @@ function CylinderOperationsPage() {
             <label className="block text-sm font-medium text-gray-700">Cylinder Type</label>
             <select name="cylinderId" required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
               {cylinderTypes.map(type => (
-                <option key={type.id} value={type.id}>{type.name}</option>
+                <option key={type.id} value={type.id}>
+                  {type.brand ? `[${type.brand}] ` : ''}{type.name}
+                </option>
               ))}
             </select>
           </div>
