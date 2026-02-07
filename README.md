@@ -1,63 +1,279 @@
-# ARS Group - ERP Business Dashboard (Prototype)
+# ARS Group - ERP Business Dashboard
 
-This project is a high-fidelity, interactive prototype for a web-based ERP and business intelligence dashboard for the ARS Group. It provides a centralized overview of two distinct businesses, ARS Lube LTD BD and ARS Corporation, allowing for comprehensive monitoring of financial health, inventory, and operational metrics.
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Visit%20Site-blue)](https://ars-erp-dashboard.vercel.app/login)
+[![Next.js](https://img.shields.io/badge/Next.js-15.5-black)](https://nextjs.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-6.19-2D3748)](https://www.prisma.io/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC)](https://tailwindcss.com/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 
-## ✨ Key Features
+A comprehensive, production-ready ERP and business intelligence dashboard built for **ARS Group**. This application provides centralized management for two distinct business units:
 
-- **Multi-Company Architecture**: Seamlessly switch between different company dashboards.
-- **Authentication**: Secure login page to protect business data.
-- **Dynamic Dashboard**: At-a-glance overview of crucial KPIs, including profitability ratios, liquidity, sales performance, and top expenses.
-- **Interactive Charts & Tables**: Visual representations of financial trends and data, built with Chart.js.
-- **Full-Featured Modules**: Complete pages for managing:
-  - **Accounts**: Sundry Debtors and Creditors with filtering and add/edit/delete functionality.
-  - **Inventory**: Detailed status, purchases, sales, and process loss tracking.
-  - **Financial Reports**: Dynamic, accountant-approved layouts for the Balance Sheet, Income Statement, Cash Flow Statement, and Trial Balance.
-  - **Fixed Assets**: A complete register of all company assets.
-- **Responsive Design**: A modern, collapsible sidebar and mobile-friendly layout built with Tailwind CSS and Headless UI.
-- **Placeholder Modals**: Functional modals for all data entry points (Add Sale, Add Product, etc.) ready for backend integration.
-
-## 🚀 Technology Stack
-
-- **Framework**: [Next.js](https://nextjs.org/) (with Pages Router)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **UI Components**: [Headless UI](https://headlessui.com/) for accessible components (Modals, Dropdowns).
-- **Icons**: [Heroicons](https://heroicons.com/)
-- **Charts**: [Chart.js](https://www.chartjs.org/) with `react-chartjs-2`.
-- **Linting & Formatting**: ESLint.
-
-## 🛠️ Getting Started
-
-### Prerequisites
-
-- Node.js (v18.x or higher)
-- npm or yarn
-
-### Installation & Setup
-
-1.  **Clone the repository:**
-    ```bash
-    git clone <your-repository-url>
-    cd ars-erp-dashboard
-    ```
-
-2.  **Install dependencies:**
-    ```bash
-    npm install
-    ```
-
-3.  **Run the development server:**
-    ```bash
-    npm run dev
-    ```
-
-4.  **Open the application:**
-    Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-### Login Credentials (for Prototype)
-
-- **Email**: `admin@arsgroup.com`
-- **Password**: Any password will work.
+- **ARS Lube LTD BD** — Lubricant distribution and sales
+- **ARS Corporation** — Petrol pump operations and LPG cylinder management
 
 ---
 
-This project was bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+## 🌐 Live Demo
+
+**👉 [https://ars-erp-dashboard.vercel.app/login](https://ars-erp-dashboard.vercel.app/login)**
+
+### 🔐 Login Credentials
+
+| Role | Email | Password | Access Level |
+|------|-------|----------|--------------|
+| **Super Owner** | `owner@arsgroup.com` | `admin123` | Full access to all companies |
+| **ARS Lube Manager** | `manager@arslube.com` | `admin123` | ARS Lube company only |
+| **ARS Corp Manager** | `manager@arscorp.com` | `admin123` | ARS Corporation only |
+| **Pump Cashier** | `cashier@arscorp.com` | `admin123` | Pump operations only |
+
+> 💡 **Tip:** Log in as **Super Owner** to explore all features across both companies.
+
+---
+
+## ✨ Key Features
+
+### 🏢 Multi-Business Architecture
+- Seamlessly switch between ARS Lube and ARS Corporation dashboards
+- Unified owner view for cross-company analytics
+- Company-specific branding and settings
+
+### 🔒 Role-Based Access Control
+- **Super Owner** — Full access to all companies and admin features
+- **Manager** — Company-level management and reporting
+- **Cashier** — Limited access for daily pump operations
+
+### 📊 Dashboard & Analytics
+- Real-time KPIs: Revenue, Expenses, Profit Margins
+- Liquidity ratios and financial health indicators
+- Interactive charts with Chart.js
+- Top expenses breakdown and sales performance
+
+### 💼 Business Modules
+
+#### Accounts Management
+- **Sundry Debtors** — Track customer receivables with aging analysis
+- **Sundry Creditors** — Manage supplier payables and due dates
+- Full CRUD operations with search and filtering
+
+#### Inventory Management
+- Real-time stock levels and alerts
+- Purchase order tracking
+- Sales recording and history
+- Process loss monitoring for lubricants
+
+#### Financial Reports
+- **Balance Sheet** — Assets, liabilities, and equity overview
+- **Income Statement** — Revenue and expense breakdown
+- **Cash Flow Statement** — Operating, investing, financing activities
+- **Trial Balance** — Debit/credit verification
+
+#### Fixed Assets
+- Complete asset register
+- Depreciation tracking (Straight-line & Written Down Value)
+- Asset categories: Buildings, Vehicles, Machinery, Equipment
+
+#### Pump Operations (ARS Corporation)
+- Daily fuel sales recording
+- Credit sales management
+- Dip stock measurements
+- LPG cylinder inventory and sales
+
+### 🎨 User Experience
+- Modern, responsive design
+- Collapsible sidebar navigation
+- Dark mode support
+- Mobile-friendly layouts
+- Toast notifications for user feedback
+
+---
+
+## 🚀 Tech Stack
+
+### Frontend
+| Technology | Purpose |
+|------------|---------|
+| [Next.js 15](https://nextjs.org/) | React framework with Pages Router |
+| [React 19](https://react.dev/) | UI component library |
+| [Tailwind CSS 3.4](https://tailwindcss.com/) | Utility-first CSS framework |
+| [Headless UI](https://headlessui.com/) | Accessible UI components |
+| [Flowbite React](https://flowbite-react.com/) | Pre-built Tailwind components |
+| [Heroicons](https://heroicons.com/) | SVG icon library |
+| [Chart.js](https://www.chartjs.org/) | Interactive data visualization |
+
+### Backend
+| Technology | Purpose |
+|------------|---------|
+| [Next.js API Routes](https://nextjs.org/docs/api-routes/introduction) | RESTful API endpoints |
+| [Prisma ORM 6.19](https://www.prisma.io/) | Database access and migrations |
+| [PostgreSQL](https://www.postgresql.org/) | Relational database |
+| [bcryptjs](https://www.npmjs.com/package/bcryptjs) | Password hashing |
+| [jsonwebtoken](https://www.npmjs.com/package/jsonwebtoken) | JWT authentication |
+
+### DevOps
+| Technology | Purpose |
+|------------|---------|
+| [Vercel](https://vercel.com/) | Deployment and hosting |
+| [ESLint](https://eslint.org/) | Code linting |
+
+---
+
+## 📁 Project Structure
+
+```
+ars-erp-dashboard/
+├── prisma/
+│   ├── schema.prisma          # Database schema definitions
+│   ├── seed.mjs               # Demo data seeding script
+│   └── migrations/            # Database migration history
+│
+├── src/
+│   ├── components/            # Reusable React components
+│   │   ├── auth/              # Authentication components
+│   │   ├── charts/            # Chart.js wrapper components
+│   │   ├── layout/            # Sidebar, Header, Footer
+│   │   └── modals/            # Modal dialog components
+│   │
+│   ├── contexts/              # React Context providers
+│   │   └── AuthContext.js     # Authentication state management
+│   │
+│   ├── lib/                   # Utility libraries
+│   │   ├── auth.js            # JWT signing/verification
+│   │   └── prisma.js          # Prisma client singleton
+│   │
+│   ├── pages/
+│   │   ├── api/               # API route handlers
+│   │   │   ├── login.js       # Authentication endpoint
+│   │   │   ├── dashboard.js   # Dashboard data API
+│   │   │   ├── inventory/     # Inventory CRUD APIs
+│   │   │   ├── sales/         # Sales CRUD APIs
+│   │   │   ├── purchases/     # Purchase CRUD APIs
+│   │   │   └── reports.js     # Financial reports API
+│   │   │
+│   │   ├── accounts/          # Debtors & Creditors pages
+│   │   ├── inventory/         # Inventory management pages
+│   │   ├── reports/           # Financial report pages
+│   │   ├── pump/              # Pump operations pages
+│   │   ├── lube/              # ARS Lube specific pages
+│   │   ├── owner/             # Super owner admin pages
+│   │   ├── dashboard.js       # Main dashboard
+│   │   ├── login.js           # Login page
+│   │   └── profile.js         # User profile page
+│   │
+│   └── styles/
+│       └── globals.css        # Global styles and Tailwind imports
+│
+├── public/                    # Static assets
+├── package.json               # Dependencies and scripts
+├── tailwind.config.js         # Tailwind configuration
+└── next.config.mjs            # Next.js configuration
+```
+
+---
+
+## 🛠️ Local Development
+
+### Prerequisites
+
+- **Node.js** v22.x or higher
+- **npm** or **yarn** package manager
+- **PostgreSQL** database (local or cloud-hosted)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <your-repository-url>
+   cd ars-erp-dashboard
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Configure environment variables**
+   
+   Create a `.env` file in the root directory:
+   ```env
+   # Database connection
+   DATABASE_URL="postgresql://username:password@localhost:5432/ars_erp_db"
+   
+   # JWT secret for authentication (use a strong random string in production)
+   JWT_SECRET="your-super-secret-key-change-in-production"
+   ```
+
+4. **Set up the database**
+   ```bash
+   # Push the Prisma schema to your database
+   npm run db:push
+   
+   # Seed the database with demo data
+   npm run db:seed
+   ```
+
+5. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+6. **Open the application**
+   
+   Navigate to [http://localhost:3000](http://localhost:3000)
+
+---
+
+## 📜 Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server with hot reload |
+| `npm run build` | Create optimized production build |
+| `npm run start` | Start production server |
+| `npm run lint` | Run ESLint for code quality |
+| `npm run db:push` | Push Prisma schema changes to database |
+| `npm run db:seed` | Populate database with demo data |
+| `npm run prisma:generate` | Regenerate Prisma client after schema changes |
+
+---
+
+## 🚀 Deployment
+
+This application is deployed on **Vercel**. To deploy your own instance:
+
+1. Fork this repository
+2. Connect to Vercel
+3. Add environment variables (`DATABASE_URL`, `JWT_SECRET`)
+4. Deploy
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** — see the [LICENSE](./LICENSE) file for details.
+
+---
+
+## 👤 Author
+
+**Nazifa Tasnim Shifa**
+
+- GitHub: [@NazifaTasnimShifa](https://github.com/NazifaTasnimShifa)
+- Email: nazifatasnimshifa@gmail.com
+
+---
+
+<p align="center">
+  <strong>Built with ❤️ for ARS Group</strong>
+</p>
