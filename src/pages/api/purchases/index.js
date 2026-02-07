@@ -65,7 +65,7 @@ async function handler(req, res) {
                 supplier: supplier,
                 date: date ? new Date(date) : new Date(),
                 amount: totalAmount,
-                paidAmount: paidAmt,
+                // paidAmount: paidAmt, // TODO: Add this after running migration
                 status: purchaseStatus,
                 notes: notes
               }

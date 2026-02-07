@@ -80,7 +80,7 @@ async function handler(req, res) {
                 customer: customer || 'Walk-in',
                 date: date ? new Date(date) : new Date(),
                 totalAmount: totalAmount,
-                paidAmount: paidAmt,
+                // paidAmount: paidAmt, // TODO: Add this after running migration
                 status: saleStatus,
                 paymentMethod: paymentMethod,
                 notes: notes

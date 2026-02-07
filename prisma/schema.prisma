@@ -339,13 +339,13 @@ model FuelSale {
 model CylinderType {
   id                   String                @id @default(cuid())
   name                 String                @db.VarChar(100)
-  brand                String?               @db.VarChar(50)
   weight               Decimal               @db.Decimal(6, 2)
   depositAmount        Decimal               @db.Decimal(10, 2)
   currentPrice         Decimal               @db.Decimal(10, 2)
   isActive             Boolean               @default(true)
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
+  brand                String?               @db.VarChar(50)
   cylinderStock        CylinderStock[]
   cylinderTransactions CylinderTransaction[]
 
@@ -1184,14 +1184,14 @@ model expenses {
   description    String?           @db.Text
   amount         Decimal           @db.Decimal(15, 2)
   date           DateTime          @default(now())
-  status         String            @default("Paid") @db.VarChar(20) // Paid, Accrued, Pending
+  status         String            @default("Paid") @db.VarChar(20)
   payeeName      String?           @db.VarChar(255)
   paymentMethod  String?           @default("Cash") @db.VarChar(50)
-  receiptNumber  String?           @db.VarChar(100)
   notes          String?           @db.Text
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   createdBy      String?
+  receiptNumber  String?           @db.VarChar(100)
   creditor_entry sundry_creditors?
 
   @@index([company_id])
