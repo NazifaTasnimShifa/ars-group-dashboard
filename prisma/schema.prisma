@@ -1126,6 +1126,7 @@ model sales {
   customer      String?
   date          DateTime        @default(now())
   totalAmount   Decimal         @db.Decimal(15, 2)
+  paidAmount    Decimal?        @default(0.00) @db.Decimal(15, 2)
   status        String?
   paymentMethod String?
   notes         String?         @db.Text
@@ -1154,6 +1155,7 @@ model purchases {
   supplier       String?
   date           DateTime          @default(now())
   amount         Decimal           @db.Decimal(15, 2)
+  paidAmount     Decimal?          @default(0.00) @db.Decimal(15, 2)
   status         String?
   paymentMethod  String?
   notes          String?           @db.Text
