@@ -126,13 +126,55 @@ export default function DashboardPage() {
     setModalState({ open: false, title: '', content: null });
   };
 
-  const handleSave = async (data) => {
-    // Handle form submission - this will be called by the form components
+  const handleSave = async (formData) => {
+    // Handle form submission - submit to the correct API based on modal type
     try {
-      closeModal();
-      fetchDashboardData(dateRange); // Refresh dashboard data
+      let endpoint = '';
+      let method = 'POST';
+      
+      switch (modalState.content) {
+        case 'sale':
+          endpoint = '/api/sales';
+          break;
+        case 'purchase':
+          endpoint = '/api/purchases';
+          break;
+        case 'product':
+          endpoint = '/api/inventory';
+          break;
+        case 'debtor':
+          endpoint = '/api/debtors';
+          break;
+        case 'creditor':
+          endpoint = '/api/creditors';
+          break;
+        default:
+          console.error('Unknown modal type:', modalState.content);
+          return;
+      }
+      
+      // Add company_id to form data
+      const payload = {
+        ...formData,
+        company_id: currentBusiness?.id
+      };
+      
+      const res = await authFetch(endpoint, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      if (res.ok) {
+        closeModal();
+        fetchDashboardData(dateRange); // Refresh dashboard data
+      } else {
+        const errorData = await res.json();
+        alert(`Failed to save: ${errorData.message || 'Unknown error'}`);
+      }
     } catch (err) {
       console.error('Save error:', err);
+      alert('Error saving data. Please try again.');
     }
   };
 

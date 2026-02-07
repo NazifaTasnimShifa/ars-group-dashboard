@@ -81,11 +81,63 @@ export default function SalesPage() {
     } catch (e) { console.error("Delete failed", e); }
   };
 
+  const handleSave = async (formData) => {
+    try {
+      const payload = {
+        ...formData,
+        company_id: currentBusiness?.id
+      };
+      
+      const res = await authFetch('/api/sales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      if (res.ok) {
+        setModalState({ ...modalState, open: false });
+        fetchData(dateRange); // Refresh sales data
+      } else {
+        const errorData = await res.json();
+        alert(`Failed to save: ${errorData.message || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Save error:', err);
+      alert('Error saving sale. Please try again.');
+    }
+  };
+
+  const stats = [
+    { name: 'Total Sales', stat: formatCurrency(sales.reduce((sum, s) => sum + (s.totalAmount || s.amount || 0), 0)), color: 'text-green-600' },
+    { name: 'Paid', stat: formatCurrency(sales.filter(s => s.status === 'Paid').reduce((sum, s) => sum + (s.totalAmount || s.amount || 0), 0)), color: 'text-green-600' },
+    { name: 'Partial', stat: formatCurrency(sales.filter(s => s.status === 'Partial').reduce((sum, s) => sum + (s.totalAmount || s.amount || 0), 0)), color: 'text-yellow-600' },
+    { name: 'Unpaid', stat: formatCurrency(sales.filter(s => s.status === 'Unpaid').reduce((sum, s) => sum + (s.totalAmount || s.amount || 0), 0)), color: 'text-red-600' },
+  ];
+
   return (
     <DashboardLayout>
-      {/* ... (modal and header) ... */}
-  
-       {/* ... (stats) ... */}
+      {/* Modal */}
+      <Modal open={modalState.open} setOpen={(val) => setModalState({ ...modalState, open: val })} title="Add Sale Invoice">
+        <SaleForm onSave={handleSave} onCancel={() => setModalState({ ...modalState, open: false })} />
+      </Modal>
+
+      {/* Page Header */}
+      <PageHeader title="Sales" description="Manage sales invoices and track revenue">
+        <button 
+          onClick={() => setModalState({ open: true, mode: 'add', sale: null })}
+          className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+        >
+          <PlusIcon className="-ml-0.5 mr-1.5 h-5 w-5 inline" />
+          Add Sale
+        </button>
+      </PageHeader>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-4 mb-6">
+        {stats.map((item) => (
+          <PageStat key={item.name} item={item} />
+        ))}
+      </div>
 
       <div className="rounded-lg bg-white p-6 shadow">
         <div className="sm:flex sm:items-center sm:justify-between mb-4">
