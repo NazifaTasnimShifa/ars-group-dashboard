@@ -167,6 +167,26 @@ export function AppProvider({ children }) {
     router.push('/login');
   };
 
+  // Refresh user data (for after profile updates)
+  const refreshUser = async () => {
+    try {
+      const res = await authFetch('/api/user/profile');
+      const data = await res.json();
+      
+      if (data.success) {
+        const updatedUser = {
+          ...user,
+          name: data.data.name,
+          email: data.data.email
+        };
+        setUser(updatedUser);
+        sessionStorage.setItem('ars_user', JSON.stringify(updatedUser));
+      }
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+    }
+  };
+
   // Authenticated fetch helper - automatically adds Authorization header
   const authFetch = async (url, options = {}) => {
     const headers = {
@@ -258,6 +278,7 @@ export function AppProvider({ children }) {
     // Actions
     login,
     logout,
+    refreshUser,
     switchBusiness,
     hasPermission,
     authFetch,

@@ -6,7 +6,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { UserCircleIcon, EnvelopeIcon, LockClosedIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
 export default function ProfilePage() {
-    const { authFetch, user } = useAppContext();
+    const { authFetch, user, refreshUser } = useAppContext();
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     
@@ -59,6 +59,7 @@ export default function ProfilePage() {
                 setEmailMessage({ type: 'success', text: 'Email updated successfully! Please use your new email to log in next time.' });
                 setEmailForm({ currentPassword: '', newEmail: '' });
                 fetchProfile();
+                refreshUser(); // Update the email in context
             } else {
                 setEmailMessage({ type: 'error', text: data.message || 'Failed to update email' });
             }
@@ -85,6 +86,7 @@ export default function ProfilePage() {
                 setNameMessage({ type: 'success', text: 'Name updated successfully!' });
                 setNameForm({ newName: '' });
                 fetchProfile();
+                refreshUser(); // Update the name in topbar
             } else {
                 setNameMessage({ type: 'error', text: data.message || 'Failed to update name' });
             }
