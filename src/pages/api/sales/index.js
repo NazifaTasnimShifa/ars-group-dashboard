@@ -36,6 +36,20 @@ async function handler(req, res) {
         const { items, customer, date, status, paymentMethod, notes, paidAmount } = req.body;
         const targetCompanyId = req.body.company_id || company_id;
 
+        // Debug logging
+        console.log('Sales POST received:', { 
+          hasItems: !!items, 
+          itemsLength: items?.length,
+          customer,
+          targetCompanyId,
+          company_id,
+          bodyCompanyId: req.body.company_id
+        });
+
+        if (!targetCompanyId) {
+          return res.status(400).json({ success: false, message: 'Company ID is required' });
+        }
+
         if (!items || !Array.isArray(items) || items.length === 0) {
           return res.status(400).json({ success: false, message: 'Items array is required' });
         }
