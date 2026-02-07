@@ -108,10 +108,10 @@ export default function SalesPage() {
   };
 
   const stats = [
-    { name: 'Total Sales', stat: formatCurrency(sales.reduce((sum, s) => sum + (s.totalAmount || s.amount || 0), 0)), color: 'text-green-600' },
-    { name: 'Paid', stat: formatCurrency(sales.filter(s => s.status === 'Paid').reduce((sum, s) => sum + (s.totalAmount || s.amount || 0), 0)), color: 'text-green-600' },
-    { name: 'Partial', stat: formatCurrency(sales.filter(s => s.status === 'Partial').reduce((sum, s) => sum + (s.totalAmount || s.amount || 0), 0)), color: 'text-yellow-600' },
-    { name: 'Unpaid', stat: formatCurrency(sales.filter(s => s.status === 'Unpaid').reduce((sum, s) => sum + (s.totalAmount || s.amount || 0), 0)), color: 'text-red-600' },
+    { name: 'Total Sales', stat: formatCurrency(sales.reduce((sum, s) => sum + Number(s.totalAmount || s.amount || 0), 0)), color: 'text-green-600' },
+    { name: 'Paid', stat: formatCurrency(sales.filter(s => s.status === 'Paid').reduce((sum, s) => sum + Number(s.totalAmount || s.amount || 0), 0)), color: 'text-green-600' },
+    { name: 'Partial', stat: formatCurrency(sales.filter(s => s.status === 'Partial').reduce((sum, s) => sum + Number(s.totalAmount || s.amount || 0), 0)), color: 'text-yellow-600' },
+    { name: 'Unpaid', stat: formatCurrency(sales.filter(s => s.status === 'Unpaid').reduce((sum, s) => sum + Number(s.totalAmount || s.amount || 0), 0)), color: 'text-red-600' },
   ];
 
   return (
