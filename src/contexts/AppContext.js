@@ -174,10 +174,16 @@ export function AppProvider({ children }) {
       const data = await res.json();
       
       if (data.success) {
+        // Create a completely new user object to ensure React re-renders
         const updatedUser = {
-          ...user,
+          id: data.data.id,
           name: data.data.name,
-          email: data.data.email
+          email: data.data.email,
+          phone: data.data.phone,
+          role: data.data.role,
+          business: data.data.business,
+          isSuperOwner: user?.isSuperOwner || false,
+          lastLoginAt: data.data.lastLoginAt
         };
         setUser(updatedUser);
         sessionStorage.setItem('ars_user', JSON.stringify(updatedUser));
